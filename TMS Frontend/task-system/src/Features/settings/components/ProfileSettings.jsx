@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Input } from "../../../components/ui/Input";
 import Button from "../../../components/ui/Button";
+import Card from "../../../components/ui/Card";
 import { useAuthStore } from "../../../store/useAuthStore";
 
 export default function ProfileSettings() {
@@ -12,29 +13,28 @@ export default function ProfileSettings() {
 
   function handleSave(e) {
     e.preventDefault();
-    login({ ...user, ...form }); // placeholder — later this calls authApi.updateProfile()
+    login({ ...user, ...form });
   }
 
   return (
-    <form
-      onSubmit={handleSave}
-      className="bg-surface rounded-card shadow-card p-6 flex flex-col gap-4 max-w-md"
-    >
-      <h3 className="font-semibold text-dark">Profile</h3>
-      <Input
-        label="Full name"
-        value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
-      />
-      <Input
-        label="Email"
-        type="email"
-        value={form.email}
-        onChange={(e) => setForm({ ...form, email: e.target.value })}
-      />
-      <Button variant="primary" type="submit" className="self-start">
-        Save Changes
-      </Button>
-    </form>
+    <Card className="p-6 max-w-md">
+      <form onSubmit={handleSave} className="flex flex-col gap-4">
+        <h3 className="font-semibold text-dark">Profile</h3>
+        <Input
+          label="Full name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+        />
+        <Button variant="primary" type="submit" className="self-start">
+          Save Changes
+        </Button>
+      </form>
+    </Card>
   );
 }

@@ -1,12 +1,13 @@
 import { Check } from "lucide-react";
 import { useAccessStore } from "../accessStore";
 import RolePresets from "./RolePresets";
+import Card from "../../../components/ui/Card";
 
 export default function PermissionTable() {
   const { permissions, modules, actions, toggleAction } = useAccessStore();
 
   return (
-    <div className="bg-surface rounded-card shadow-card overflow-x-auto">
+    <Card className="overflow-x-auto">
       {permissions.map((perm) => (
         <div key={perm.userId} className="border-b border-bg last:border-0 p-4">
           <div className="flex items-center justify-between mb-3">
@@ -64,6 +65,6 @@ export default function PermissionTable() {
           </table>
         </div>
       ))}
-    </div>
+    </Card>
   );
 }

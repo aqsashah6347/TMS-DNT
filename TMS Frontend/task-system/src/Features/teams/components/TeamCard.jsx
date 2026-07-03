@@ -1,12 +1,14 @@
 import { Users } from "lucide-react";
 import ProjectMembers from "../../projects/components/ProjectMembers";
 import TeamWorkload from "./TeamWorkload";
+import Card from "../../../components/ui/Card";
 
 export default function TeamCard({ team, onClick }) {
   return (
-    <div
+    <Card
+      hover
       onClick={() => onClick?.(team)}
-      className="bg-surface rounded-card shadow-card p-5 cursor-pointer hover:shadow-md transition-shadow flex flex-col gap-4"
+      className="p-5 cursor-pointer flex flex-col gap-4"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -20,6 +22,6 @@ export default function TeamCard({ team, onClick }) {
         <p className="text-[11px] text-muted mb-2">Workload</p>
         <TeamWorkload members={team.members} />
       </div>
-    </div>
+    </Card>
   );
 }

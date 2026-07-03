@@ -1,5 +1,6 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useAdminStore } from "../adminStore";
+import Card from "../../../components/ui/Card";
 
 const roleStyles = {
   admin: "bg-primary text-dark",
@@ -15,7 +16,7 @@ export default function UserTable() {
   const { users, openEditModal, deleteUser } = useAdminStore();
 
   return (
-    <div className="bg-surface rounded-card shadow-card overflow-hidden">
+    <Card className="overflow-hidden">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-primary-light text-left text-xs text-muted">
@@ -65,6 +66,6 @@ export default function UserTable() {
           ))}
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }

@@ -65,7 +65,7 @@ export default function TaskCalendarView({ tasks, onTaskClick }) {
                     {dayTasks.slice(0, 2).map((t) => (
                       <button
                         key={t.id}
-                        onClick={() => onTaskClick(t)}
+                        onClick={() => useTaskStore.getState().openTaskView(t)}
                         className="text-[10px] bg-primary-light text-dark rounded px-1 py-0.5 truncate text-left"
                       >
                         {t.title}

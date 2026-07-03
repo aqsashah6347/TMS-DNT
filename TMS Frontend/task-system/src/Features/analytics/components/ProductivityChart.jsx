@@ -7,8 +7,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import Card from "../../../components/ui/Card";
 
-// Placeholder — later from analyticsApi.getUserProductivity()
 const data = [
   { user: "Aqsa", tasks: 24 },
   { user: "Sara", tasks: 18 },
@@ -19,7 +19,7 @@ const data = [
 
 export default function ProductivityChart() {
   return (
-    <div className="bg-surface rounded-card shadow-card p-6">
+    <Card className="p-6">
       <h3 className="font-semibold text-dark mb-4">User Productivity</h3>
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
@@ -51,6 +51,6 @@ export default function ProductivityChart() {
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   );
 }

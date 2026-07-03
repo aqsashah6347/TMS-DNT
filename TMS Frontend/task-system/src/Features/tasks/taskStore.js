@@ -1,6 +1,5 @@
 import { create } from "zustand";
 
-// Placeholder seed data — replace with a real fetch (taskApi.getAllTasks()) once your backend is ready.
 const seedTasks = [
   {
     id: 1,
@@ -11,6 +10,11 @@ const seedTasks = [
     dueDate: "2026-07-04",
     assignedTo: "Aqsa",
     assignedBy: "Admin",
+    projectId: 1,
+    pinned: true,
+    zoomLink: "",
+    githubLink: "",
+    completedBy: null,
   },
   {
     id: 2,
@@ -21,6 +25,11 @@ const seedTasks = [
     dueDate: "2026-07-05",
     assignedTo: "Sara",
     assignedBy: "Admin",
+    projectId: 2,
+    pinned: false,
+    zoomLink: "",
+    githubLink: "",
+    completedBy: null,
   },
   {
     id: 3,
@@ -31,6 +40,11 @@ const seedTasks = [
     dueDate: "2026-07-06",
     assignedTo: "Ali",
     assignedBy: "Admin",
+    projectId: 1,
+    pinned: false,
+    zoomLink: "",
+    githubLink: "",
+    completedBy: null,
   },
   {
     id: 4,
@@ -41,54 +55,105 @@ const seedTasks = [
     dueDate: "2026-07-02",
     assignedTo: "Aqsa",
     assignedBy: "Admin",
+    projectId: 1,
+    pinned: false,
+    zoomLink: "",
+    githubLink: "",
+    completedBy: "Aqsa",
   },
 ];
 
 export const useTaskStore = create((set, get) => ({
   tasks: seedTasks,
-  view: "list", // 'list' | 'kanban' | 'calendar'
+  view: "list",
   filters: { priority: "", assignedTo: "", search: "" },
   isTaskModalOpen: false,
   isFiltersModalOpen: false,
   editingTask: null,
+  modalMode: "view",
+  pendingProjectId: null, // set when "Add Task" is clicked from inside a Project modal
 
   setView: (view) => set({ view }),
   setFilters: (filters) => set({ filters: { ...get().filters, ...filters } }),
 
-  openCreateModal: () => set({ isTaskModalOpen: true, editingTask: null }),
-  openEditModal: (task) => set({ isTaskModalOpen: true, editingTask: task }),
-  closeTaskModal: () => set({ isTaskModalOpen: false, editingTask: null }),
+  openTaskView: (task) =>
+    set({ isTaskModalOpen: true, editingTask: task, modalMode: "view" }),
+  openTaskEdit: (task) =>
+    set({ isTaskModalOpen: true, editingTask: task, modalMode: "edit" }),
+  openCreateModal: () =>
+    set({
+      isTaskModalOpen: true,
+      editingTask: null,
+      modalMode: "edit",
+      pendingProjectId: null,
+    }),
 
-  openFiltersModal: () => set({ isFiltersModalOpen: true }),
-  closeFiltersModal: () => set({ isFiltersModalOpen: false }),
+  // Called from the Project detail modal's "Add Task" button
+  openCreateModalForProject: (projectId) =>
+    set({
+      isTaskModalOpen: true,
+      editingTask: null,
+      modalMode: "edit",
+      pendingProjectId: projectId,
+    }),
+
+  closeTaskModal: () =>
+    set({
+      isTaskModalOpen: false,
+      editingTask: null,
+      modalMode: "view",
+      pendingProjectId: null,
+    }),
 
   addTask: (task) =>
     set((state) => ({
-      tasks: [...state.tasks, { ...task, id: Date.now() }],
+      tasks: [...state.tasks, { ...task, id: Date.now(), pinned: false }],
     })),
 
   updateTask: (id, updates) =>
-    set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-    })),
+    set((state) => {
+      // If a task is being marked done and no completedBy was set, default to the assignee
+      const patched = { ...updates };
+      if (patched.status === "done" && !patched.completedBy) {
+        const existing = state.tasks.find((t) => t.id === id);
+        patched.completedBy = existing?.assignedTo || null;
+      }
+      return {
+        tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...patched } : t)),
+        editingTask:
+          state.editingTask?.id === id
+            ? { ...state.editingTask, ...patched }
+            : state.editingTask,
+      };
+    }),
 
   deleteTask: (id) =>
+    set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) })),
+
+  togglePin: (id) =>
     set((state) => ({
-      tasks: state.tasks.filter((t) => t.id !== id),
+      tasks: state.tasks.map((t) =>
+        t.id === id ? { ...t, pinned: !t.pinned } : t,
+      ),
     })),
+
+  getTasksByProject: (projectId) =>
+    get().tasks.filter((t) => t.projectId === projectId),
 
   getFilteredTasks: () => {
     const { tasks, filters } = get();
-    return tasks.filter((t) => {
-      if (filters.priority && t.priority !== filters.priority) return false;
-      if (filters.assignedTo && t.assignedTo !== filters.assignedTo)
-        return false;
-      if (
-        filters.search &&
-        !t.title.toLowerCase().includes(filters.search.toLowerCase())
-      )
-        return false;
-      return true;
-    });
+    return tasks
+      .filter((t) => {
+        if (filters.priority && t.priority !== filters.priority) return false;
+        if (filters.assignedTo && t.assignedTo !== filters.assignedTo)
+          return false;
+        if (
+          filters.search &&
+          !t.title.toLowerCase().includes(filters.search.toLowerCase())
+        )
+          return false;
+        return true;
+      })
+      .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   },
 }));

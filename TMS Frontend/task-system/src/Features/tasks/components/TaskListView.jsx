@@ -1,6 +1,6 @@
 import TaskCard from "./TaskCard";
 
-export default function TaskListView({ tasks, onTaskClick }) {
+export default function TaskListView({ tasks }) {
   if (!tasks || tasks.length === 0) {
     return (
       <div className="text-center py-12 text-muted text-sm">
@@ -12,7 +12,7 @@ export default function TaskListView({ tasks, onTaskClick }) {
   return (
     <div className="flex flex-col gap-3">
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} onClick={onTaskClick} />
+        <TaskCard key={task.id} task={task} />
       ))}
     </div>
   );
