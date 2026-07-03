@@ -1,28 +1,18 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/layout/Sidebar";
-
-import Dashboard from "./pages/Dashboard";
-import Tasks from "./pages/Tasks";
-import Admin from "./pages/Admin";
-import Settings from "./pages/Settings";
+import Header from "./components/layout/Header";
+import AppRoutes from "./routes/AppRoutes";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <div style={{ display: "flex" }}>
-        {/* Sidebar */}
-        <Sidebar />
+    <div className="flex h-screen bg-bg">
+      <Sidebar isAdmin={true} />
 
-        {/* Main Content */}
-        <div style={{ flex: 1, padding: "20px" }}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header userName="Aqsa" />
+        <main className="flex-1 overflow-y-auto p-6">
+          <AppRoutes />
+        </main>
       </div>
-    </BrowserRouter>
+    </div>
   );
 }

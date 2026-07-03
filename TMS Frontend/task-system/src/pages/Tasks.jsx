@@ -1,31 +1,69 @@
-import { useState } from "react";
+import { Plus, Filter, List, Kanban, Calendar } from "lucide-react";
+import { useTaskStore } from "../features/tasks/taskStore";
+import TaskListView from "../features/tasks/components/TaskListView";
+import TaskKanbanView from "../features/tasks/components/TaskKanbanView";
+import TaskCalendarView from "../features/tasks/components/TaskCalendarView";
+import TaskModal from "../features/tasks/components/TaskModal";
+import TaskFiltersModal from "../features/tasks/components/TaskFiltersModal";
+import Button from "../components/ui/Button";
+
+const viewOptions = [
+  { key: "list", icon: List },
+  { key: "kanban", icon: Kanban },
+  { key: "calendar", icon: Calendar },
+];
 
 export default function Tasks() {
-  const [tasks] = useState([
-    { id: 1, title: "Design UI system", priority: "High" },
-    { id: 2, title: "Build backend API", priority: "Critical" },
-    { id: 3, title: "Setup auth system", priority: "Medium" },
-  ]);
+  const {
+    view,
+    setView,
+    openCreateModal,
+    openEditModal,
+    openFiltersModal,
+    getFilteredTasks,
+  } = useTaskStore();
+  const tasks = getFilteredTasks();
 
   return (
     <div>
-      <h1>Tasks</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-dark">Tasks</h2>
 
-      <div style={{ marginTop: "20px" }}>
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            style={{
-              border: "1px solid #ddd",
-              padding: "10px",
-              marginBottom: "10px",
-            }}
-          >
-            <h3>{task.title}</h3>
-            <p>Priority: {task.priority}</p>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-surface rounded-card p-1 gap-1">
+            {viewOptions.map(({ key, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setView(key)}
+                className={`p-2 rounded-card ${view === key ? "bg-primary text-dark" : "text-muted"}`}
+              >
+                <Icon size={16} />
+              </button>
+            ))}
           </div>
-        ))}
+
+          <Button variant="secondary" onClick={openFiltersModal}>
+            <Filter size={14} className="inline mr-1.5 -mt-0.5" /> Filters
+          </Button>
+
+          <Button variant="primary" onClick={openCreateModal}>
+            <Plus size={14} className="inline mr-1.5 -mt-0.5" /> New Task
+          </Button>
+        </div>
       </div>
+
+      {view === "list" && (
+        <TaskListView tasks={tasks} onTaskClick={openEditModal} />
+      )}
+      {view === "kanban" && (
+        <TaskKanbanView tasks={tasks} onTaskClick={openEditModal} />
+      )}
+      {view === "calendar" && (
+        <TaskCalendarView tasks={tasks} onTaskClick={openEditModal} />
+      )}
+
+      <TaskModal />
+      <TaskFiltersModal />
     </div>
   );
 }
