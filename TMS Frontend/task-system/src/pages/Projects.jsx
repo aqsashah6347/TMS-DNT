@@ -5,7 +5,7 @@ import ProjectModal from "../features/projects/components/ProjectModal";
 import Button from "../components/ui/Button";
 
 export default function Projects() {
-  const { projects, openCreateModal, openEditModal } = useProjectStore();
+  const { projects, openCreateModal } = useProjectStore();
 
   return (
     <div>
@@ -23,11 +23,7 @@ export default function Projects() {
       ) : (
         <div className="grid grid-cols-3 gap-4">
           {projects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onClick={openEditModal}
-            />
+            <ProjectCard key={project.id} project={project} />
           ))}
         </div>
       )}

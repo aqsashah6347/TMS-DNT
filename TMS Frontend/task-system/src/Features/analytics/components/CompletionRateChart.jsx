@@ -7,8 +7,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import Card from "../../../components/ui/Card";
 
-// Placeholder — later from analyticsApi.getCompletionRate({ range: '30d' })
 const data = [
   { week: "W1", rate: 62 },
   { week: "W2", rate: 70 },
@@ -20,7 +20,7 @@ const data = [
 
 export default function CompletionRateChart() {
   return (
-    <div className="bg-surface rounded-card shadow-card p-6">
+    <Card className="p-6">
       <h3 className="font-semibold text-dark mb-4">
         Completion Rate Over Time
       </h3>
@@ -61,6 +61,6 @@ export default function CompletionRateChart() {
           </LineChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   );
 }

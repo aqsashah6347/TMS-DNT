@@ -1,29 +1,6 @@
 import { UserPlus, CheckCircle2, AlertCircle } from "lucide-react";
-
-// Placeholder — later from notificationApi.getRecent()
-const notifications = [
-  {
-    id: 1,
-    type: "assignment",
-    message: "You were assigned to 'Fix login bug'",
-    time: "10m ago",
-    read: false,
-  },
-  {
-    id: 2,
-    type: "status",
-    message: "'Update permissions' marked as Done",
-    time: "1h ago",
-    read: false,
-  },
-  {
-    id: 3,
-    type: "overdue",
-    message: "'Review proposal' is overdue",
-    time: "3h ago",
-    read: true,
-  },
-];
+import { useNavigate } from "react-router-dom";
+import { useNotificationStore } from "../../inbox/notificationStore";
 
 const iconMap = {
   assignment: { icon: UserPlus, color: "text-primary" },
@@ -32,14 +9,27 @@ const iconMap = {
 };
 
 export default function InboxPreview() {
+  const { notifications, markAsRead } = useNotificationStore();
+  const navigate = useNavigate();
+
+  function handleClick(n) {
+    markAsRead(n.id);
+    navigate("/inbox");
+  }
+
+  if (notifications.length === 0) {
+    return <p className="text-sm text-muted">You're all caught up 🎉</p>;
+  }
+
   return (
-    <div className="flex flex-col gap-3">
-      {notifications.map((n) => {
-        const { icon: Icon, color } = iconMap[n.type];
+    <div className="flex flex-col gap-1">
+      {notifications.slice(0, 4).map((n) => {
+        const { icon: Icon, color } = iconMap[n.type] || iconMap.status;
         return (
-          <div
+          <button
             key={n.id}
-            className={`flex gap-3 p-2 rounded-card ${!n.read ? "bg-bg" : ""}`}
+            onClick={() => handleClick(n)}
+            className={`w-full text-left flex gap-3 p-2 rounded-card hover:bg-primary-light/40 transition-colors ${!n.read ? "bg-bg" : ""}`}
           >
             <Icon size={16} className={`${color} shrink-0 mt-0.5`} />
             <div className="min-w-0">
@@ -49,10 +39,9 @@ export default function InboxPreview() {
             {!n.read && (
               <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1" />
             )}
-          </div>
+          </button>
         );
       })}
     </div>
   );
 }
-

@@ -6,20 +6,18 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import Card from "../../../components/ui/Card";
 
-// Placeholder — later from analyticsApi.getWorkloadDistribution()
 const data = [
   { name: "Frontend Squad", value: 45 },
   { name: "Design Team", value: 30 },
   { name: "Unassigned", value: 25 },
 ];
-
-// All colors pulled from your palette — teal, mint, and muted olive so it never clashes.
 const COLORS = ["#9DC0BC", "#CDF3D9", "#515A47"];
 
 export default function WorkloadDistribution() {
   return (
-    <div className="bg-surface rounded-card shadow-card p-6">
+    <Card className="p-6">
       <h3 className="font-semibold text-dark mb-4">Workload Distribution</h3>
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
@@ -49,6 +47,6 @@ export default function WorkloadDistribution() {
           </PieChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   );
 }

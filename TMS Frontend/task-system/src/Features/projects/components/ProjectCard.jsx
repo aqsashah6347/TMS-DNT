@@ -1,4 +1,6 @@
 import ProjectMembers from "./ProjectMembers";
+import Card from "../../../components/ui/Card";
+import { useProjectStore } from "../projectStore";
 
 const statusStyles = {
   planning: "bg-info text-info-text",
@@ -6,14 +8,24 @@ const statusStyles = {
   completed: "bg-success text-success-text",
 };
 
-export default function ProjectCard({ project, onClick }) {
+export default function ProjectCard({ project }) {
+  const openProjectView = useProjectStore((s) => s.openProjectView);
+
   return (
-    <div
-      onClick={() => onClick?.(project)}
-      className="bg-surface rounded-card shadow-card p-5 cursor-pointer hover:shadow-md transition-shadow flex flex-col gap-3"
+    <Card
+      hover
+      onClick={() => openProjectView(project)}
+      className="p-5 cursor-pointer flex flex-col gap-3 border-t-4"
+      style={{ borderTopColor: project.color }}
     >
       <div className="flex items-start justify-between gap-2">
-        <h4 className="text-base font-semibold text-dark">{project.name}</h4>
+        <div className="flex items-center gap-2">
+          <span
+            className="w-2.5 h-2.5 rounded-full shrink-0"
+            style={{ backgroundColor: project.color }}
+          />
+          <h4 className="text-base font-semibold text-dark">{project.name}</h4>
+        </div>
         <span
           className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize shrink-0 ${statusStyles[project.status]}`}
         >
@@ -32,8 +44,11 @@ export default function ProjectCard({ project, onClick }) {
         </div>
         <div className="h-1.5 bg-bg rounded-full overflow-hidden">
           <div
-            className="h-full bg-primary rounded-full transition-all"
-            style={{ width: `${project.progress}%` }}
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${project.progress}%`,
+              backgroundColor: project.color,
+            }}
           />
         </div>
       </div>
@@ -42,6 +57,6 @@ export default function ProjectCard({ project, onClick }) {
         <span className="text-[11px] text-muted">{project.teamName}</span>
         <ProjectMembers members={project.members} />
       </div>
-    </div>
+    </Card>
   );
 }

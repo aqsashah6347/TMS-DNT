@@ -1,13 +1,13 @@
 import { AlertTriangle, TrendingDown } from "lucide-react";
+import Card from "../../../components/ui/Card";
 
-// Placeholder — later from analyticsApi.getOverdueMetrics()
 const metrics = { totalOverdue: 7, avgDaysLate: 2.3, changeFromLastWeek: -18 };
 
 export default function OverdueMetrics() {
   const isImproving = metrics.changeFromLastWeek < 0;
 
   return (
-    <div className="bg-surface rounded-card shadow-card p-6">
+    <Card className="p-6">
       <h3 className="font-semibold text-dark mb-4">Overdue Metrics</h3>
 
       <div className="flex items-center gap-3 mb-4">
@@ -37,6 +37,6 @@ export default function OverdueMetrics() {
           {isImproving ? "improvement" : "increase"} vs last week
         </span>
       </div>
-    </div>
+    </Card>
   );
 }

@@ -40,3 +40,21 @@
 body {
   @apply bg-bg text-dark font-sans;
 }
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-gradient-bg {
+  background: linear-gradient(
+    120deg,
+    #9DC0BC 0%,
+    #CDF3D9 25%,
+    #515A47 50%,
+    #9DC0BC 75%,
+    #CDF3D9 100%
+  );
+  background-size: 300% 300%;
+  animation: gradientMove 12s ease infinite;
+}

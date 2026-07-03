@@ -1,11 +1,12 @@
 import { History } from "lucide-react";
 import { useAccessStore } from "../accessStore";
+import Card from "../../../components/ui/Card";
 
 export default function AuditLog() {
   const auditLog = useAccessStore((s) => s.auditLog);
 
   return (
-    <div className="bg-surface rounded-card shadow-card p-4">
+    <Card className="p-4">
       <div className="flex items-center gap-2 mb-3">
         <History size={16} className="text-muted" />
         <h4 className="text-sm font-semibold text-dark">Audit Log</h4>
@@ -23,6 +24,6 @@ export default function AuditLog() {
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

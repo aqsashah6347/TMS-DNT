@@ -1,21 +1,6 @@
 import { Flag } from "lucide-react";
-
-// Placeholder data — later this comes from taskApi.getTasks({ sort: 'priority' })
-const priorityTasks = [
-  { id: 1, title: "Fix login 2FA bug", priority: "critical", dueDate: "Today" },
-  {
-    id: 2,
-    title: "Review project proposal",
-    priority: "high",
-    dueDate: "Tomorrow",
-  },
-  {
-    id: 3,
-    title: "Update team permissions",
-    priority: "medium",
-    dueDate: "Jul 5",
-  },
-];
+import { useNavigate } from "react-router-dom";
+import { useTaskStore } from "../../tasks/taskStore";
 
 const priorityStyles = {
   critical: "bg-danger text-danger-text",
@@ -24,19 +9,36 @@ const priorityStyles = {
   low: "bg-primary-light text-dark",
 };
 
+const priorityRank = { critical: 0, high: 1, medium: 2, low: 3 };
+
 export default function PriorityTaskList() {
+  const { tasks, openTaskView } = useTaskStore();
+  const navigate = useNavigate();
+
+  const priorityTasks = [...tasks]
+    .sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority])
+    .slice(0, 4);
+
+  function handleClick(task) {
+    openTaskView(task);
+    navigate("/tasks");
+  }
+
+  if (priorityTasks.length === 0)
+    return <p className="text-sm text-muted">No tasks yet.</p>;
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {priorityTasks.map((task) => (
-        <div
+        <button
           key={task.id}
-          className="flex items-center justify-between gap-2 bg-bg rounded-card px-3 py-2"
+          onClick={() => handleClick(task)}
+          className="w-full flex items-center justify-between gap-2 bg-bg rounded-card px-3 py-2 hover:bg-primary-light/40 transition-colors text-left"
         >
           <div className="flex items-center gap-2 min-w-0">
             <Flag size={14} className="text-muted shrink-0" />
             <span className="text-sm text-dark truncate">{task.title}</span>
           </div>
-
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs text-muted">{task.dueDate}</span>
             <span
@@ -45,7 +47,7 @@ export default function PriorityTaskList() {
               {task.priority}
             </span>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );

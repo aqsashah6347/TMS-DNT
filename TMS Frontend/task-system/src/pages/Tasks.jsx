@@ -14,14 +14,8 @@ const viewOptions = [
 ];
 
 export default function Tasks() {
-  const {
-    view,
-    setView,
-    openCreateModal,
-    openEditModal,
-    openFiltersModal,
-    getFilteredTasks,
-  } = useTaskStore();
+  const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
+    useTaskStore();
   const tasks = getFilteredTasks();
 
   return (
@@ -52,15 +46,9 @@ export default function Tasks() {
         </div>
       </div>
 
-      {view === "list" && (
-        <TaskListView tasks={tasks} onTaskClick={openEditModal} />
-      )}
-      {view === "kanban" && (
-        <TaskKanbanView tasks={tasks} onTaskClick={openEditModal} />
-      )}
-      {view === "calendar" && (
-        <TaskCalendarView tasks={tasks} onTaskClick={openEditModal} />
-      )}
+      {view === "list" && <TaskListView tasks={tasks} />}
+      {view === "kanban" && <TaskKanbanView tasks={tasks} />}
+      {view === "calendar" && <TaskCalendarView tasks={tasks} />}
 
       <TaskModal />
       <TaskFiltersModal />

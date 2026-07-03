@@ -22,7 +22,7 @@ export default function TaskKanbanView({ tasks, onTaskClick }) {
             </div>
             <div className="flex flex-col gap-2">
               {colTasks.map((task) => (
-                <TaskCard key={task.id} task={task} onClick={onTaskClick} />
+                <TaskCard key={task.id} task={task} />
               ))}
               {colTasks.length === 0 && (
                 <p className="text-xs text-muted text-center py-4">No tasks</p>
