@@ -2,14 +2,18 @@
 
 @theme {
   /* Backgrounds */
-  --color-bg: #F9F3F1;
-  --color-surface: #FFFFFF;
+  --color-bg: #F2F6F5;       /* Mint-tinted body */
+  --color-surface: #FFFFFF;  /* White for dashboard cards */
+  --color-topbar: #FFFFFF;   /* Top bar header background */
+
+  /* Sidebar Specific Color */
+  --color-sidebar: #515A47;  /* Lock your sidebar exactly to your sage green */
 
   /* Brand / primary */
   --color-primary: #9DC0BC;
   --color-primary-light: #CDF3D9;
 
-  /* Dark accents */
+  /* Dark accents & borders */
   --color-dark: #001021;
   --color-muted: #515A47;
 
@@ -23,9 +27,11 @@
   --color-info: #9DC0BC;
   --color-info-text: #001021;
 
-  /* Layout */
+  /* Layout Details */
   --radius-card: 16px;
-  --shadow-card: 0 2px 12px rgba(0, 16, 33, 0.06);
+  --shadow-card: 0 10px 30px -4px rgba(0, 16, 33, 0.04), 
+                 0 4px 12px -2px rgba(0, 16, 33, 0.03), 
+                 0 0 1px 0 rgba(81, 90, 71, 0.12);
 
   /* Type */
   --font-sans: 'Inter', system-ui, sans-serif;

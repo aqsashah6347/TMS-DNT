@@ -3,7 +3,7 @@
 
 export const colors = {
   // Backgrounds
-  bg: "#F9F3F1", // main app background — warm off-white
+  bg: "#F2F6F5", // main app background — warm off-white
   surface: "#FFFFFF", // cards, modals, panels sit on pure white above bg
 
   // Brand / primary
