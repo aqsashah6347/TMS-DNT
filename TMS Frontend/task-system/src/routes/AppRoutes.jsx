@@ -1,7 +1,8 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
 
-// Lazy-loaded pages — each one is a separate chunk, only fetched when visited
+const Login = lazy(() => import("../pages/Login"));
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Tasks = lazy(() => import("../pages/Tasks"));
 const Projects = lazy(() => import("../pages/Projects"));
@@ -24,15 +25,81 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/teams" element={<Teams />} />
-        <Route path="/inbox" element={<Inbox />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/access" element={<Access />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute>
+              <Tasks />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute>
+              <Projects />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teams"
+          element={
+            <ProtectedRoute>
+              <Teams />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inbox"
+          element={
+            <ProtectedRoute>
+              <Inbox />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute adminOnly>
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/access"
+          element={
+            <ProtectedRoute adminOnly>
+              <Access />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Suspense>
   );
