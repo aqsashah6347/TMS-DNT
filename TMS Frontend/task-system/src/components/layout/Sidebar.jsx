@@ -1,14 +1,8 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
-  CheckSquare,
-  FolderKanban,
-  Users,
-  Inbox,
-  BarChart3,
-  ShieldCheck,
-  KeyRound,
-  Settings,
+  LayoutDashboard, CheckSquare, FolderKanban, Users, Inbox,
+  BarChart3, ShieldCheck, KeyRound, Settings, ChevronRight,
 } from "lucide-react";
 
 const navItems = [
@@ -26,66 +20,64 @@ const adminItems = [
 ];
 
 export default function Sidebar({ isAdmin = false }) {
+  const [expanded, setExpanded] = useState(true);
+
   const linkClass = ({ isActive }) =>
-    `group relative flex items-center gap-3 px-4 py-2.5 rounded-card text-sm font-medium transition-all duration-200 ${
+    `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
       isActive
-        ? "bg-white/10 text-white shadow-sm backdrop-blur-md"
-        : "text-white/60 hover:bg-white/5 hover:text-white"
+        ? "bg-primary/15 text-primary shadow-[0_0_0_1px_rgba(22,163,74,0.25),0_0_16px_-2px_rgba(22,163,74,0.35)]"
+        : "text-dark/60 hover:bg-white/40 hover:text-dark"
     }`;
 
   return (
-    /* Uses bg-sidebar now so it is completely independent of other elements */
-    <aside className="w-64 h-screen bg-sidebar flex flex-col py-6 px-3 shadow-xl">
-      <div className="px-4 mb-8 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-primary-light flex items-center justify-center shadow-sm">
-          <span className="text-dark font-bold text-sm">T</span>
-        </div>
-        <h1 className="text-lg font-bold text-white tracking-tight">TMS</h1>
-      </div>
+    <aside
+      className={`glass-nav fixed left-5 top-1/2 -translate-y-1/2 z-20 flex flex-col rounded-[32px] py-5 transition-all duration-500 ease-out ${
+        expanded ? "w-60 px-4" : "w-[68px] px-2 items-center"
+      }`}
+    >
+      <div className="glass-content flex flex-col h-full w-full">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className={`flex items-center justify-center w-9 h-9 rounded-full hover:bg-white/50 transition-all mb-4 ${
+            expanded ? "self-end" : "self-center"
+          }`}
+        >
+          <ChevronRight size={16} className={`text-dark/60 transition-transform duration-500 ${expanded ? "rotate-180" : ""}`} />
+        </button>
 
-      <nav className="flex-1 flex flex-col gap-1">
-        {navItems.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} className={linkClass}>
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-primary-light" />
-                )}
-                <Icon size={18} />
-                {label}
-              </>
-            )}
-          </NavLink>
-        ))}
-
-        {isAdmin && (
-          <>
-            <div className="my-3 border-t border-white/10" />
-            <p className="px-4 text-[10px] font-semibold uppercase tracking-wider text-white/30 mb-1">
-              Administration
-            </p>
-            {adminItems.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-primary-light" />
-                    )}
-                    <Icon size={18} />
-                    {label}
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </>
+        {expanded && (
+          <div className="px-1 mb-4">
+            <p className="text-xs font-semibold text-dark/40 tracking-wide">TMS</p>
+          </div>
         )}
-      </nav>
 
-      <div className="border-t border-white/10 pt-3">
-        <NavLink to="/settings" className={linkClass}>
-          <Settings size={18} />
-          Settings
-        </NavLink>
+        <nav className="flex flex-col gap-1.5">
+          {navItems.map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} className={linkClass} title={!expanded ? label : undefined}>
+              <Icon size={18} className="shrink-0" />
+              {expanded && <span className="truncate">{label}</span>}
+            </NavLink>
+          ))}
+
+          {isAdmin && (
+            <>
+              <div className="my-2 border-t border-dark/10" />
+              {adminItems.map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} className={linkClass} title={!expanded ? label : undefined}>
+                  <Icon size={18} className="shrink-0" />
+                  {expanded && <span className="truncate">{label}</span>}
+                </NavLink>
+              ))}
+            </>
+          )}
+        </nav>
+
+        <div className="mt-auto pt-3 border-t border-dark/10">
+          <NavLink to="/settings" className={linkClass} title={!expanded ? "Settings" : undefined}>
+            <Settings size={18} className="shrink-0" />
+            {expanded && <span>Settings</span>}
+          </NavLink>
+        </div>
       </div>
     </aside>
   );
