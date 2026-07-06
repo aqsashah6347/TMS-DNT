@@ -9,9 +9,9 @@ export function Input({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label className="text-xs font-medium text-muted">
+        <label className="text-xs font-medium text-white/50 uppercase tracking-wide">
           {label}
-          {required && <span className="text-danger-text"> *</span>}
+          {required && <span className="text-red-400"> *</span>}
         </label>
       )}
       <input
@@ -20,7 +20,7 @@ export function Input({
         onChange={onChange}
         placeholder={placeholder}
         required={required}
-        className="bg-bg rounded-card px-3 py-2 text-sm text-dark outline-none focus:ring-2 focus:ring-primary placeholder:text-muted"
+        className="glass-input"
       />
     </div>
   );
@@ -30,14 +30,16 @@ export function Textarea({ label, value, onChange, placeholder, rows = 3 }) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label className="text-xs font-medium text-muted">{label}</label>
+        <label className="text-xs font-medium text-white/50 uppercase tracking-wide">
+          {label}
+        </label>
       )}
       <textarea
         value={value}
         onChange={onChange}
         placeholder={placeholder}
         rows={rows}
-        className="bg-bg rounded-card px-3 py-2 text-sm text-dark outline-none focus:ring-2 focus:ring-primary placeholder:text-muted resize-none"
+        className="glass-textarea"
       />
     </div>
   );

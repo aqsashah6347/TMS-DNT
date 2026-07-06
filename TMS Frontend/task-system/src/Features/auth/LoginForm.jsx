@@ -45,7 +45,11 @@ export default function LoginForm() {
         onChange={(e) => setForm({ ...form, password: e.target.value })}
         placeholder="••••••••"
       />
-      <Button variant="primary" type="submit" className="mt-2">
+      <Button
+        variant="primary"
+        type="submit"
+        className="mt-2 justify-center w-full"
+      >
         Continue
       </Button>
     </form>

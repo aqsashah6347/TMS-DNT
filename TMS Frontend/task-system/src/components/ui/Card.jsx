@@ -1,9 +1,15 @@
-export default function Card({ children, className = "", hover = true, onClick, style }) {
+export default function Card({
+  children,
+  className = "",
+  hover = true,
+  onClick,
+  style,
+}) {
   return (
     <div
       onClick={onClick}
       style={style}
-      className={`glass-card relative ${hover ? "glass-card-hover" : ""} ${className}`}
+      className={`glass glass-card ${hover ? "glass-card-hover" : ""} ${className}`}
     >
       <div className="glass-content">{children}</div>
     </div>
