@@ -9,53 +9,67 @@ import Card from "../components/ui/Card";
 export default function Dashboard() {
   return (
     <div className="grid grid-cols-3 gap-4">
-      {/* Banner */}
-      <div className="col-span-2 rounded-card p-6 bg-gradient-to-br from-primary via-primary to-primary-light relative overflow-hidden">
-        <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10" />
-        <div className="absolute -right-2 top-16 w-24 h-24 rounded-full bg-white/10" />
-        <h2 className="relative text-2xl font-bold text-dark mb-1">
-          Welcome back, Aqsa 👋
-        </h2>
-        <p className="relative text-dark/70 text-sm mb-6">
-          Here's what's happening across your projects today.
-        </p>
+      <div className="glass col-span-2 rounded-[24px] p-8 cascade-in">
+        <div className="glass-content">
+          <span className="glass-badge glass-badge--primary mb-3 inline-flex">
+            <span className="glass-badge__dot" /> Dashboard Overview
+          </span>
+          <h2
+            className="text-3xl text-white mb-1"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Welcome back, Aqsa
+          </h2>
+          <p className="text-white/50 text-sm mb-6">
+            Here's what's happening across your projects today.
+          </p>
 
-        <div className="relative grid grid-cols-3 gap-4">
-          <StatBox label="Tasks completed" value="42" />
-          <StatBox label="Overdue tasks" value="3" accent="danger" />
-          <StatBox label="Active projects" value="7" />
+          <div className="grid grid-cols-3 gap-4">
+            <StatBox label="Tasks completed" value="42" />
+            <StatBox label="Overdue tasks" value="3" accent="danger" />
+            <StatBox label="Active projects" value="7" />
+          </div>
         </div>
       </div>
 
-      {/* Top-right: date/time + calendar, stacked above Inbox */}
-      <Card className="p-4 flex flex-col gap-4">
+      <Card
+        className="flex flex-col gap-4 cascade-in"
+        style={{ animationDelay: "0.1s" }}
+      >
         <DateTimeBox />
         <div>
-          <h3 className="font-semibold text-dark text-sm mb-3">Calendar</h3>
+          <h3 className="text-sm font-semibold text-white mb-3">Calendar</h3>
           <CalendarPreview />
         </div>
       </Card>
 
-      {/* Task completion chart */}
-      <Card className="col-span-2 p-6">
-        <h3 className="font-semibold text-dark mb-4">Task Completion</h3>
+      <Card
+        className="col-span-2 cascade-in"
+        style={{ animationDelay: "0.15s" }}
+      >
+        <h3 className="text-sm font-semibold text-white mb-4">
+          Task Completion
+        </h3>
         <TaskCompletionChart />
       </Card>
 
-      {/* Inbox — directly below the calendar card */}
-      <Card className="p-6">
-        <h3 className="font-semibold text-dark mb-4">Inbox</h3>
+      <Card className="cascade-in" style={{ animationDelay: "0.2s" }}>
+        <h3 className="text-sm font-semibold text-white mb-4">Inbox</h3>
         <InboxPreview />
       </Card>
 
-      {/* Priority + Overdue */}
-      <Card className="p-6">
-        <h3 className="font-semibold text-dark mb-4">Priority Tasks</h3>
+      <Card className="cascade-in" style={{ animationDelay: "0.25s" }}>
+        <h3 className="text-sm font-semibold text-white mb-4">
+          Priority Tasks
+        </h3>
         <PriorityTaskList />
       </Card>
 
-      <Card className="col-span-2 p-6">
-        <h3 className="font-semibold text-dark mb-4">Overdue</h3>
+      <Card
+        className="col-span-2 cascade-in"
+        style={{ animationDelay: "0.3s" }}
+      >
+        <h3 className="text-sm font-semibold text-white mb-4">Overdue</h3>
         <OverdueTasks />
       </Card>
     </div>
@@ -63,11 +77,18 @@ export default function Dashboard() {
 }
 
 function StatBox({ label, value, accent }) {
-  const valueColor = accent === "danger" ? "text-danger-text" : "text-dark";
+  const valueColor = accent === "danger" ? "text-red-400" : "text-white";
   return (
-    <div className="bg-white/50 backdrop-blur-sm rounded-card p-4">
-      <p className={`text-2xl font-bold ${valueColor}`}>{value}</p>
-      <p className="text-xs text-dark/60 mt-1">{label}</p>
+    <div className="glass rounded-2xl p-4">
+      <div className="glass-content">
+        <p
+          className={`text-2xl font-semibold ${valueColor}`}
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {value}
+        </p>
+        <p className="text-xs text-white/50 mt-1">{label}</p>
+      </div>
     </div>
   );
 }

@@ -2,8 +2,6 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useEffect } from "react";
 
-// Uses a portal so the modal always renders at document.body,
-// avoiding the overflow-clipping bugs you hit before with nested containers.
 export default function Modal({
   isOpen,
   onClose,
@@ -22,14 +20,15 @@ export default function Modal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-dark/40" onClick={onClose} />
-      <div
-        className={`relative bg-surface rounded-card shadow-card w-full ${width} mx-4 max-h-[90vh] overflow-y-auto`}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-primary-light">
-          <h3 className="text-lg font-semibold text-dark">{title}</h3>
-          <button onClick={onClose} className="text-muted hover:text-dark">
+    <div className="glass-modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className={`glass-modal relative w-full ${width} mx-4`}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <button
+            onClick={onClose}
+            className="text-white/50 hover:text-white transition-colors"
+          >
             <X size={20} />
           </button>
         </div>

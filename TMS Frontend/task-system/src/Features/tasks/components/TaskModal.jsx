@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Modal from "../../../components/ui/Modal";
-import { Input, Textarea } from "../../../components/ui/Input";
-import { Dropdown } from "../../../components/ui/Dropdown";
+import { Input, Textarea } from "../../../components/ui/input";
+import { Dropdown } from "../../../components/ui/dropdown";
 import Button from "../../../components/ui/Button";
 import { useTaskStore } from "../taskStore";
 import {
@@ -24,18 +24,18 @@ const statusOptions = ["backlog", "in progress", "review", "done"].map((v) => ({
   label: v,
 }));
 
-const priorityStyles = {
-  critical: "bg-danger text-danger-text",
-  high: "bg-warning text-warning-text",
-  medium: "bg-info text-info-text",
-  low: "bg-primary-light text-dark",
-};
+// const priorityStyles = {
+//   critical: "bg-danger text-danger-text",
+//   high: "bg-warning text-warning-text",
+//   medium: "bg-info text-info-text",
+//   low: "bg-primary-light text-dark",
+// };
 
-const statusStyles = {
-  backlog: "bg-bg text-muted",
-  "in progress": "bg-info text-info-text",
-  review: "bg-warning text-warning-text",
-  done: "bg-success text-success-text",
+const priorityBadgeMap = {
+  critical: "glass-badge--danger",
+  high: "glass-badge--amber",
+  medium: "glass-badge--violet",
+  low: "glass-badge--primary",
 };
 
 const emptyForm = {
@@ -64,19 +64,18 @@ export default function TaskModal() {
     pendingProjectId,
   } = useTaskStore();
 
-  const [form, setForm] = useState(emptyForm);
-
-  useEffect(() => {
-    if (editingTask) {
-      setForm({ ...editingTask });
-    } else {
-      setForm({ ...emptyForm, projectId: pendingProjectId || null });
-    }
-  }, [editingTask, isTaskModalOpen, pendingProjectId]);
+  // key changes whenever a different task (or "new task") is being edited,
+  // so React resets the form's internal state automatically — no effect needed.
+  const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
+  const [form, setForm] = useState(() =>
+    editingTask
+      ? { ...editingTask }
+      : { ...emptyForm, projectId: pendingProjectId || null },
+  );
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!form.title.trim()) return;
+    if (!(form.title || "").trim()) return;
 
     if (editingTask) {
       updateTask(editingTask.id, form);
@@ -100,7 +99,12 @@ export default function TaskModal() {
       : editingTask.title;
 
   return (
-    <Modal isOpen={isTaskModalOpen} onClose={closeTaskModal} title={title}>
+    <Modal
+      key={formKey}
+      isOpen={isTaskModalOpen}
+      onClose={closeTaskModal}
+      title={title}
+    >
       {isEditing ? (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
@@ -193,14 +197,12 @@ export default function TaskModal() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 flex-wrap">
               <span
-                className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${priorityStyles[editingTask.priority]}`}
+                className={`glass-badge ${priorityBadgeMap[editingTask.priority]}`}
               >
                 <Flag size={10} className="inline mr-1 -mt-0.5" />
                 {editingTask.priority}
               </span>
-              <span
-                className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${statusStyles[editingTask.status]}`}
-              >
+              <span className="glass-badge glass-badge--violet">
                 {editingTask.status}
               </span>
             </div>
