@@ -18,9 +18,9 @@ export default function PasswordSettings() {
   }
 
   return (
-    <Card className="p-6 max-w-md">
+    <Card className="max-w-md">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <h3 className="font-semibold text-dark">Change Password</h3>
+        <h3 className="text-sm font-semibold text-white">Change Password</h3>
         <Input
           label="Current password"
           type="password"
@@ -39,7 +39,7 @@ export default function PasswordSettings() {
           value={form.confirm}
           onChange={(e) => setForm({ ...form, confirm: e.target.value })}
         />
-        {error && <p className="text-xs text-danger-text">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
         <Button variant="primary" type="submit" className="self-start">
           Update Password
         </Button>

@@ -3,6 +3,7 @@ import { Search, Bell } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useNotificationStore } from "../../features/inbox/notificationStore";
 import ProfileMenu from "./ProfileMenu";
+import Logo from "./Logo";
 import { useNavigate } from "react-router-dom";
 
 export default function Header() {
@@ -26,17 +27,21 @@ export default function Header() {
 
   return (
     <>
-      <header className="glass fixed top-5 left-28 right-5 z-20 rounded-full px-3 py-2 flex items-center justify-between">
-        <div className="glass-content flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 w-80">
-          <Search size={16} className="text-white/40" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="bg-transparent outline-none text-sm text-white placeholder:text-white/40 w-full"
-          />
+      <header className="hash-bar fixed top-0 left-0 right-0 z-30 h-16 flex items-center justify-between px-6">
+        <Logo size={26} />
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-emerald-50 rounded-full px-4 py-2 w-80 shadow-[0_2px_8px_rgba(0,0,0,0.25)]">
+            <Search size={16} className="text-emerald-800/50" />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="bg-transparent outline-none text-sm text-emerald-950 placeholder:text-emerald-800/40 w-full"
+            />
+          </div>
         </div>
 
-        <div className="glass-content flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <div className="relative" ref={bellRef}>
             <button
               onClick={() => setBellOpen(!bellOpen)}

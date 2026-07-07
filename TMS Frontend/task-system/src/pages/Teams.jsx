@@ -10,7 +10,12 @@ export default function Teams() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-dark">Teams</h2>
+        <h2
+          className="text-2xl text-white"
+          style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+        >
+          Teams
+        </h2>
         <Button variant="primary" onClick={openCreateModal}>
           <Plus size={14} className="inline mr-1.5 -mt-0.5" /> New Team
         </Button>

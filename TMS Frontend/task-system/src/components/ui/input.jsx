@@ -5,6 +5,7 @@ export function Input({
   onChange,
   placeholder,
   required = false,
+  className = "",
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -20,7 +21,7 @@ export function Input({
         onChange={onChange}
         placeholder={placeholder}
         required={required}
-        className="glass-input"
+        className={className || "glass-input"}
       />
     </div>
   );

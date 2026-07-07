@@ -11,9 +11,14 @@ export default function Inbox() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-dark">Inbox</h2>
+          <h2
+            className="text-2xl text-white"
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+          >
+            Inbox
+          </h2>
           {count > 0 && (
-            <p className="text-xs text-muted mt-1">{count} unread</p>
+            <p className="text-xs text-white/50 mt-1">{count} unread</p>
           )}
         </div>
         {count > 0 && (
