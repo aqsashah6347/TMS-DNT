@@ -9,7 +9,7 @@ import Card from "../components/ui/Card";
 export default function Dashboard() {
   return (
     <div className="grid grid-cols-3 gap-4">
-      <div className="glass col-span-2 rounded-[24px] p-8 cascade-in">
+      <div className="glass col-span-2 rounded-[24px] px-8 py-5 cascade-in">
         <div className="glass-content">
           <span className="glass-badge glass-badge--primary mb-3 inline-flex">
             <span className="glass-badge__dot" /> Dashboard Overview
@@ -17,11 +17,11 @@ export default function Dashboard() {
           <h2 className="text-2xl text-white" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
             Welcome back, Aqsa
           </h2>
-          <p className="text-white/50 text-sm mb-6">
+          <p className="text-white/50 text-sm mb-4">
             Here's what's happening across your projects today.
           </p>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <StatBox label="Tasks completed" value="42" />
             <StatBox label="Overdue tasks" value="3" accent="danger" />
             <StatBox label="Active projects" value="7" />
@@ -30,7 +30,7 @@ export default function Dashboard() {
       </div>
 
       <div
-        className="solid-card p-6 flex flex-col gap-4 cascade-in"
+  className="solid-card p-4 flex items-center justify-center cascade-in"
         style={{ animationDelay: "0.1s" }}
       >
        <CalendarPreview />
@@ -72,7 +72,7 @@ export default function Dashboard() {
 function StatBox({ label, value, accent }) {
   const valueColor = accent === "danger" ? "text-red-400" : "text-white";
   return (
-    <div className="glass rounded-2xl p-4">
+    <div className="glass rounded-2xl p-3">
       <div className="glass-content">
         <p
           className={`text-2xl font-semibold ${valueColor}`}
