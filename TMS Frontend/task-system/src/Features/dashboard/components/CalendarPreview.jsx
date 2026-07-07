@@ -1,47 +1,43 @@
-// Lightweight week-strip preview — no calendar library needed, keeps the dashboard fast.
-// Full calendar view (for the Tasks module) will be a separate, heavier component.
-
-const today = new Date();
-const weekDays = Array.from({ length: 7 }, (_, i) => {
-  const d = new Date(today);
-  d.setDate(today.getDate() - today.getDay() + i);
-  return d;
-});
-
-// Placeholder — later from taskApi.getTasks({ dueThisWeek: true })
-const taskCountByDay = { 1: 2, 3: 1, 5: 3 }; // keyed by day index (0=Sun)
+import { useEffect, useState } from "react";
+import Calendar from "react-calendar";
+//import "react-calendar/dist/Calendar.css";
 
 export default function CalendarPreview() {
-  return (
-    <div className="flex justify-between">
-      {weekDays.map((date, i) => {
-        const isToday = date.toDateString() === today.toDateString();
-        const count = taskCountByDay[i] || 0;
+  const [date, setDate] = useState(new Date());
+  const [now, setNow] = useState(new Date());
 
-        return (
-          <div key={i} className="flex flex-col items-center gap-1.5">
-            <span className="text-[10px] text-muted uppercase">
-              {date
-                .toLocaleDateString("en-US", { weekday: "short" })
-                .slice(0, 2)}
-            </span>
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                isToday ? "bg-primary text-dark" : "text-dark"
-              }`}
-            >
-              {date.getDate()}
-            </div>
-            {count > 0 && (
-              <div className="flex gap-0.5">
-                {Array.from({ length: Math.min(count, 3) }).map((_, j) => (
-                  <span key={j} className="w-1 h-1 rounded-full bg-primary" />
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="calendar-widget">
+      <div className="calendar-header">
+        <div>
+          <h3>
+            {now.toLocaleDateString(undefined, {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </h3>
+
+          <span>
+            {now.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </span>
+        </div>
+      </div>
+
+      <Calendar onChange={setDate} value={date} className="tms-calendar" />
     </div>
   );
 }

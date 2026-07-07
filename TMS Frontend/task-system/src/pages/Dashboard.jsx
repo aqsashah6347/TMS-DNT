@@ -3,7 +3,7 @@ import PriorityTaskList from "../features/dashboard/components/PriorityTaskList"
 import InboxPreview from "../features/dashboard/components/InboxPreview";
 import OverdueTasks from "../features/dashboard/components/OverdueTasks";
 import CalendarPreview from "../features/dashboard/components/CalendarPreview";
-import DateTimeBox from "../features/dashboard/components/DateTimeBox";
+//import DateTimeBox from "../features/dashboard/components/DateTimeBox";
 import Card from "../components/ui/Card";
 
 export default function Dashboard() {
@@ -33,11 +33,7 @@ export default function Dashboard() {
         className="solid-card p-6 flex flex-col gap-4 cascade-in"
         style={{ animationDelay: "0.1s" }}
       >
-        <DateTimeBox />
-        <div>
-          <h3 className="text-sm font-semibold text-white mb-3">Calendar</h3>
-          <CalendarPreview />
-        </div>
+       <CalendarPreview />
       </div>
 
       <div
