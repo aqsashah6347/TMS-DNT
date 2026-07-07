@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import Calendar from "react-calendar";
-//import "react-calendar/dist/Calendar.css";
 
 export default function CalendarPreview() {
   const [date, setDate] = useState(new Date());
   const [now, setNow] = useState(new Date());
+  const [activeStartDate, setActiveStartDate] = useState(new Date());
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -14,9 +14,33 @@ export default function CalendarPreview() {
     return () => clearInterval(timer);
   }, []);
 
+  // Returns true if a tile is today's date
+  const isToday = (tileDate) => {
+    const today = new Date();
+
+    return (
+      tileDate.getDate() === today.getDate() &&
+      tileDate.getMonth() === today.getMonth() &&
+      tileDate.getFullYear() === today.getFullYear()
+    );
+  };
+
+  // Jump back to today's month and select today's date
+  const goToToday = () => {
+    const today = new Date();
+
+    setNow(today);
+    setDate(today);
+    setActiveStartDate(today);
+  };
+
   return (
     <div className="calendar-widget">
-      <div className="calendar-header">
+      <div
+        className="calendar-header"
+        onClick={goToToday}
+        title="Go to Today"
+      >
         <div>
           <h3>
             {now.toLocaleDateString(undefined, {
@@ -37,7 +61,18 @@ export default function CalendarPreview() {
         </div>
       </div>
 
-      <Calendar onChange={setDate} value={date} className="tms-calendar" />
+      <Calendar
+        className="tms-calendar"
+        value={date}
+        activeStartDate={activeStartDate}
+        onChange={(value) => setDate(value)}
+        onActiveStartDateChange={({ activeStartDate }) =>
+          setActiveStartDate(activeStartDate)
+        }
+        tileClassName={({ date, view }) =>
+          view === "month" && isToday(date) ? "today-tile" : null
+        }
+      />
     </div>
   );
 }

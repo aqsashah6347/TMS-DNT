@@ -817,137 +817,117 @@
   outline: 2px solid #fb923c;
   outline-offset: 2px;
 }
-.tms-calendar{
-    width:100%;
-    background:transparent;
-    border:none;
-    color:white;
-    font-family:inherit;
+.calendar-header {
+    background: linear-gradient(135deg, #ff9d3c, #ff7b00);
+    padding: 24px;
+    border-radius: 18px 18px 0 0;
+    color: white;
 }
 
-.tms-calendar *{
-    box-sizing:border-box;
-}
-
-.tms-calendar .react-calendar__navigation{
-
-    display:flex;
-
-    margin:20px;
-
-    gap:8px;
-
-}
-
-.tms-calendar .react-calendar__navigation button{
-
-    background:transparent;
-
-    color:#fb923c;
-
-    border:none;
-
-    border-radius:10px;
-
-    height:38px;
-
-    min-width:38px;
-
-    cursor:pointer;
-
-    font-weight:600;
-
-}
-
-.tms-calendar .react-calendar__navigation button:hover{
-
-    background:rgba(251,146,60,.15);
-
-}
-
-.tms-calendar .react-calendar__month-view__weekdays{
-
-    margin:0 18px 10px;
-
-}
-
-.tms-calendar .react-calendar__month-view__weekdays__weekday{
-
-    text-align:center;
-
-    color:#fb923c;
-
-    font-size:12px;
-
+.calendar-header h3{
+    margin:0;
+    font-size:1.45rem;
     font-weight:700;
-
-    text-decoration:none;
-
 }
 
-.tms-calendar abbr{
+.calendar-header {
+    background: linear-gradient(
+        135deg,
+        rgba(251,146,60,.22),
+        rgba(194,65,12,.22)
+    );
 
-    text-decoration:none;
+    backdrop-filter: var(--blur-md);
+    -webkit-backdrop-filter: var(--blur-md);
 
+    border: 1px solid rgba(251,146,60,.28);
+
+    box-shadow:
+        inset 0 1px rgba(255,255,255,.08),
+        0 10px 30px rgba(251,146,60,.10);
+
+    padding:24px;
+    border-radius:18px 18px 0 0;
+}
+.tms-calendar .react-calendar__navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
 }
 
-.tms-calendar .react-calendar__month-view__days{
+.tms-calendar .react-calendar__navigation button {
+    min-width: 48px;
+    height: 48px;
 
-    padding:0 18px 18px;
+    font-size: 1.25rem;
+    font-weight: 500;
 
+    color: var(--accent-primary);
+
+    border-radius: 12px;
+
+    transition: .2s;
+}
+.tms-calendar .react-calendar__navigation__label {
+    flex: 1;
+
+    font-size: 1.2rem;
+    font-weight: 500;
+
+    text-align: center;
+}
+.tms-calendar .react-calendar__month-view__weekdays{
+    font-size:0.95rem;
+    font-weight:700;
+    color: var(--accent-primary);
+    text-transform:none;
+}
+.tms-calendar .react-calendar__tile{
+    height:56px;
+    font-size:1rem;
+    font-weight:600;
+    border-radius:14px;
+}
+.react-calendar__tile--active{
+    background:#ff9d3c !important;
+    color:#000 !important;
+    font-weight:700;
+}
+
+.react-calendar__tile--active:hover{
+    color:#000 !important;
+}
+.today-tile{
+    border:2px solid #ff9d3c !important;
+    border-radius:14px;
+}
+.today-tile.react-calendar__tile--active{
+    border:2px solid #ff9d3c;
+}
+.react-calendar__tile:hover{
+    background:#2d2d2d;
+}
+.calendar-header {
+    cursor: pointer;
+}
+.calendar-header:hover {
+    filter: brightness(1.05);
+}
+.calendar-widget{
+    width:100%;
+    max-width:320px;
+    margin:auto;
+}
+
+.tms-calendar{
+    font-size:.92rem;
 }
 
 .tms-calendar .react-calendar__tile{
-
-    background:transparent;
-
-    color:white;
-
-    border:none;
-
-    border-radius:12px;
-
-    height:52px;
-
-    font-size:14px;
-
-    transition:.25s;
-
+    height:46px;
 }
 
-.tms-calendar .react-calendar__tile:hover{
-
-    background:rgba(251,146,60,.18);
-
-}
-
-.tms-calendar .react-calendar__tile--now{
-
-    background:rgba(251,146,60,.22);
-
-    color:#fb923c;
-
-    font-weight:700;
-
-}
-
-.tms-calendar .react-calendar__tile--active{
-
-    background:#fb923c !important;
-
-    color:white !important;
-
-}
-
-.tms-calendar .react-calendar__month-view__days__day--neighboringMonth{
-
-    color:rgba(255,255,255,.28);
-
-}
-.calendar-widget{
-    overflow:hidden;
-    border-radius:24px;
-    background:#1b1b1d;
-    border:1px solid rgba(251,146,60,.18);
-    width:100%;
+.calendar-header{
+    padding:18px 20px;
 }
