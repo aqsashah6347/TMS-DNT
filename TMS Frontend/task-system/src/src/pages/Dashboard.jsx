@@ -23,33 +23,24 @@ export default function Dashboard() {
       {/* ---- Left column (2/3 width) ---- */}
       <div className="col-span-2 flex flex-col gap-4">
         <div className="glass rounded-[24px] p-8 cascade-in">
-          <div className="glass-content flex flex-col md:flex-row gap-6 md:gap-8">
-            <div className="flex-1 min-w-0">
-              <span className="glass-badge glass-badge--primary mb-3 inline-flex">
-                <span className="glass-badge__dot" /> Dashboard Overview
-              </span>
-              <h2
-                className="text-2xl text-white"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-              >
-                Welcome back, Aqsa
-              </h2>
-              <p className="text-white/50 text-sm mb-6">
-                Here's what's happening across your projects today.
-              </p>
+          <div className="glass-content">
+            <span className="glass-badge glass-badge--primary mb-3 inline-flex">
+              <span className="glass-badge__dot" /> Dashboard Overview
+            </span>
+            <h2
+              className="text-2xl text-white"
+              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+            >
+              Welcome back, Aqsa
+            </h2>
+            <p className="text-white/50 text-sm mb-6">
+              Here's what's happening across your projects today.
+            </p>
 
-              <div className="grid grid-cols-3 gap-4">
-                <StatBox label="Tasks completed" value={completed} />
-                <StatBox label="Active projects" value="7" />
-                <StatBox label="Overdue tasks" value="3" accent="danger" />
-              </div>
-            </div>
-
-            <div className="md:w-52 shrink-0 md:border-l md:border-white/10 md:pl-8">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">
-                Quick Actions
-              </h3>
-              <QuickActions columns={2} />
+            <div className="grid grid-cols-3 gap-4">
+              <StatBox label="Tasks completed" value={completed} />
+              <StatBox label="Active projects" value="7" />
+              <StatBox label="Overdue tasks" value="3" accent="danger" />
             </div>
           </div>
         </div>
@@ -124,6 +115,11 @@ export default function Dashboard() {
             </button>
           </div>
           <InboxPreview />
+        </Card>
+
+        <Card className="cascade-in" style={{ animationDelay: "0.2s" }}>
+          <h3 className="text-sm font-semibold text-white mb-4">Quick Actions</h3>
+          <QuickActions />
         </Card>
       </div>
     </div>
