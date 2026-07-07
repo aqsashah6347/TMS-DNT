@@ -6,7 +6,9 @@ import WorkloadDistribution from "../features/analytics/components/WorkloadDistr
 export default function Analytics() {
   return (
     <div>
-      <h2 className="text-2xl font-bold text-dark mb-6">Analytics</h2>
+    <h2 className="text-2xl text-white" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
+        Analytics
+      </h2>
 
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2">

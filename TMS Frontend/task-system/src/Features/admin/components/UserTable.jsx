@@ -1,71 +1,66 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { useAdminStore } from "../adminStore";
-import Card from "../../../components/ui/Card";
 
-const roleStyles = {
-  admin: "bg-primary text-dark",
-  user: "bg-primary-light text-dark",
+const roleBadge = {
+  admin: "glass-badge--primary",
+  user: "glass-badge--violet",
 };
-
-const statusStyles = {
-  active: "bg-success text-success-text",
-  inactive: "bg-bg text-muted",
-};
+const statusColor = { active: "text-emerald-300", inactive: "text-white/40" };
 
 export default function UserTable() {
   const { users, openEditModal, deleteUser } = useAdminStore();
 
   return (
-    <Card className="overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-primary-light text-left text-xs text-muted">
-            <th className="px-4 py-3 font-medium">Name</th>
-            <th className="px-4 py-3 font-medium">Email</th>
-            <th className="px-4 py-3 font-medium">Role</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id} className="border-b border-bg last:border-0">
-              <td className="px-4 py-3 text-dark font-medium">{user.name}</td>
-              <td className="px-4 py-3 text-muted">{user.email}</td>
-              <td className="px-4 py-3">
-                <span
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${roleStyles[user.role]}`}
-                >
-                  {user.role}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <span
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${statusStyles[user.status]}`}
-                >
-                  {user.status}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => openEditModal(user)}
-                    className="text-muted hover:text-dark p-1"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => deleteUser(user.id)}
-                    className="text-muted hover:text-danger-text p-1"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </td>
+    <div className="glass glass-table-wrap">
+      <div className="glass-content">
+        <table className="glass-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th style={{ textAlign: "right" }}>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id}>
+                <td className="text-white font-medium">{user.name}</td>
+                <td className="text-white/50">{user.email}</td>
+                <td>
+                  <span className={`glass-badge ${roleBadge[user.role]}`}>
+                    {user.role}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={`text-xs font-medium capitalize ${statusColor[user.status]}`}
+                  >
+                    {user.status}
+                  </span>
+                </td>
+                <td>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => openEditModal(user)}
+                      className="text-white/40 hover:text-white p-1"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => deleteUser(user.id)}
+                      className="text-white/40 hover:text-red-400 p-1"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

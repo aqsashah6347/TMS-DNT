@@ -24,7 +24,7 @@ export default function App() {
       <Scene />
       <Sidebar isAdmin={user?.role === "admin"} />
       <Header />
-      <main className="relative z-10 pt-24 pl-28 pr-6 pb-6 min-h-screen">
+      <main className="relative z-10 pt-20 pl-28 pr-6 pb-6 min-h-screen">
         <AppRoutes />
       </main>
     </div>

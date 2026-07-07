@@ -14,10 +14,7 @@ export default function Dashboard() {
           <span className="glass-badge glass-badge--primary mb-3 inline-flex">
             <span className="glass-badge__dot" /> Dashboard Overview
           </span>
-          <h2
-            className="text-3xl text-white mb-1"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
+          <h2 className="text-2xl text-white" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
             Welcome back, Aqsa
           </h2>
           <p className="text-white/50 text-sm mb-6">
@@ -32,8 +29,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Card
-        className="flex flex-col gap-4 cascade-in"
+      <div
+        className="solid-card p-6 flex flex-col gap-4 cascade-in"
         style={{ animationDelay: "0.1s" }}
       >
         <DateTimeBox />
@@ -41,17 +38,17 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-white mb-3">Calendar</h3>
           <CalendarPreview />
         </div>
-      </Card>
+      </div>
 
-      <Card
-        className="col-span-2 cascade-in"
+      <div
+        className="solid-card col-span-2 p-6 cascade-in"
         style={{ animationDelay: "0.15s" }}
       >
         <h3 className="text-sm font-semibold text-white mb-4">
           Task Completion
         </h3>
         <TaskCompletionChart />
-      </Card>
+      </div>
 
       <Card className="cascade-in" style={{ animationDelay: "0.2s" }}>
         <h3 className="text-sm font-semibold text-white mb-4">Inbox</h3>

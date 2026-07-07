@@ -21,7 +21,12 @@ export default function Tasks() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-dark">Tasks</h2>
+        <h2
+          className="text-2xl text-white"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          Tasks
+        </h2>
 
         <div className="flex items-center gap-3">
           <div className="flex bg-surface rounded-card p-1 gap-1">

@@ -17,9 +17,9 @@ export default function ProfileSettings() {
   }
 
   return (
-    <Card className="p-6 max-w-md">
+    <Card className="max-w-md">
       <form onSubmit={handleSave} className="flex flex-col gap-4">
-        <h3 className="font-semibold text-dark">Profile</h3>
+        <h3 className="text-sm font-semibold text-white">Profile</h3>
         <Input
           label="Full name"
           value={form.name}
