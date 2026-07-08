@@ -1,21 +1,34 @@
 import NotificationItem from "./NotificationItem";
 import { useNotificationStore } from "../notificationStore";
 
-export default function NotificationList() {
+export default function NotificationList({ filter = "all" }) {
   const { notifications, markAsRead } = useNotificationStore();
 
-  if (notifications.length === 0) {
+  const filtered =
+    filter === "unread" ? notifications.filter((n) => !n.read) : notifications;
+
+  if (filtered.length === 0) {
     return (
-      <p className="text-sm text-muted text-center py-12">
-        You're all caught up 🎉
-      </p>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <p className="mb-2 text-3xl">🎉</p>
+        <p className="text-sm text-white/50">
+          {filter === "unread"
+            ? "No unread notifications"
+            : "You're all caught up"}
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-1">
-      {notifications.map((n) => (
-        <NotificationItem key={n.id} notification={n} onMarkRead={markAsRead} />
+      {filtered.map((n, i) => (
+        <NotificationItem
+          key={n.id}
+          notification={n}
+          onMarkRead={markAsRead}
+          style={{ animationDelay: `${i * 0.04}s` }}
+        />
       ))}
     </div>
   );

@@ -18,7 +18,7 @@ export default function PasswordSettings() {
   }
 
   return (
-    <Card className="max-w-md">
+    <Card className="w-full max-w-3xl mx-auto">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-white">Change Password</h3>
         <Input

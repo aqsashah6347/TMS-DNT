@@ -1,28 +1,49 @@
-import { UserPlus, CheckCircle2, AlertCircle } from "lucide-react";
+import { User, CheckCircle2, AlertCircle, Mail, CheckCheck } from "lucide-react";
 
 const iconMap = {
-  assignment: { icon: UserPlus, color: "text-primary" },
-  status: { icon: CheckCircle2, color: "text-success-text" },
-  overdue: { icon: AlertCircle, color: "text-danger-text" },
+  assignment: { icon: User, color: "#c4c4c4", bg: "rgba(255,255,255,0.1)" },
+  status: { icon: CheckCircle2, color: "#4ade80", bg: "rgba(74,222,128,0.15)" },
+  overdue: { icon: AlertCircle, color: "#f87171", bg: "rgba(248,113,113,0.15)" },
+  comment: { icon: Mail, color: "#60a5fa", bg: "rgba(96,165,250,0.15)" },
 };
 
-export default function NotificationItem({ notification, onMarkRead }) {
-  const { icon: Icon, color } = iconMap[notification.type] || iconMap.status;
+export default function NotificationItem({ notification, onMarkRead, style }) {
+  const { icon: Icon, color, bg } = iconMap[notification.type] || iconMap.status;
 
   return (
     <div
+      style={style}
       onClick={() => !notification.read && onMarkRead(notification.id)}
-      className={`flex gap-3 p-3 rounded-card cursor-pointer transition-colors ${
-        !notification.read ? "bg-bg hover:bg-primary-light" : "hover:bg-bg"
+      className={`glass-row cascade-in ${
+        !notification.read ? "cursor-pointer bg-white/[0.04]" : "opacity-70"
       }`}
     >
-      <Icon size={18} className={`${color} shrink-0 mt-0.5`} />
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+        style={{ background: bg }}
+      >
+        <Icon size={16} color={color} />
+      </span>
+
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-dark leading-snug">{notification.message}</p>
-        <p className="text-xs text-muted mt-1">{notification.time}</p>
+        <p
+          className={`text-sm leading-snug ${
+            notification.read ? "text-white/60" : "text-white/90"
+          }`}
+        >
+          {notification.message}
+        </p>
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-white/40">
+          <span>{notification.time}</span>
+          <span>&bull;</span>
+          <span className="capitalize">{notification.relatedEntity}</span>
+        </div>
       </div>
-      {!notification.read && (
-        <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5" />
+
+      {!notification.read ? (
+        <span className="h-2 w-2 shrink-0 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.8)]" />
+      ) : (
+        <CheckCheck size={14} className="shrink-0 text-white/25" />
       )}
     </div>
   );

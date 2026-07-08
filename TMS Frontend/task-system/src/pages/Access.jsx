@@ -4,7 +4,10 @@ import AuditLog from "../features/access/components/AuditLog";
 export default function Access() {
   return (
     <div>
-     <h2 className="text-2xl text-white" style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
+      <h2
+        className="text-4xl font-semibold text-white"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
         Manage Access
       </h2>
 

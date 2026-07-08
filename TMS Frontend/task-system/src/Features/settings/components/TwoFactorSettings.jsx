@@ -1,6 +1,5 @@
 import { Dropdown } from "../../../components/ui/Dropdown";
-import { useAccessStore } from "../accessStore";
-
+import { useAccessStore } from "../../access/accessStore";
 const roleOptions = ["admin", "manager", "user"].map((v) => ({
   value: v,
   label: v,

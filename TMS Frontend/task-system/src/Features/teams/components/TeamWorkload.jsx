@@ -15,7 +15,7 @@ export default function TeamWorkload({ members }) {
             <span className="text-xs text-white/70 w-16 truncate">{name}</span>
             <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-400 rounded-full"
+                className="h-full bg-orange-400 rounded-full"
                 style={{ width: `${(load / maxLoad) * 100}%` }}
               />
             </div>
