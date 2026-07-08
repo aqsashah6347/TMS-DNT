@@ -37,6 +37,8 @@
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
 
+   --container-lg: 32rem;
+
   /* Typography Sizing */
   --text-2xs: 0.68rem;
   --text-xs: 0.75rem;
@@ -602,20 +604,21 @@
     padding: var(--spacing-md);
   }
 
-  .glass-modal {
-    border-radius: var(--radius-2xl);
-    width: 100%;
-    max-width: 32rem;
-    max-height: 90vh;
-    overflow-y: auto;
-    background: rgba(24, 16, 10, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    backdrop-filter: var(--blur-lg);
-    -webkit-backdrop-filter: var(--blur-lg);
-    position: relative;
-  }
-
+ .glass-modal {
+  border-radius: var(--radius-2xl);
+  width: 100%;
+  max-width: 32rem; /* fallback in case Tailwind's max-w-* isn't compiling */
+  margin: 0 16px;   /* fallback in case Tailwind's mx-4 isn't compiling */
+  max-height: 90vh;
+  overflow-y: auto;
+  background: rgba(24, 16, 10, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: var(--blur-lg);
+  -webkit-backdrop-filter: var(--blur-lg);
+  position: relative;
+  flex-shrink: 0;
+}
   .glass-modal::before {
     content: "";
     position: absolute;
@@ -1136,14 +1139,14 @@
   }
 
   .inbox-row__msg {
-    font-size: 0.82rem;
+    font-size: 12px;
     color: rgba(255, 255, 255, 0.85);
     line-height: 1.35;
   }
 
   .inbox-row__time {
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    color: rgba(8, 8, 8, 0.4);
     flex-shrink: 0;
     white-space: nowrap;
     margin-left: auto;
