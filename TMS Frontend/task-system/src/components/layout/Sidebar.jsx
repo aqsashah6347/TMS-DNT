@@ -32,7 +32,7 @@ export default function Sidebar({ isAdmin = false }) {
   const [expanded, setExpanded] = useState(false);
 
  const linkClass = ({ isActive }) =>
-   `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
+   `flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
      isActive
        ? "bg-orange-500/15 text-orange-400 shadow-[0_0_0_1px_rgba(249,115,22,0.35),0_0_20px_-4px_rgba(249,115,22,0.45)]"
        : "text-white/60 hover:bg-white/10 hover:text-white hover:shadow-[0_0_12px_rgba(249,115,22,0.15)]"
@@ -40,7 +40,7 @@ export default function Sidebar({ isAdmin = false }) {
 
   return (
     <aside
-      className={`hash-nav fixed left-5 top-20 bottom-5 z-20 flex flex-col transition-all duration-500 ease-out ${
+      className={`hash-nav fixed left-5 top-20 bottom-5 z-20 overflow-visible flex flex-col transition-all duration-500 ease-out ${
         expanded ? "w-60 px-4" : "w-[68px] px-2 items-center"
       }`}
     >
@@ -65,52 +65,61 @@ export default function Sidebar({ isAdmin = false }) {
           </button>
         </div>
 
-        {expanded && (
-          <div className="px-1 mb-4">
-            
-          </div>
-        )}
+        {expanded && <div className="px-1 mb-4"></div>}
 
         <nav className="flex flex-col gap-1.5">
           {navItems.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={linkClass}
-              title={!expanded ? label : undefined}
-            >
-              <Icon size={18} className="shrink-0" />
-              {expanded && <span className="truncate">{label}</span>}
-            </NavLink>
+            <div key={to} className="relative group w-full">
+              <NavLink to={to} className={linkClass}>
+                <Icon
+                  size={18}
+                  className="shrink-0 transition-all duration-200 group-hover:scale-110"
+                />
+                {expanded && <span className="truncate">{label}</span>}
+              </NavLink>
+
+              {!expanded && (
+                <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-orange-400/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
+                  {label}
+                </div>
+              )}
+            </div>
           ))}
 
           {isAdmin && (
             <>
               <div className="my-2 border-t border-white/10" />
               {adminItems.map(({ to, label, icon: Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={linkClass}
-                  title={!expanded ? label : undefined}
-                >
-                  <Icon size={18} className="shrink-0" />
-                  {expanded && <span className="truncate">{label}</span>}
-                </NavLink>
+                <div key={to} className="relative group w-full">
+                  <NavLink to={to} className={linkClass}>
+                    <Icon size={18} className="shrink-0" />
+                    {expanded && <span className="truncate">{label}</span>}
+                  </NavLink>
+
+                  {!expanded && (
+                    <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-orange-400/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
+                      {label}
+                    </div>
+                  )}
+                </div>
               ))}
             </>
           )}
         </nav>
 
         <div className="mt-auto pt-3 border-t border-white/10">
-          <NavLink
-            to="/settings"
-            className={linkClass}
-            title={!expanded ? "Settings" : undefined}
-          >
-            <Settings size={18} className="shrink-0" />
-            {expanded && <span>Settings</span>}
-          </NavLink>
+          <div className="relative group w-full">
+            <NavLink to="/settings" className={linkClass}>
+              <Settings size={18} className="shrink-0" />
+              {expanded && <span>Settings</span>}
+            </NavLink>
+
+            {!expanded && (
+              <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-orange-400/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
+                Settings
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </aside>

@@ -75,6 +75,8 @@ export const useTaskStore = create((set, get) => ({
 
   setView: (view) => set({ view }),
   setFilters: (filters) => set({ filters: { ...get().filters, ...filters } }),
+  openFiltersModal: () => set({ isFiltersModalOpen: true }),
+  closeFiltersModal: () => set({ isFiltersModalOpen: false }),
 
   openTaskView: (task) =>
     set({ isTaskModalOpen: true, editingTask: task, modalMode: "view" }),

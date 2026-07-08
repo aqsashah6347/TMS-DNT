@@ -12,7 +12,7 @@ export default function TeamCard({ team, onClick }) {
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Users size={16} className="text-emerald-300" />
+          <Users size={16} className="text-orange-300" />
           <h4 className="glass-card__title !mb-0 !text-base text-white">
             {team.name}
           </h4>

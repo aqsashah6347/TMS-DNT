@@ -12,7 +12,7 @@ const priorityBadge = {
 };
 
 const statusLabel = {
-  backlog: "text-white/50",
+  backlog: "text-white/60",
   "in progress": "text-violet-300",
   review: "text-amber-300",
   done: "text-emerald-300",
@@ -27,7 +27,7 @@ export default function TaskCard({ task }) {
     <Card
       hover
       onClick={() => openTaskView(task)}
-      className="cursor-pointer relative border-l-4"
+      className="task-card cursor-pointer relative border-l-4"
       style={{ borderLeftColor: projectColor }}
     >
       {task.pinned && (
@@ -37,8 +37,8 @@ export default function TaskCard({ task }) {
         />
       )}
 
-      <div className="flex items-start justify-between gap-2 mb-2 pr-4">
-        <h4 className="text-sm font-medium text-white leading-snug">
+      <div className="flex items-start justify-between gap-3 mb-2 pr-4">
+        <h4 className="text-lg sm:text-xl font-bold text-white leading-snug">
           {task.title}
         </h4>
         <span
@@ -50,28 +50,26 @@ export default function TaskCard({ task }) {
       </div>
 
       {task.description && (
-        <p className="text-xs text-white/50 mb-3 line-clamp-2">
+        <p className="text-sm text-white/75 mb-3 line-clamp-2">
           {task.description}
         </p>
       )}
 
-      <div className="flex items-center justify-between">
-        <span
-          className={`text-[11px] font-medium capitalize ${statusLabel[task.status]}`}
-        >
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className={`status-badge capitalize ${statusLabel[task.status]}`}>
           {task.status}
         </span>
-        <div className="flex items-center gap-2 text-white/40">
-          {task.zoomLink && <Video size={12} />}
-          {task.githubLink && <GitBranch size={12} />}
+        <div className="flex items-center gap-3 text-white/70">
+          {task.zoomLink && <Video size={13} />}
+          {task.githubLink && <GitBranch size={13} />}
           {task.dueDate && (
-            <span className="flex items-center gap-1 text-[11px]">
-              <Calendar size={11} /> {task.dueDate}
+            <span className="flex items-center gap-1 text-xs">
+              <Calendar size={12} /> {task.dueDate}
             </span>
           )}
           {task.assignedTo && (
-            <span className="flex items-center gap-1 text-[11px]">
-              <User size={11} /> {task.assignedTo}
+            <span className="flex items-center gap-1 text-xs">
+              <User size={12} /> {task.assignedTo}
             </span>
           )}
         </div>

@@ -17,7 +17,7 @@ export default function ProfileSettings() {
   }
 
   return (
-    <Card className="max-w-md">
+    <Card className="w-full max-w-3xl mx-auto">
       <form onSubmit={handleSave} className="flex flex-col gap-4">
         <h3 className="text-sm font-semibold text-white">Profile</h3>
         <Input

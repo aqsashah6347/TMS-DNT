@@ -11,7 +11,7 @@ export default function Projects() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2
-          className="text-2xl text-white"
+          className="text-4xl font-semibold text-white"
           style={{ fontFamily: "var(--font-display)" }}
         >
           Projects

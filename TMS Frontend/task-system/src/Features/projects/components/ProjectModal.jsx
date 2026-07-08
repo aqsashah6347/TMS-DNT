@@ -8,6 +8,7 @@ import { useProjectStore } from "../projectStore";
 import { useTaskStore } from "../../tasks/taskStore";
 import { PROJECT_COLORS } from "../../../utils/projectColors";
 
+
 const statusOptions = ["planning", "active", "completed"].map((v) => ({
   value: v,
   label: v,

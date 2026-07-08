@@ -38,11 +38,16 @@ export const useProjectStore = create((set, get) => ({
   projects: seedProjects,
   isModalOpen: false,
   editingProject: null,
+  modalMode: "view",
 
-  openCreateModal: () => set({ isModalOpen: true, editingProject: null }),
+  openCreateModal: () =>
+    set({ isModalOpen: true, editingProject: {}, modalMode: "edit" }),
   openEditModal: (project) =>
-    set({ isModalOpen: true, editingProject: project }),
-  closeModal: () => set({ isModalOpen: false, editingProject: null }),
+    set({ isModalOpen: true, editingProject: project, modalMode: "edit" }),
+  openProjectView: (project) =>
+    set({ isModalOpen: true, editingProject: project, modalMode: "view" }),
+  closeModal: () =>
+    set({ isModalOpen: false, editingProject: null, modalMode: "view" }),
 
   addProject: (project) =>
     set((state) => ({
