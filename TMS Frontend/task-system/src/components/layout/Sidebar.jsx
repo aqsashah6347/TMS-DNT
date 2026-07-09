@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router-dom"; // useState import removed
 import {
   LayoutDashboard,
   CheckSquare,
@@ -28,15 +27,13 @@ const adminItems = [
   { to: "/access", label: "Manage Access", icon: KeyRound },
 ];
 
-export default function Sidebar({ isAdmin = false }) {
-  const [expanded, setExpanded] = useState(false);
-
- const linkClass = ({ isActive }) =>
-   `flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
-     isActive
-       ? "bg-orange-500/15 text-orange-400 shadow-[0_0_0_1px_rgba(249,115,22,0.35),0_0_20px_-4px_rgba(249,115,22,0.45)]"
-       : "text-white/60 hover:bg-white/10 hover:text-white hover:shadow-[0_0_12px_rgba(249,115,22,0.15)]"
-   }`;
+export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
+  const linkClass = ({ isActive }) =>
+    `flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
+      isActive
+        ? "bg-orange-500/15 text-orange-400 shadow-[0_0_0_1px_rgba(249,115,22,0.35),0_0_20px_-4px_rgba(249,115,22,0.45)]"
+        : "text-white/60 hover:bg-white/10 hover:text-white hover:shadow-[0_0_12px_rgba(249,115,22,0.15)]"
+    }`;
 
   return (
     <aside
@@ -55,7 +52,7 @@ export default function Sidebar({ isAdmin = false }) {
             </div>
           )}
           <button
-            onClick={() => setExpanded(!expanded)}
+            onClick={onToggle}
             className={`flex items-center justify-center w-7 h-7 text-white/40 hover:text-white transition-colors ${!expanded ? "mx-auto" : ""}`}
           >
             <ChevronRight
