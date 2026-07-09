@@ -32,7 +32,7 @@ export default function Login() {
           <LoginForm />
         </div>
       </div>
-      <div className="absolute bottom-6 left-6 max-w-sm">
+      <div className="absolute bottom-6 left-6 w-80">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-orange-400 text-lg">💡</span>
           <h3 className="text-sm font-semibold tracking-wide text-orange-400">
