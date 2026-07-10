@@ -1,4 +1,5 @@
 const { sql, poolPromise } = require("../config/db");
+const { hasPermission } = require("../middleware/permissions");
 
 // GET /api/tasks?priority=&assignedTo=&search=&status=&projectId=
 // Matches taskStore.getFilteredTasks() logic, but done in the DB instead
@@ -160,6 +161,19 @@ async function updateTask(req, res, next) {
         .input("id", sql.Int, id)
         .query("SELECT assigned_to FROM tms_tasks WHERE id = @id");
       updates.completedBy = existing.recordset[0]?.assigned_to || null;
+    }
+    if (updates.assignedTo !== undefined && req.user.role !== "admin") {
+      const canAssign = await hasPermission(
+        req.user.id,
+        req.user.role,
+        "tasks",
+        "assign",
+      );
+      if (!canAssign) {
+        return res
+          .status(403)
+          .json({ message: "You're not allowed to reassign tasks" });
+      }
     }
 
     const fieldMap = {

@@ -1,28 +1,35 @@
 const express = require("express");
 const router = express.Router();
-const { requireAuth, requireRole } = require("../middleware/auth");
+const { requireAuth } = require("../middleware/auth");
+const { requirePermission } = require("../middleware/permissions");
 const projectController = require("../controllers/projectController");
 
 router.use(requireAuth);
 
-// Everyone logged in can view projects.
-router.get("/", projectController.getAllProjects);
-router.get("/:id", projectController.getProjectById);
+router.get(
+  "/",
+  requirePermission("projects", "view"),
+  projectController.getAllProjects,
+);
+router.get(
+  "/:id",
+  requirePermission("projects", "view"),
+  projectController.getProjectById,
+);
 
-// Only admins and managers can create, edit, or delete projects.
 router.post(
   "/",
-  requireRole("admin", "manager"),
+  requirePermission("projects", "create"),
   projectController.createProject,
 );
 router.put(
   "/:id",
-  requireRole("admin", "manager"),
+  requirePermission("projects", "edit"),
   projectController.updateProject,
 );
 router.delete(
   "/:id",
-  requireRole("admin", "manager"),
+  requirePermission("projects", "delete"),
   projectController.deleteProject,
 );
 
