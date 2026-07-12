@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  /* Fonts */
-  --font-sans: "Quicksand", system-ui, sans-serif;
-  --font-display: "Quicksand", system-ui, sans-serif;
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-display: "Outfit", system-ui, sans-serif;
+  --radius-card: 24px;
+
 
   /* Glass Surface Tints & Colors */
   --color-glass-white: rgba(255, 255, 255, 0.12);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/input";
-import { Dropdown } from "../../../components/ui/dropdown";
+import { Dropdown } from "../../../components/ui/Dropdown";
 import Button from "../../../components/ui/Button";
 import { useTaskStore } from "../taskStore";
 import {

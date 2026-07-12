@@ -1,51 +1,57 @@
 import { create } from "zustand";
+import { accessApi } from "../../api/accessApi";
 
-// Placeholder — later from permissionApi.getAll()
-const modules = ["tasks", "projects", "teams", "admin", "analytics"];
-const actions = ["view", "create", "edit", "delete", "assign"];
-
-const seedPermissions = [
-  {
-    userId: 2,
-    userName: "Sara",
-    role: "manager",
-    overrides: {
-      tasks: ["view", "create", "edit"],
-      projects: ["view", "edit"],
-    },
-  },
-  {
-    userId: 3,
-    userName: "Ali",
-    role: "user",
-    overrides: { tasks: ["view", "edit"] },
-  },
-];
-
-const seedAuditLog = [
-  {
-    id: 1,
-    actor: "Aqsa",
-    action: "Changed Sara's role to Manager",
-    time: "2h ago",
-  },
-  {
-    id: 2,
-    actor: "Aqsa",
-    action: "Granted Ali edit access on Tasks",
-    time: "1d ago",
-  },
-];
-
+// Real data now comes from GET /api/permissions and /api/permissions/audit-log.
+// Shape is unchanged from the old mock data, so PermissionTable.jsx,
+// RolePresets.jsx, and AuditLog.jsx don't need to change at all:
+//   permissions: [{ userId, userName, role, overrides: { module: [actions] } }]
+//   auditLog: [{ id, actor, action, time }]
 export const useAccessStore = create((set, get) => ({
-  modules,
-  actions,
-  permissions: seedPermissions,
-  auditLog: seedAuditLog,
+  modules: ["tasks", "projects", "teams", "admin", "analytics"],
+  actions: ["view", "create", "edit", "delete", "assign"],
+  permissions: [],
+  auditLog: [],
+  isLoading: false,
+  error: null,
 
-  toggleAction: (userId, module, action) =>
-    set((state) => ({
-      permissions: state.permissions.map((p) => {
+  // Call this from Access.jsx on mount.
+  fetchAll: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const [permsData, auditLog] = await Promise.all([
+        accessApi.getAll(),
+        accessApi.getAuditLog(),
+      ]);
+      set({
+        modules: permsData.modules,
+        actions: permsData.actions,
+        permissions: permsData.permissions,
+        auditLog,
+        isLoading: false,
+      });
+    } catch (err) {
+      set({
+        isLoading: false,
+        error: err.response?.data?.message || "Couldn't load permissions",
+      });
+    }
+  },
+
+  refreshAuditLog: async () => {
+    try {
+      const auditLog = await accessApi.getAuditLog();
+      set({ auditLog });
+    } catch {
+      // Non-critical — the toggle/role change already succeeded, so
+      // just leave the audit log stale rather than surfacing an error.
+    }
+  },
+
+  toggleAction: async (userId, module, action) => {
+    // Optimistic update so the checkbox feels instant.
+    const previous = get().permissions;
+    set({
+      permissions: previous.map((p) => {
         if (p.userId !== userId) return p;
         const current = p.overrides[module] || [];
         const updated = current.includes(action)
@@ -53,30 +59,44 @@ export const useAccessStore = create((set, get) => ({
           : [...current, action];
         return { ...p, overrides: { ...p.overrides, [module]: updated } };
       }),
-      auditLog: [
-        {
-          id: Date.now(),
-          actor: "Aqsa",
-          action: `Toggled '${action}' on '${module}' for user #${userId}`,
-          time: "just now",
-        },
-        ...state.auditLog,
-      ],
-    })),
+    });
 
-  setRolePreset: (userId, role) =>
-    set((state) => ({
-      permissions: state.permissions.map((p) =>
+    try {
+      const { actions } = await accessApi.toggleAction(userId, module, action);
+      // Reconcile with the server's authoritative action list for that module.
+      set((state) => ({
+        permissions: state.permissions.map((p) =>
+          p.userId === userId
+            ? { ...p, overrides: { ...p.overrides, [module]: actions } }
+            : p,
+        ),
+      }));
+      get().refreshAuditLog();
+    } catch (err) {
+      // Revert on failure.
+      set({
+        permissions: previous,
+        error: err.response?.data?.message || "Couldn't update permission",
+      });
+    }
+  },
+
+  setRolePreset: async (userId, role) => {
+    const previous = get().permissions;
+    set({
+      permissions: previous.map((p) =>
         p.userId === userId ? { ...p, role } : p,
       ),
-      auditLog: [
-        {
-          id: Date.now(),
-          actor: "Aqsa",
-          action: `Set role preset '${role}' for user #${userId}`,
-          time: "just now",
-        },
-        ...state.auditLog,
-      ],
-    })),
+    });
+
+    try {
+      await accessApi.setRole(userId, role);
+      get().refreshAuditLog();
+    } catch (err) {
+      set({
+        permissions: previous,
+        error: err.response?.data?.message || "Couldn't update role",
+      });
+    }
+  },
 }));
