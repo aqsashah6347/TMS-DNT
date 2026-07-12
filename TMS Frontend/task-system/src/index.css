@@ -21,8 +21,8 @@
   --color-surface: rgba(255, 255, 255, 0.04);
 
   /* Accents */
-  --color-accent-primary: #34ebb7;
-  --color-accent-primary-dim: #1c9d78;
+  --color-accent-primary: #d68394;
+  --color-accent-primary-dim: #8f5863;
   --color-accent-violet: #b490f5;
   --color-accent-rose: #f7a8c4;
   --color-accent-amber: #ffd27f;
@@ -153,7 +153,7 @@
       repeating-linear-gradient(45deg, #2a2a2a 0, #2a2a2a 1px, transparent 0, transparent 7px),
       repeating-linear-gradient(-45deg, #2a2a2a 0, #2a2a2a 1px, transparent 0, transparent 7px),
       #131415;
-    border-bottom: 2px solid rgba(52, 235, 183, 0.35);
+    border-bottom: 2px solid rgba(214, 131, 148, 0.35);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
   }
 
@@ -191,8 +191,8 @@
   .hash-nav__item.is-active {
     --curr: 1;
     box-shadow:
-      inset 0 0 0 1px rgba(52, 235, 183, 0.45),
-      0 0 20px -4px rgba(52, 235, 183, 0.55);
+      inset 0 0 0 1px rgba(214, 131, 148, 0.45),
+      0 0 20px -4px rgba(214, 131, 148, 0.55);
   }
 
   .hash-nav__label {
@@ -205,27 +205,27 @@
     display: block;
     font-size: 0.65rem;
     text-transform: lowercase;
-    color: hsla(161, 70%, calc(55% + (1 - var(--curr)) * 20%), calc(0.5 + 0.4 * var(--curr)));
+    color: hsla(348, 55%, calc(55% + (1 - var(--curr)) * 20%), calc(0.5 + 0.4 * var(--curr)));
     transition: color 0.4s ease-out;
   }
 
   /* Solid Container Layouts */
   .solid-card {
     background: #1c1e1f;
-    border: 1px solid rgba(52, 235, 183, 0.28);
+    border: 1px solid rgba(214, 131, 148, 0.28);
     border-radius: var(--radius-xl);
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.45),
-      0 0 18px rgba(52, 235, 183, 0.12),
+      0 0 18px rgba(214, 131, 148, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.04);
     transition: all 0.3s ease;
   }
 
   .solid-card:hover {
-    border-color: rgba(52, 235, 183, 0.5);
+    border-color: rgba(214, 131, 148, 0.5);
     box-shadow:
       0 12px 36px rgba(0, 0, 0, 0.45),
-      0 0 24px rgba(52, 235, 183, 0.22);
+      0 0 24px rgba(214, 131, 148, 0.22);
   }
 
   /* Animated Drift Canvas Blobs */
@@ -248,7 +248,7 @@
   .scene__blob--1 {
     width: 700px;
     height: 700px;
-    background: radial-gradient(circle, #34ebb7, #0b1f19);
+    background: radial-gradient(circle, #d68394, #1f0f14);
     top: -200px;
     left: -150px;
     --dur: 22s;
@@ -383,14 +383,14 @@
   }
 
   .glass-btn--primary {
-    background: linear-gradient(135deg, rgba(52, 235, 183, 0.55) 0%, rgba(28, 157, 120, 0.55) 100%);
-    border: 1px solid rgba(52, 235, 183, 0.5);
-    box-shadow: 0 4px 24px rgba(52, 235, 183, 0.3), var(--reflection-inner);
+    background: linear-gradient(135deg, rgba(214, 131, 148, 0.55) 0%, rgba(143, 88, 99, 0.55) 100%);
+    border: 1px solid rgba(214, 131, 148, 0.5);
+    box-shadow: 0 4px 24px rgba(214, 131, 148, 0.3), var(--reflection-inner);
   }
 
   .glass-btn--primary:hover {
-    background: linear-gradient(135deg, rgba(52, 235, 183, 0.75) 0%, rgba(28, 157, 120, 0.75) 100%);
-    box-shadow: 0 8px 36px rgba(52, 235, 183, 0.5), var(--reflection-inner);
+    background: linear-gradient(135deg, rgba(214, 131, 148, 0.75) 0%, rgba(143, 88, 99, 0.75) 100%);
+    box-shadow: 0 8px 36px rgba(214, 131, 148, 0.5), var(--reflection-inner);
     transform: translateY(-2px);
   }
 
@@ -435,8 +435,8 @@
   }
 
   .glass-badge--primary {
-    background: rgba(52, 235, 183, 0.2);
-    border: 1px solid rgba(52, 235, 183, 0.4);
+    background: rgba(214, 131, 148, 0.2);
+    border: 1px solid rgba(214, 131, 148, 0.4);
     color: var(--color-accent-primary);
   }
 
@@ -502,9 +502,9 @@
   .glass-input:focus,
   .glass-textarea:focus,
   .glass-select:focus {
-    border-color: rgba(52, 235, 183, 0.6);
+    border-color: rgba(214, 131, 148, 0.6);
     background: var(--color-glass-white-md);
-    box-shadow: 0 0 0 3px rgba(52, 235, 183, 0.15), var(--shadow-glass);
+    box-shadow: 0 0 0 3px rgba(214, 131, 148, 0.15), var(--shadow-glass);
   }
 
   .glass-textarea {
@@ -581,9 +581,9 @@
   }
 
   .glass-switch-label input:checked + .glass-switch-track {
-    background: rgba(52, 235, 183, 0.3);
-    border-color: rgba(52, 235, 183, 0.65);
-    box-shadow: 0 0 14px rgba(52, 235, 183, 0.22), var(--reflection-inner);
+    background: rgba(214, 131, 148, 0.3);
+    border-color: rgba(214, 131, 148, 0.65);
+    box-shadow: 0 0 14px rgba(214, 131, 148, 0.22), var(--reflection-inner);
   }
 
   .glass-switch-label input:checked + .glass-switch-track .glass-switch-thumb {
@@ -714,15 +714,15 @@
 
   .login-ring i:nth-child(1) {
     animation: var(--animate-ring-spin);
-    border-color: rgba(52, 235, 183, 0.55);
-    filter: drop-shadow(0 0 16px rgba(52, 235, 183, 0.35));
+    border-color: rgba(214, 131, 148, 0.55);
+    filter: drop-shadow(0 0 16px rgba(214, 131, 148, 0.35));
   }
 
   .login-ring i:nth-child(2) {
     border-radius: 41% 44% 56% 59% / 38% 62% 63% 37%;
     animation: ring-spin 5s linear infinite;
-    border-color: rgba(28, 157, 120, 0.45);
-    filter: drop-shadow(0 0 16px rgba(28, 157, 120, 0.3));
+    border-color: rgba(143, 88, 99, 0.45);
+    filter: drop-shadow(0 0 16px rgba(143, 88, 99, 0.3));
   }
 
   .login-ring i:nth-child(3) {
@@ -733,13 +733,13 @@
   }
 
   .login-ring:hover i:nth-child(1) {
-    border-color: #8ff5d9;
-    filter: drop-shadow(0 0 25px #8ff5d9);
+    border-color: #e8b4bf;
+    filter: drop-shadow(0 0 25px #e8b4bf);
   }
 
   .login-ring:hover i:nth-child(2) {
-    border-color: #34ebb7;
-    filter: drop-shadow(0 0 25px #34ebb7);
+    border-color: #d68394;
+    filter: drop-shadow(0 0 25px #d68394);
   }
 
   .login-ring:hover i:nth-child(3) {
@@ -764,9 +764,9 @@
   }
 
   .login-pill-input:focus {
-    border-color: rgba(52, 235, 183, 0.7);
+    border-color: rgba(214, 131, 148, 0.7);
     background: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 0 4px rgba(52, 235, 183, 0.15);
+    box-shadow: 0 0 0 4px rgba(214, 131, 148, 0.15);
   }
 
   .login-signin-btn {
@@ -776,19 +776,19 @@
   }
 
   .login-signin-btn:hover {
-    background: #17b88e;
-    border-color: #17b88e;
+    background: #c06277;
+    border-color: #c06277;
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(23, 184, 142, 0.35);
+    box-shadow: 0 8px 20px rgba(192, 98, 119, 0.35);
   }
 
   .login-signin-btn:active {
-    background: #0f9c78;
+    background: #764851;
     transform: scale(0.98);
   }
 
   .login-signin-btn:focus-visible {
-    outline: 2px solid #34ebb7;
+    outline: 2px solid #d68394;
     outline-offset: 2px;
   }
 
@@ -806,7 +806,7 @@
     overflow: hidden;
     border-radius: 24px;
     background: #1c1e20;
-    border: 1px solid rgba(52, 235, 183, 0.22);
+    border: 1px solid rgba(214, 131, 148, 0.22);
     width: 100%;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 40px rgba(0, 0, 0, 0.35);
   }
@@ -818,7 +818,7 @@
     padding: 10px 14px;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(28, 157, 120, 0.55) 0%, rgba(23, 184, 142, 0.45) 40%, rgba(52, 235, 183, 0.35) 100%);
+    background: linear-gradient(135deg, rgba(143, 88, 99, 0.55) 0%, rgba(192, 98, 119, 0.45) 40%, rgba(214, 131, 148, 0.35) 100%);
     backdrop-filter: var(--blur-md);
     -webkit-backdrop-filter: var(--blur-md);
     border-bottom: 1px solid var(--color-glass-border);
@@ -866,7 +866,7 @@
   .tms-calendar .react-calendar__navigation button {
     border: none;
     background: transparent;
-    color: #34ebb7;
+    color: #d68394;
     min-width: 26px;
     height: 26px;
     border-radius: 50%;
@@ -886,7 +886,7 @@
   }
 
   .tms-calendar .react-calendar__month-view__weekdays__weekday {
-    color: #8ff5d9;
+    color: #e8b4bf;
     font-size: 15px;
     font-weight: 700;
     text-transform: uppercase;
@@ -910,28 +910,28 @@
   }
 
   .tms-calendar .react-calendar__tile:hover {
-    background: rgba(52, 235, 183, 0.18);
+    background: rgba(214, 131, 148, 0.18);
     transform: scale(1.08);
-    box-shadow: 0 0 14px rgba(52, 235, 183, 0.25);
+    box-shadow: 0 0 14px rgba(214, 131, 148, 0.25);
   }
 
   .tms-calendar .react-calendar__tile--now {
     background: transparent !important;
-    border: 2px solid #34ebb7;
-    color: #34ebb7;
+    border: 2px solid #d68394;
+    color: #d68394;
     font-weight: 700;
   }
 
   .tms-calendar .react-calendar__tile--active {
-    background: #34ebb7 !important;
-    color: #14201c !important;
+    background: #d68394 !important;
+    color: #20161a !important;
     font-weight: 700;
-    box-shadow: 0 0 18px rgba(52, 235, 183, 0.45);
+    box-shadow: 0 0 18px rgba(214, 131, 148, 0.45);
   }
 
   .tms-calendar .react-calendar__tile--active:hover {
-    background: #8ff5d9 !important;
-    color: #14201c !important;
+    background: #e8b4bf !important;
+    color: #20161a !important;
   }
 
   .tms-calendar .react-calendar__month-view__days__day--neighboringMonth {
@@ -958,8 +958,8 @@
   .progress-fill {
     height: 100%;
     border-radius: var(--radius-full);
-    background: linear-gradient(90deg, #34ebb7, #17b88e);
-    box-shadow: 0 0 12px rgba(52, 235, 183, 0.5);
+    background: linear-gradient(90deg, #d68394, #c06277);
+    box-shadow: 0 0 12px rgba(214, 131, 148, 0.5);
     transition: width 0.6s var(--ease-glass);
   }
 
@@ -975,9 +975,9 @@
 
   .priority-pill--critical,
   .priority-pill--high {
-    background: rgba(52, 235, 183, 0.18);
-    color: #34ebb7;
-    border: 1px solid rgba(52, 235, 183, 0.4);
+    background: rgba(214, 131, 148, 0.18);
+    color: #d68394;
+    border: 1px solid rgba(214, 131, 148, 0.4);
   }
 
   .priority-pill--medium {
@@ -1019,8 +1019,8 @@
   }
 
   .dot-row__dot--amber {
-    background: #34ebb7;
-    box-shadow: 0 0 8px rgba(52, 235, 183, 0.7);
+    background: #d68394;
+    box-shadow: 0 0 8px rgba(214, 131, 148, 0.7);
   }
 
   .dot-row__dot--red {
@@ -1058,7 +1058,7 @@
     gap: 4px;
     font-size: 0.78rem;
     font-weight: 500;
-    color: #34ebb7;
+    color: #d68394;
     background: none;
     border: none;
     cursor: pointer;
@@ -1097,7 +1097,7 @@
   .quick-action-btn:hover {
     transform: translateY(-2px);
     background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(52, 235, 183, 0.4);
+    border-color: rgba(214, 131, 148, 0.4);
   }
 
   .quick-action-btn__icon {
@@ -1180,5 +1180,5 @@
   .glass-badge--danger { color: #fca5a5; }
   .glass-badge--amber { color: #fde68a; }
   .glass-badge--violet { color: #d8c4fb; }
-  .glass-badge--primary { color: #a7f3de; }
+  .glass-badge--primary { color: #dfa3af; }
 }
