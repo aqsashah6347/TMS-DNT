@@ -5,6 +5,7 @@ import {
   FolderKanban,
   Users,
   Inbox,
+  MessageCircle,   // ADD THIS
   BarChart3,
   ShieldCheck,
   KeyRound,
@@ -19,6 +20,7 @@ const navItems = [
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/teams", label: "Teams", icon: Users },
   { to: "/inbox", label: "Inbox", icon: Inbox },
+  { to: "/chat", label: "Chat", icon: MessageCircle },   // ADD THIS
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
