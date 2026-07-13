@@ -13,7 +13,7 @@ const Admin = lazy(() => import("../pages/Admin"));
 const Chat = lazy(() => import("../pages/Chat"));   
 const Access = lazy(() => import("../pages/Access"));
 const Settings = lazy(() => import("../pages/Settings"));
-
+const Employees = lazy(() => import("../pages/Employees"));
 
 function PageLoader() {
   return (
@@ -35,6 +35,14 @@ export default function AppRoutes() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute adminOnly>
+              <Employees />
             </ProtectedRoute>
           }
         />
@@ -71,13 +79,13 @@ export default function AppRoutes() {
           }
         />
         <Route
-  path="/chat"
-  element={
-    <ProtectedRoute>
-      <Chat />
-    </ProtectedRoute>
-  }
-/>
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/analytics"
           element={

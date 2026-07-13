@@ -5,10 +5,11 @@ import {
   FolderKanban,
   Users,
   Inbox,
-  MessageCircle,   // ADD THIS
+  MessageCircle,
   BarChart3,
   ShieldCheck,
   KeyRound,
+  IdCard,
   Settings,
   ChevronRight,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems = [
 const adminItems = [
   { to: "/admin", label: "Admin", icon: ShieldCheck },
   { to: "/access", label: "Manage Access", icon: KeyRound },
+  { to: "/employees", label: "Employees", icon: IdCard },
 ];
 
 export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
