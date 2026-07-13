@@ -65,7 +65,7 @@ const seedTasks = [
 
 export const useTaskStore = create((set, get) => ({
   tasks: seedTasks,
-  view: "list",
+  view: "kanban",
   filters: { priority: "", assignedTo: "", search: "" },
   isTaskModalOpen: false,
   isFiltersModalOpen: false,

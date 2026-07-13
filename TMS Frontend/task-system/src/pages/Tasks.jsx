@@ -1,11 +1,13 @@
 import { Plus, Filter, List, Kanban, Calendar } from "lucide-react";
-import { useTaskStore } from "../features/tasks/taskStore";
-import TaskListView from "../features/tasks/components/TaskListView";
-import TaskKanbanView from "../features/tasks/components/TaskKanbanView";
-import TaskCalendarView from "../features/tasks/components/TaskCalendarView";
-import TaskModal from "../features/tasks/components/TaskModal";
-import TaskFiltersModal from "../features/tasks/components/TaskFiltersModal";
-import Button from "../components/ui/Button";
+import { useTaskStore } from "../Features/tasks/taskStore";
+import TaskListView from "../Features/tasks/components/TaskListView";
+import TaskKanbanView from "../Features/tasks/components/TaskKanbanView";
+import TaskCalendarView from "../Features/tasks/components/TaskCalendarView";
+import TaskModal from "../Features/tasks/components/TaskModal";
+import TaskFiltersModal from "../Features/tasks/components/TaskFiltersModal";
+import Button from "../components/ui/Button"
+import { useRef } from "react";
+import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
 
 const viewOptions = [
   { key: "list", label: "List View", icon: List },
@@ -17,9 +19,11 @@ export default function Tasks() {
   const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
     useTaskStore();
   const tasks = getFilteredTasks();
-
+    const containerRef = useRef(null);
   return (
-    <div>
+    <div ref={containerRef} className="relative overflow-hidden min-h-screen w-full">
+      <TeamFluidCursor containerRef={containerRef} />
+      <div className="relative z-10">
       <div className="flex items-center justify-between mb-6">
         <h2
           className="text-4xl font-semibold text-white"
@@ -75,5 +79,7 @@ export default function Tasks() {
       <TaskModal />
       <TaskFiltersModal />
     </div>
+    </div>
   );
 }
+
