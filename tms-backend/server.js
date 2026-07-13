@@ -15,6 +15,7 @@ const permissionRoutes = require("./src/routes/permissionRoutes");
 const chatRoutes = require("./src/routes/chatRoutes");
 const analyticsRoutes = require("./src/routes/analyticsRoutes");
 const attendanceRoutes = require("./src/routes/attendanceRoutes");
+const employeesRoutes = require("./src/routes/employeesRoutes");
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/employees", employeesRoutes);
 
 // Must be registered LAST — Express only reaches this if nothing above
 // handled the request or something threw an error.
