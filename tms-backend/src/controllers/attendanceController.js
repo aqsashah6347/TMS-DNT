@@ -1,10 +1,6 @@
 const attendanceService = require("../services/attendanceService");
 const { fetchAllEmployees } = require("../services/zkEmployeeService");
 
-// GET /api/attendance/today  (admin only)
-// Joins today's ZK device logs directly against the ZK employees list
-// (by enrollNo === employeeCode) so we get live name + department with
-// zero dependency on tms_users — no manual linking needed.
 async function getTodayAttendance(req, res, next) {
   try {
     const dateStr = attendanceService.todayDateString();
@@ -14,7 +10,12 @@ async function getTodayAttendance(req, res, next) {
       fetchAllEmployees(),
     ]);
 
-    const employeeByCode = new Map(employees.map((e) => [e.employeeCode, e]));
+    const employeeByCode = new Map(
+      employees.map((e) => [
+        attendanceService.normalizeEmployeeCode(e.employeeCode),
+        e,
+      ]),
+    );
 
     const present = [];
     let unmatchedCount = 0;
@@ -22,8 +23,6 @@ async function getTodayAttendance(req, res, next) {
     for (const log of logs) {
       const emp = employeeByCode.get(log.enrollNo);
       if (!emp) {
-        // Logged on the device but not found (or inactive) in the
-        // employees API — shouldn't happen often, just skip it.
         unmatchedCount += 1;
         continue;
       }

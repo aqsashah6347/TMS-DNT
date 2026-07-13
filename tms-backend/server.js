@@ -16,6 +16,7 @@ const chatRoutes = require("./src/routes/chatRoutes");
 const analyticsRoutes = require("./src/routes/analyticsRoutes");
 const attendanceRoutes = require("./src/routes/attendanceRoutes");
 const employeesRoutes = require("./src/routes/employeesRoutes");
+const { checkZkTokenExpiry } = require("./src/utils/checkZkTokenExpiry");
 
 const app = express();
 
@@ -50,4 +51,5 @@ initSocket(httpServer);
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 TMS backend running on http://localhost:${PORT}`);
+  checkZkTokenExpiry();
 });

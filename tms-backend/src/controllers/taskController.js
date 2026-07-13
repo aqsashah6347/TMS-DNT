@@ -1,23 +1,34 @@
 const { sql, poolPromise } = require("../config/db");
 const { hasPermission } = require("../middleware/permissions");
 
+const JOIN_QUERY = `
+  SELECT t.*, u1.name AS assignedToName, u2.name AS assignedByName, u3.name AS completedByName
+  FROM tms_tasks t
+  LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
+  LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
+  LEFT JOIN tms_users u3 ON t.completed_by = u3.id
+`;
+
+// Re-fetches a task WITH its joined names after an insert/update, since
+// "OUTPUT INSERTED.*" only returns raw columns (assigned_to as an id,
+// no name) — without this, the frontend never sees assignedToName after
+// creating/editing a task, only after a full page refresh.
+async function fetchTaskWithJoins(pool, id) {
+  const result = await pool
+    .request()
+    .input("id", sql.Int, id)
+    .query(`${JOIN_QUERY} WHERE t.id = @id AND t.deleted_at IS NULL`);
+  return result.recordset[0] ? mapTask(result.recordset[0]) : null;
+}
+
 // GET /api/tasks?priority=&assignedTo=&search=&status=&projectId=
-// Matches taskStore.getFilteredTasks() logic, but done in the DB instead
-// of in the frontend, since real data will be too big to filter in JS.
 async function getAllTasks(req, res, next) {
   try {
     const { priority, assignedTo, search, status, projectId } = req.query;
     const pool = await poolPromise;
     const request = pool.request();
 
-    let query = `
-      SELECT t.*, u1.name AS assignedToName, u2.name AS assignedByName, u3.name AS completedByName
-      FROM tms_tasks t
-      LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
-      LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
-      LEFT JOIN tms_users u3 ON t.completed_by = u3.id
-      WHERE t.deleted_at IS NULL
-    `;
+    let query = `${JOIN_QUERY} WHERE t.deleted_at IS NULL`;
 
     if (priority) {
       query += " AND t.priority = @priority";
@@ -52,20 +63,9 @@ async function getAllTasks(req, res, next) {
 async function getTaskById(req, res, next) {
   try {
     const pool = await poolPromise;
-    const result = await pool.request().input("id", sql.Int, req.params.id)
-      .query(`
-        SELECT t.*, u1.name AS assignedToName, u2.name AS assignedByName, u3.name AS completedByName
-        FROM tms_tasks t
-        LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
-        LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
-        LEFT JOIN tms_users u3 ON t.completed_by = u3.id
-        WHERE t.id = @id AND t.deleted_at IS NULL
-      `);
-
-    const task = result.recordset[0];
+    const task = await fetchTaskWithJoins(pool, req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
-
-    res.json(mapTask(task));
+    res.json(task);
   } catch (err) {
     next(err);
   }
@@ -95,36 +95,35 @@ async function createTask(req, res, next) {
       .input("priority", sql.NVarChar, priority)
       .input("status", sql.NVarChar, status)
       .input("dueDate", sql.Date, dueDate)
-      .input("assignedTo", sql.Int, assignedTo)
+      .input("assignedTo", sql.Int, assignedTo || null)
       .input("assignedBy", sql.Int, req.user.id)
-      .input("projectId", sql.Int, projectId)
+      .input("projectId", sql.Int, projectId || null)
       .input("zoomLink", sql.NVarChar, zoomLink)
       .input("githubLink", sql.NVarChar, githubLink).query(`
         INSERT INTO tms_tasks
           (title, description, priority, status, due_date, assigned_to, assigned_by, project_id, zoom_link, github_link)
-        OUTPUT INSERTED.*
+        OUTPUT INSERTED.id
         VALUES
           (@title, @description, @priority, @status, @dueDate, @assignedTo, @assignedBy, @projectId, @zoomLink, @githubLink)
       `);
 
-    res.status(201).json(mapTask(result.recordset[0]));
+    const newId = result.recordset[0].id;
+    const task = await fetchTaskWithJoins(pool, newId);
+    res.status(201).json(task);
   } catch (err) {
     next(err);
   }
 }
 
-// Fields a plain "user" is allowed to change on their own tasks.
-// Everything else (reassigning, changing priority/dates/project, etc.)
-// is an admin/manager action.
 const USER_EDITABLE_FIELDS = ["status", "pinned", "completedBy"];
 
 async function updateTask(req, res, next) {
   try {
     const id = req.params.id;
     const updates = req.body;
+    const pool = await poolPromise;
 
     if (req.user.role === "user") {
-      const pool = await poolPromise;
       const existing = await pool
         .request()
         .input("id", sql.Int, id)
@@ -152,10 +151,7 @@ async function updateTask(req, res, next) {
       }
     }
 
-    // If a task is being marked done and no completedBy was sent,
-    // default to whoever it's assigned to — same rule your taskStore uses.
     if (updates.status === "done" && !updates.completedBy) {
-      const pool = await poolPromise;
       const existing = await pool
         .request()
         .input("id", sql.Int, id)
@@ -190,12 +186,13 @@ async function updateTask(req, res, next) {
       completedBy: "completed_by",
     };
 
-    const pool = await poolPromise;
     const request = pool.request().input("id", sql.Int, id);
     const setClauses = [];
 
     for (const [key, column] of Object.entries(fieldMap)) {
       if (updates[key] !== undefined) {
+        // assignedTo/completedBy come in as numbers (or null) from the
+        // frontend now that they're proper user-id dropdowns, not free text.
         request.input(key, updates[key]);
         setClauses.push(`${column} = @${key}`);
       }
@@ -209,7 +206,7 @@ async function updateTask(req, res, next) {
 
     const result = await request.query(`
       UPDATE tms_tasks SET ${setClauses.join(", ")}
-      OUTPUT INSERTED.*
+      OUTPUT INSERTED.id
       WHERE id = @id AND deleted_at IS NULL
     `);
 
@@ -217,15 +214,13 @@ async function updateTask(req, res, next) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    res.json(mapTask(result.recordset[0]));
+    const task = await fetchTaskWithJoins(pool, result.recordset[0].id);
+    res.json(task);
   } catch (err) {
     next(err);
   }
 }
 
-// Soft delete — per taskApi.js comment, we set deleted_at instead of
-// actually removing the row, so nothing else that references this task
-// (comments, audit logs, etc.) ever breaks.
 async function deleteTask(req, res, next) {
   try {
     const pool = await poolPromise;
@@ -246,7 +241,6 @@ async function deleteTask(req, res, next) {
   }
 }
 
-// GET /api/tasks/stats/completion?range=7d
 async function getCompletionStats(req, res, next) {
   try {
     const range = req.query.range || "7d";
@@ -271,6 +265,14 @@ async function getCompletionStats(req, res, next) {
   }
 }
 
+// Formats a SQL DATE column (comes back as a JS Date object) down to a
+// plain "YYYY-MM-DD" string — the calendar view compares dueDate strings
+// directly, and a full ISO datetime string would never match.
+function formatDate(value) {
+  if (!value) return null;
+  return new Date(value).toISOString().split("T")[0];
+}
+
 function mapTask(row) {
   return {
     id: row.id,
@@ -278,14 +280,17 @@ function mapTask(row) {
     description: row.description,
     priority: row.priority,
     status: row.status,
-    dueDate: row.due_date,
-    assignedTo: row.assignedToName || row.assigned_to,
-    assignedBy: row.assignedByName || row.assigned_by,
+    dueDate: formatDate(row.due_date),
+    assignedTo: row.assigned_to,
+    assignedToName: row.assignedToName || null,
+    assignedBy: row.assigned_by,
+    assignedByName: row.assignedByName || null,
     projectId: row.project_id,
     pinned: row.pinned,
     zoomLink: row.zoom_link,
     githubLink: row.github_link,
-    completedBy: row.completedByName || row.completed_by,
+    completedBy: row.completed_by,
+    completedByName: row.completedByName || null,
   };
 }
 

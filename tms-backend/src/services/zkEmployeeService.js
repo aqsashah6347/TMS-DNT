@@ -1,13 +1,12 @@
+const { getZkAccessToken } = require("./zkAuthService");
+
 async function fetchAllEmployees() {
   const baseUrl = process.env.ZK_EMPLOYEES_API_URL;
-  const token = process.env.ZK_EMPLOYEES_API_TOKEN;
-
   if (!baseUrl) {
     throw new Error("ZK_EMPLOYEES_API_URL is not set in .env");
   }
-  if (!token) {
-    throw new Error("ZK_EMPLOYEES_API_TOKEN is not set in .env");
-  }
+
+  const token = await getZkAccessToken();
 
   const response = await fetch(`${baseUrl}/api/employees`, {
     headers: {

@@ -1,9 +1,6 @@
 const attendanceService = require("../services/attendanceService");
 const { fetchAllEmployees } = require("../services/zkEmployeeService");
 
-// GET /api/employees/roster  (admin only)
-// Full active-employee roster with today's live present/absent status,
-// straight from the ZK employees + logs APIs — no tms_users dependency.
 async function getRoster(req, res, next) {
   try {
     const dateStr = attendanceService.todayDateString();
@@ -16,7 +13,8 @@ async function getRoster(req, res, next) {
     const logByCode = new Map(logRanges.map((l) => [l.enrollNo, l]));
 
     const roster = employees.map((emp) => {
-      const log = logByCode.get(emp.employeeCode);
+      const code = attendanceService.normalizeEmployeeCode(emp.employeeCode);
+      const log = logByCode.get(code);
       return {
         employeeCode: emp.employeeCode,
         name: emp.fullName,
