@@ -94,7 +94,7 @@ async function createTask(req, res, next) {
       .input("description", sql.NVarChar, description)
       .input("priority", sql.NVarChar, priority)
       .input("status", sql.NVarChar, status)
-      .input("dueDate", sql.Date, dueDate)
+      .input("dueDate", sql.Date, dueDate || null)
       .input("assignedTo", sql.Int, assignedTo || null)
       .input("assignedBy", sql.Int, req.user.id)
       .input("projectId", sql.Int, projectId || null)
@@ -189,14 +189,19 @@ async function updateTask(req, res, next) {
     const request = pool.request().input("id", sql.Int, id);
     const setClauses = [];
 
-    for (const [key, column] of Object.entries(fieldMap)) {
-      if (updates[key] !== undefined) {
-        // assignedTo/completedBy come in as numbers (or null) from the
-        // frontend now that they're proper user-id dropdowns, not free text.
-        request.input(key, updates[key]);
-        setClauses.push(`${column} = @${key}`);
-      }
-    }
+   for (const [key, column] of Object.entries(fieldMap)) {
+     if (updates[key] !== undefined) {
+       // Empty string ("" from a blank date input) isn't a valid SQL DATE —
+       // normalize to null so SQL Server doesn't choke on the conversion.
+       const value = updates[key] === "" ? null : updates[key];
+       if (key === "dueDate") {
+         request.input(key, sql.Date, value);
+       } else {
+         request.input(key, value);
+       }
+       setClauses.push(`${column} = @${key}`);
+     }
+   }
 
     if (setClauses.length === 0) {
       return res.status(400).json({ message: "No fields to update" });
