@@ -5,8 +5,6 @@
 // Requires Node 18+ (uses the built-in global fetch — no axios dependency needed).
 
 function todayDateString() {
-  // YYYY-MM-DD in the server's local time. If your server and the ZK
-  // device disagree on timezone, adjust this (e.g. force Asia/Karachi).
   const now = new Date();
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth() + 1).padStart(2, "0");
@@ -14,12 +12,16 @@ function todayDateString() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-// Fetches every log entry for a single day and reduces it down to
-// "first time seen" per enrollNo — i.e. did this person show up today,
-// and when. We deliberately ignore inOutMode: its check-in/check-out
-// meaning was only ever an inferred guess, and for "who came in today"
-// we don't actually need to know in vs. out, just presence.
-async function getFirstLogPerEmployeeForDate(dateStr = todayDateString()) {
+// The logs API and the employees API don't agree on enrollNo/employeeCode
+// formatting (one may be zero-padded, the other a plain number) — this
+// normalizes both sides to the same shape so matching actually works.
+// e.g. "01" -> "1", 1 -> "1", " 7 " -> "7"
+function normalizeEmployeeCode(value) {
+  const n = parseInt(String(value).trim(), 10);
+  return Number.isNaN(n) ? String(value).trim() : String(n);
+}
+
+async function fetchLogsForDate(dateStr) {
   const baseUrl = process.env.ZK_API_BASE_URL;
   if (!baseUrl) {
     throw new Error("ZK_API_BASE_URL is not set in .env");
@@ -33,12 +35,15 @@ async function getFirstLogPerEmployeeForDate(dateStr = todayDateString()) {
   }
 
   const data = await response.json();
-  const items = Array.isArray(data.items) ? data.items : [];
+  return Array.isArray(data.items) ? data.items : [];
+}
 
-  // enrollNo -> earliest logTime seen so far
+async function getFirstLogPerEmployeeForDate(dateStr = todayDateString()) {
+  const items = await fetchLogsForDate(dateStr);
+
   const firstSeen = new Map();
   for (const item of items) {
-    const enrollNo = String(item.enrollNo);
+    const enrollNo = normalizeEmployeeCode(item.enrollNo);
     const logTime = item.logTime;
     const existing = firstSeen.get(enrollNo);
     if (!existing || new Date(logTime) < new Date(existing)) {
@@ -52,44 +57,29 @@ async function getFirstLogPerEmployeeForDate(dateStr = todayDateString()) {
   }));
 }
 
-// Same idea as getFirstLogPerEmployeeForDate, but keeps both the
-// earliest AND latest log per enrollNo for a day — used by the
-// Employees page to show check-in / check-out times.
-async function getFirstAndLastLogPerEmployeeForDate(dateStr = todayDateString()) {
-  const baseUrl = process.env.ZK_API_BASE_URL;
-  if (!baseUrl) {
-    throw new Error("ZK_API_BASE_URL is not set in .env");
-  }
+async function getFirstAndLastLogPerEmployeeForDate(
+  dateStr = todayDateString(),
+) {
+  const items = await fetchLogsForDate(dateStr);
 
-  const url = `${baseUrl}/api/zk/logs?from=${dateStr}&to=${dateStr}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`ZK logs API returned ${response.status}`);
-  }
-
-  const data = await response.json();
-  const items = Array.isArray(data.items) ? data.items : [];
-
-  // enrollNo -> { checkIn, checkOut }
   const range = new Map();
   for (const item of items) {
-    const enrollNo = String(item.enrollNo);
+    const enrollNo = normalizeEmployeeCode(item.enrollNo);
     const logTime = item.logTime;
     const existing = range.get(enrollNo);
     if (!existing) {
       range.set(enrollNo, { checkIn: logTime, checkOut: logTime });
       continue;
     }
-    if (new Date(logTime) < new Date(existing.checkIn)) existing.checkIn = logTime;
-    if (new Date(logTime) > new Date(existing.checkOut)) existing.checkOut = logTime;
+    if (new Date(logTime) < new Date(existing.checkIn))
+      existing.checkIn = logTime;
+    if (new Date(logTime) > new Date(existing.checkOut))
+      existing.checkOut = logTime;
   }
 
   return Array.from(range.entries()).map(([enrollNo, times]) => ({
     enrollNo,
     checkIn: times.checkIn,
-    // If check-in and check-out are the same single log, there's no
-    // real "logged out" event yet — treat checkOut as null.
     checkOut: times.checkIn === times.checkOut ? null : times.checkOut,
   }));
 }
@@ -98,4 +88,5 @@ module.exports = {
   getFirstLogPerEmployeeForDate,
   getFirstAndLastLogPerEmployeeForDate,
   todayDateString,
+  normalizeEmployeeCode,
 };

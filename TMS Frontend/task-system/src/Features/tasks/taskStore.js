@@ -1,80 +1,26 @@
 import { create } from "zustand";
-
-const seedTasks = [
-  {
-    id: 1,
-    title: "Fix login 2FA bug",
-    description: "Users report OTP not validating",
-    priority: "critical",
-    status: "in progress",
-    dueDate: "2026-07-04",
-    assignedTo: "Aqsa",
-    assignedBy: "Admin",
-    projectId: 1,
-    pinned: true,
-    zoomLink: "",
-    githubLink: "",
-    completedBy: null,
-  },
-  {
-    id: 2,
-    title: "Review project proposal",
-    description: "",
-    priority: "high",
-    status: "backlog",
-    dueDate: "2026-07-05",
-    assignedTo: "Sara",
-    assignedBy: "Admin",
-    projectId: 2,
-    pinned: false,
-    zoomLink: "",
-    githubLink: "",
-    completedBy: null,
-  },
-  {
-    id: 3,
-    title: "Update team permissions",
-    description: "",
-    priority: "medium",
-    status: "review",
-    dueDate: "2026-07-06",
-    assignedTo: "Ali",
-    assignedBy: "Admin",
-    projectId: 1,
-    pinned: false,
-    zoomLink: "",
-    githubLink: "",
-    completedBy: null,
-  },
-  {
-    id: 4,
-    title: "Client feedback call",
-    description: "",
-    priority: "low",
-    status: "done",
-    dueDate: "2026-07-02",
-    assignedTo: "Aqsa",
-    assignedBy: "Admin",
-    projectId: 1,
-    pinned: false,
-    zoomLink: "",
-    githubLink: "",
-    completedBy: "Aqsa",
-  },
-];
+import { taskApi } from "../../api/taskApi";
 
 export const useTaskStore = create((set, get) => ({
-  tasks: seedTasks,
+  tasks: [],
+  isLoading: false,
+  error: null,
+
   view: "kanban",
   filters: { priority: "", assignedTo: "", search: "" },
   isTaskModalOpen: false,
   isFiltersModalOpen: false,
   editingTask: null,
   modalMode: "view",
-  pendingProjectId: null, // set when "Add Task" is clicked from inside a Project modal
+  pendingProjectId: null,
 
   setView: (view) => set({ view }),
-  setFilters: (filters) => set({ filters: { ...get().filters, ...filters } }),
+
+  setFilters: (patch) => {
+    set((state) => ({ filters: { ...state.filters, ...patch } }));
+    get().fetchTasks();
+  },
+
   openFiltersModal: () => set({ isFiltersModalOpen: true }),
   closeFiltersModal: () => set({ isFiltersModalOpen: false }),
 
@@ -90,7 +36,6 @@ export const useTaskStore = create((set, get) => ({
       pendingProjectId: null,
     }),
 
-  // Called from the Project detail modal's "Add Task" button
   openCreateModalForProject: (projectId) =>
     set({
       isTaskModalOpen: true,
@@ -107,55 +52,89 @@ export const useTaskStore = create((set, get) => ({
       pendingProjectId: null,
     }),
 
-  addTask: (task) =>
-    set((state) => ({
-      tasks: [...state.tasks, { ...task, id: Date.now(), pinned: false }],
-    })),
+  // Pulls the current filter state and asks the backend to do the
+  // filtering (matches getAllTasks' query params on the backend).
+  fetchTasks: async () => {
+    const { filters } = get();
+    set({ isLoading: true, error: null });
+    try {
+      const tasks = await taskApi.getAllTasks({
+        priority: filters.priority || undefined,
+        assignedTo: filters.assignedTo || undefined,
+        search: filters.search || undefined,
+      });
+      set({ tasks, isLoading: false });
+    } catch (err) {
+      set({
+        error: err.response?.data?.message || "Couldn't load tasks",
+        isLoading: false,
+      });
+    }
+  },
 
-  updateTask: (id, updates) =>
-    set((state) => {
-      // If a task is being marked done and no completedBy was set, default to the assignee
-      const patched = { ...updates };
-      if (patched.status === "done" && !patched.completedBy) {
-        const existing = state.tasks.find((t) => t.id === id);
-        patched.completedBy = existing?.assignedTo || null;
+  addTask: async (task) => {
+    set({ error: null });
+    try {
+      await taskApi.createTask({
+        ...task,
+        assignedTo: task.assignedTo ? Number(task.assignedTo) : null,
+        projectId: task.projectId ? Number(task.projectId) : null,
+      });
+      await get().fetchTasks();
+      return true;
+    } catch (err) {
+      set({ error: err.response?.data?.message || "Couldn't create task" });
+      return false;
+    }
+  },
+
+  updateTask: async (id, updates) => {
+    set({ error: null });
+    try {
+      const patch = { ...updates };
+      if (patch.assignedTo !== undefined) {
+        patch.assignedTo = patch.assignedTo ? Number(patch.assignedTo) : null;
       }
-      return {
-        tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...patched } : t)),
-        editingTask:
-          state.editingTask?.id === id
-            ? { ...state.editingTask, ...patched }
-            : state.editingTask,
-      };
-    }),
+      if (patch.projectId !== undefined) {
+        patch.projectId = patch.projectId ? Number(patch.projectId) : null;
+      }
 
-  deleteTask: (id) =>
-    set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) })),
+      const updated = await taskApi.updateTask(id, patch);
+      await get().fetchTasks();
 
-  togglePin: (id) =>
-    set((state) => ({
-      tasks: state.tasks.map((t) =>
-        t.id === id ? { ...t, pinned: !t.pinned } : t,
-      ),
-    })),
+      // Keep the modal showing fresh data if this was the open task.
+      if (get().editingTask?.id === id) {
+        set({ editingTask: updated });
+      }
+      return true;
+    } catch (err) {
+      set({ error: err.response?.data?.message || "Couldn't update task" });
+      return false;
+    }
+  },
+
+  deleteTask: async (id) => {
+    set({ error: null });
+    try {
+      await taskApi.deleteTask(id);
+      await get().fetchTasks();
+      return true;
+    } catch (err) {
+      set({ error: err.response?.data?.message || "Couldn't delete task" });
+      return false;
+    }
+  },
+
+  togglePin: async (id) => {
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task) return;
+    await get().updateTask(id, { pinned: !task.pinned });
+  },
 
   getTasksByProject: (projectId) =>
     get().tasks.filter((t) => t.projectId === projectId),
 
-  getFilteredTasks: () => {
-    const { tasks, filters } = get();
-    return tasks
-      .filter((t) => {
-        if (filters.priority && t.priority !== filters.priority) return false;
-        if (filters.assignedTo && t.assignedTo !== filters.assignedTo)
-          return false;
-        if (
-          filters.search &&
-          !t.title.toLowerCase().includes(filters.search.toLowerCase())
-        )
-          return false;
-        return true;
-      })
-      .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-  },
+  // Filtering now happens server-side in fetchTasks — this just returns
+  // whatever the store currently has (kept so Tasks.jsx doesn't need to change).
+  getFilteredTasks: () => get().tasks,
 }));
