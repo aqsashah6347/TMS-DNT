@@ -52,4 +52,50 @@ async function getFirstLogPerEmployeeForDate(dateStr = todayDateString()) {
   }));
 }
 
-module.exports = { getFirstLogPerEmployeeForDate, todayDateString };
+// Same idea as getFirstLogPerEmployeeForDate, but keeps both the
+// earliest AND latest log per enrollNo for a day — used by the
+// Employees page to show check-in / check-out times.
+async function getFirstAndLastLogPerEmployeeForDate(dateStr = todayDateString()) {
+  const baseUrl = process.env.ZK_API_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("ZK_API_BASE_URL is not set in .env");
+  }
+
+  const url = `${baseUrl}/api/zk/logs?from=${dateStr}&to=${dateStr}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`ZK logs API returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const items = Array.isArray(data.items) ? data.items : [];
+
+  // enrollNo -> { checkIn, checkOut }
+  const range = new Map();
+  for (const item of items) {
+    const enrollNo = String(item.enrollNo);
+    const logTime = item.logTime;
+    const existing = range.get(enrollNo);
+    if (!existing) {
+      range.set(enrollNo, { checkIn: logTime, checkOut: logTime });
+      continue;
+    }
+    if (new Date(logTime) < new Date(existing.checkIn)) existing.checkIn = logTime;
+    if (new Date(logTime) > new Date(existing.checkOut)) existing.checkOut = logTime;
+  }
+
+  return Array.from(range.entries()).map(([enrollNo, times]) => ({
+    enrollNo,
+    checkIn: times.checkIn,
+    // If check-in and check-out are the same single log, there's no
+    // real "logged out" event yet — treat checkOut as null.
+    checkOut: times.checkIn === times.checkOut ? null : times.checkOut,
+  }));
+}
+
+module.exports = {
+  getFirstLogPerEmployeeForDate,
+  getFirstAndLastLogPerEmployeeForDate,
+  todayDateString,
+};
