@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Search, User } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Search, User, ChevronDown, Check } from "lucide-react";
 import { employeesApi } from "../api/employeesApi";
 
 function formatTime(iso) {
@@ -50,6 +50,84 @@ function StatusPill({ status }) {
   );
 }
 
+// Custom-styled dropdown — a native <select>'s open menu can't be themed
+// via Tailwind, so this builds the popup ourselves to match the dark UI.
+function DepartmentDropdown({ departments, value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const label = value || "All Departments";
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`flex items-center justify-between gap-2 min-w-[180px] px-4 py-2.5 rounded-xl bg-white/5 border text-sm text-white transition-colors ${
+          isOpen
+            ? "border-orange-500/40 ring-2 ring-orange-500/40"
+            : "border-white/10 hover:border-white/20"
+        }`}
+      >
+        <span className="truncate">{label}</span>
+        <ChevronDown
+          size={15}
+          className={`text-white/40 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-30 mt-2 w-full min-w-[200px] rounded-xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden py-1">
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setIsOpen(false);
+            }}
+            className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
+              value === ""
+                ? "text-orange-400 bg-orange-500/10"
+                : "text-white/70 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            All Departments
+            {value === "" && <Check size={14} />}
+          </button>
+
+          {departments.map((dept) => (
+            <button
+              key={dept}
+              type="button"
+              onClick={() => {
+                onChange(dept);
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left truncate transition-colors ${
+                value === dept
+                  ? "text-orange-400 bg-orange-500/10"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <span className="truncate">{dept}</span>
+              {value === dept && <Check size={14} className="shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Employees() {
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,7 +158,6 @@ export default function Employees() {
     };
   }, []);
 
-  // Department list derived from whatever's actually in the roster.
   const departments = useMemo(() => {
     const set = new Set(employees.map((e) => e.department || "—"));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
@@ -132,18 +209,11 @@ export default function Employees() {
           />
         </div>
 
-        <select
+        <DepartmentDropdown
+          departments={departments}
           value={departmentFilter}
-          onChange={(e) => setDepartmentFilter(e.target.value)}
-          className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-        >
-          <option value="">All Departments</option>
-          {departments.map((dept) => (
-            <option key={dept} value={dept}>
-              {dept}
-            </option>
-          ))}
-        </select>
+          onChange={setDepartmentFilter}
+        />
 
         <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
           <button
