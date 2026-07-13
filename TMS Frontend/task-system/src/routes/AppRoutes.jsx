@@ -10,8 +10,10 @@ const Teams = lazy(() => import("../pages/Teams"));
 const Inbox = lazy(() => import("../pages/Inbox"));
 const Analytics = lazy(() => import("../pages/Analytics"));
 const Admin = lazy(() => import("../pages/Admin"));
+const Chat = lazy(() => import("../pages/Chat"));   
 const Access = lazy(() => import("../pages/Access"));
 const Settings = lazy(() => import("../pages/Settings"));
+
 
 function PageLoader() {
   return (
@@ -68,6 +70,14 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/chat"
+  element={
+    <ProtectedRoute>
+      <Chat />
+    </ProtectedRoute>
+  }
+/>
         <Route
           path="/analytics"
           element={
