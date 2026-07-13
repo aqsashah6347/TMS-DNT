@@ -55,7 +55,8 @@ export default function Employees() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [viewMode, setViewMode] = useState("present"); // "present" | "all" — present is default
 
   useEffect(() => {
     let cancelled = false;
@@ -79,16 +80,29 @@ export default function Employees() {
     };
   }, []);
 
+  // Department list derived from whatever's actually in the roster.
+  const departments = useMemo(() => {
+    const set = new Set(employees.map((e) => e.department || "—"));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [employees]);
+
   const filtered = useMemo(() => {
     return employees.filter((emp) => {
       const matchesSearch =
         !search ||
         emp.name.toLowerCase().includes(search.toLowerCase()) ||
         emp.employeeCode.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = !statusFilter || emp.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesDept =
+        !departmentFilter || emp.department === departmentFilter;
+      const matchesView = viewMode === "all" || emp.status === "present";
+      return matchesSearch && matchesDept && matchesView;
     });
-  }, [employees, search, statusFilter]);
+  }, [employees, search, departmentFilter, viewMode]);
+
+  const presentCount = useMemo(
+    () => employees.filter((e) => e.status === "present").length,
+    [employees],
+  );
 
   return (
     <div>
@@ -102,7 +116,7 @@ export default function Employees() {
         Live attendance status, synced from the biometric device.
       </p>
 
-      {/* Search + filter */}
+      {/* Search + department filter + present/all toggle */}
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
         <div className="relative flex-1">
           <Search
@@ -117,15 +131,42 @@ export default function Employees() {
             className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
           />
         </div>
+
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          value={departmentFilter}
+          onChange={(e) => setDepartmentFilter(e.target.value)}
           className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/40"
         >
-          <option value="">All Status</option>
-          <option value="present">Present</option>
-          <option value="absent">Absent</option>
+          <option value="">All Departments</option>
+          {departments.map((dept) => (
+            <option key={dept} value={dept}>
+              {dept}
+            </option>
+          ))}
         </select>
+
+        <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
+          <button
+            onClick={() => setViewMode("present")}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "present"
+                ? "bg-orange-500/20 text-orange-400"
+                : "text-white/50 hover:text-white/80"
+            }`}
+          >
+            Present ({presentCount})
+          </button>
+          <button
+            onClick={() => setViewMode("all")}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "all"
+                ? "bg-orange-500/20 text-orange-400"
+                : "text-white/50 hover:text-white/80"
+            }`}
+          >
+            All ({employees.length})
+          </button>
+        </div>
       </div>
 
       {/* Content */}
