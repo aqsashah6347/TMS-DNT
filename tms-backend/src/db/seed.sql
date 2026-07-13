@@ -5,7 +5,7 @@
 -- (already hashed with bcrypt so login works out of the box)
 -- ============================================================
 
-USE tms_db;
+USE Task_Management;
 GO
 
 INSERT INTO tms_users (name, email, password_hash, role, status)

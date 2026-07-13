@@ -14,7 +14,7 @@ Studio) so you have a UI to run SQL scripts and look at tables.
 
 1. Open SSMS, connect to your local SQL Server.
 2. Open `src/db/schema.sql` from this folder, run it (F5). This creates the
-   `tms_db` database and every table.
+   `Task_Management;` database and every table.
 3. Open `src/db/seed.sql`, run it. This adds 3 test users, a team, a project,
    and 2 tasks so you have something to see immediately.
    - Every seeded user's password is `Password123`.
@@ -39,7 +39,7 @@ npm run dev
 
 If everything is right, you'll see:
 ```
-✅ Connected to SQL Server: tms_db
+✅ Connected to SQL Server: Task_Management;
 🚀 TMS backend running on http://localhost:5000
 ```
 
@@ -73,7 +73,7 @@ patterns you already know: `pool.request().input(...).query(...)`.
 
 ## 7. What's built vs. what's next
 
-**Fully working:** login + OTP 2FA, tasks (create/read/update/soft-delete +
+**Fully working:** login + OT 2FA, tasks (create/read/update/soft-delete +
 completion stats), projects, teams, notifications, and basic user/admin
 management.
 

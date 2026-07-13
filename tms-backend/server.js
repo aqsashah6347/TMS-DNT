@@ -14,6 +14,7 @@ const userRoutes = require("./src/routes/userRoutes");
 const permissionRoutes = require("./src/routes/permissionRoutes");
 const chatRoutes = require("./src/routes/chatRoutes");
 const analyticsRoutes = require("./src/routes/analyticsRoutes");
+const attendanceRoutes = require("./src/routes/attendanceRoutes");
 
 const app = express();
 
@@ -21,6 +22,7 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 app.use(express.json());
 app.use("/api/permissions", permissionRoutes);
+app.use("/api/attendance", attendanceRoutes);
 
 // Quick way to check the server is alive: visit http://localhost:5000/api/health
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));

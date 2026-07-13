@@ -1,4 +1,4 @@
-USE tms_db;
+USE Task_Management;
 GO
 
 CREATE TABLE tms_chat_messages (

@@ -1,17 +1,17 @@
 -- ============================================================
 -- TMS Database Schema (SQL Server)
--- Run this ONCE against an empty database called tms_db.
+-- Run this ONCE against an empty database called Task_Management;
 -- In SSMS: open this file, make sure the connection points to
 -- your server, then click Execute (or press F5).
 -- ============================================================
 
-IF DB_ID('tms_db') IS NULL
+IF DB_ID('Task_Management;') IS NULL
 BEGIN
-    CREATE DATABASE tms_db;
+    CREATE DATABASE Task_Management;
 END
 GO
 
-USE tms_db;
+USE Task_Management;
 GO
 
 -- ---------- USERS ----------
