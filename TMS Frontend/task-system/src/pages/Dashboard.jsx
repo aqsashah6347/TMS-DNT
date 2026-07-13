@@ -9,6 +9,7 @@ import { TrendingUp, Star, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTaskStore } from "../features/tasks/taskStore";
 import Card from "../components/ui/Card";
+import PresentEmployeesButton from "../features/dashboard/components/AvailableEmployeesButton";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -55,6 +56,10 @@ export default function Dashboard() {
                 Quick Actions
               </h3>
               <QuickActions columns={2} />
+              <div className="mt-2.5">
+                <PresentEmployeesButton />
+              
+              </div>
             </div>
           </div>
         </div>

@@ -1,28 +1,40 @@
-import { Plus } from "lucide-react";
-import { useAdminStore } from "../features/admin/adminStore";
-import UserTable from "../features/admin/components/UserTable";
-import UserModal from "../features/admin/components/UserModal";
-import Button from "../components/ui/Button";
+import { useEffect } from "react";
+import { useAccessStore } from "../Features/access/accessStore";
+import PermissionTable from "../Features/access/components/PermissionTable";
+import AuditLog from "../Features/access/components/AuditLog";
 
-export default function Admin() {
-  const { openCreateModal } = useAdminStore();
+export default function Access() {
+  const { fetchAll, isLoading, error, permissions } = useAccessStore();
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2
-          className="text-4xl font-semibold text-white"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Admin — User Management
-        </h2>
-        <Button variant="primary" onClick={openCreateModal}>
-          <Plus size={14} className="inline mr-1.5 -mt-0.5" /> Add User
-        </Button>
-      </div>
+      <h2
+        className="text-4xl font-semibold text-white"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        Manage Access
+      </h2>
 
-      <UserTable />
-      <UserModal />
+      {error && (
+        <div className="mt-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      {isLoading && permissions.length === 0 ? (
+        <div className="mt-6 text-sm text-white/50">Loading permissions…</div>
+      ) : (
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="col-span-2">
+            <PermissionTable />
+          </div>
+          <AuditLog />
+        </div>
+      )}
     </div>
   );
 }

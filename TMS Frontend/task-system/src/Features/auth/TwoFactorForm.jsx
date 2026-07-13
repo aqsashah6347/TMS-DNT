@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useNavigate } from "react-router-dom";
+import { authApi } from "../../api/authApi";
 
-export default function TwoFactorForm({ pendingUser, onBack }) {
+export default function TwoFactorForm({ tempToken, onBack }) {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const inputsRef = useRef([]);
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
@@ -23,15 +25,25 @@ export default function TwoFactorForm({ pendingUser, onBack }) {
     }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const otp = code.join("");
     if (otp.length !== 6) {
       setError("Enter all 6 digits");
       return;
     }
-    login(pendingUser);
-    navigate("/");
+
+    setError("");
+    setIsLoading(true);
+    try {
+      const data = await authApi.verifyOtp(tempToken, otp);
+      login(data.user, data.token);
+      navigate("/");
+    } catch (err) {
+      setError(err.response?.data?.message || "Incorrect or expired code");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -62,9 +74,10 @@ export default function TwoFactorForm({ pendingUser, onBack }) {
 
       <button
         type="submit"
+        disabled={isLoading}
         className="login-signin-btn w-full rounded-full py-3 text-white font-semibold cursor-pointer border-none transition-all duration-300"
       >
-        Verify
+        {isLoading ? "Verifying..." : "Verify"}
       </button>
       <button
         type="button"
