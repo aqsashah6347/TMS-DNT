@@ -38,7 +38,7 @@ export default function TaskCard({ task }) {
       )}
 
       <div className="flex items-start justify-between gap-3 mb-2 pr-4">
-        <h4 className="text-lg sm:text-xl font-bold text-white leading-snug">
+        <h4 className="text-base sm:text-sm font-bold text-white leading-snug">
           {task.title}
         </h4>
         <span
@@ -50,7 +50,7 @@ export default function TaskCard({ task }) {
       </div>
 
       {task.description && (
-        <p className="text-sm text-white/75 mb-3 line-clamp-2">
+        <p className="text-xs text-white/75 mb-3 line-clamp-2">
           {task.description}
         </p>
       )}
