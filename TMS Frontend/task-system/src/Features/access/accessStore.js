@@ -1,9 +1,7 @@
 import { create } from "zustand";
 import { accessApi } from "../../api/accessApi";
 
-// Real data now comes from GET /api/permissions and /api/permissions/audit-log.
-// Shape is unchanged from the old mock data, so PermissionTable.jsx,
-// RolePresets.jsx, and AuditLog.jsx don't need to change at all:
+// Real data comes from GET /api/permissions and /api/permissions/audit-log.
 //   permissions: [{ userId, userName, role, overrides: { module: [actions] } }]
 //   auditLog: [{ id, actor, action, time }]
 export const useAccessStore = create((set, get) => ({
@@ -13,6 +11,12 @@ export const useAccessStore = create((set, get) => ({
   auditLog: [],
   isLoading: false,
   error: null,
+
+  // The roster employee currently open in the panel — { userId, employeeCode,
+  // name, role }. userId is null when this employee has no tms_users login
+  // account yet; the panel handles that case instead of the list blocking it.
+  selectedEmployee: null,
+  selectEmployee: (employee) => set({ selectedEmployee: employee }),
 
   // Call this from Access.jsx on mount.
   fetchAll: async () => {
@@ -48,7 +52,6 @@ export const useAccessStore = create((set, get) => ({
   },
 
   toggleAction: async (userId, module, action) => {
-    // Optimistic update so the checkbox feels instant.
     const previous = get().permissions;
     set({
       permissions: previous.map((p) => {
@@ -63,7 +66,6 @@ export const useAccessStore = create((set, get) => ({
 
     try {
       const { actions } = await accessApi.toggleAction(userId, module, action);
-      // Reconcile with the server's authoritative action list for that module.
       set((state) => ({
         permissions: state.permissions.map((p) =>
           p.userId === userId
@@ -73,7 +75,6 @@ export const useAccessStore = create((set, get) => ({
       }));
       get().refreshAuditLog();
     } catch (err) {
-      // Revert on failure.
       set({
         permissions: previous,
         error: err.response?.data?.message || "Couldn't update permission",
@@ -92,6 +93,11 @@ export const useAccessStore = create((set, get) => ({
     try {
       await accessApi.setRole(userId, role);
       get().refreshAuditLog();
+      // Keep the panel's role badge in sync if this is the open employee.
+      const selected = get().selectedEmployee;
+      if (selected?.userId === userId) {
+        set({ selectedEmployee: { ...selected, role } });
+      }
     } catch (err) {
       set({
         permissions: previous,
