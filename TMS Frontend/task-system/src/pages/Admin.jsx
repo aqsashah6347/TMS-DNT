@@ -1,40 +1,18 @@
-import { useEffect } from "react";
-import { useAccessStore } from "../Features/access/accessStore";
-import PermissionTable from "../Features/access/components/PermissionTable";
-import AuditLog from "../Features/access/components/AuditLog";
+import { Cat } from "lucide-react"; // Assuming you are using lucide-react or a similar package
 
 export default function Access() {
-  const { fetchAll, isLoading, error, permissions } = useAccessStore();
-
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
-
   return (
-    <div>
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center text-white">
+      <Cat className="w-16 h-16 text-orange-500 mb-4" fill="currentColor" />
       <h2
-        className="text-4xl font-semibold text-white"
+        className="text-4xl font-semibold"
         style={{ fontFamily: "var(--font-display)" }}
       >
-        Manage Access
+        Coming Soon
       </h2>
-
-      {error && (
-        <div className="mt-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-          {error}
-        </div>
-      )}
-
-      {isLoading && permissions.length === 0 ? (
-        <div className="mt-6 text-sm text-white/50">Loading permissions…</div>
-      ) : (
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          <div className="col-span-2">
-            <PermissionTable />
-          </div>
-          <AuditLog />
-        </div>
-      )}
+      <p className="text-white/60 mt-2 text-sm">
+        We are working on bringing you the new access management features.
+      </p>
     </div>
   );
 }
