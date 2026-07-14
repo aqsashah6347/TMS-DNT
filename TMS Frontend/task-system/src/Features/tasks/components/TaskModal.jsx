@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "../../../components/ui/Modal";
-import { Input, Textarea } from "../../../components/ui/input";
+import { Input, Textarea } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
 import Button from "../../../components/ui/Button";
 import { useTaskStore } from "../taskStore";
+import { useAuthStore } from "../../../store/useAuthStore";
+import { usersApi } from "../../../api/usersApi";
 import {
   Pencil,
   Pin,
@@ -13,6 +15,7 @@ import {
   Calendar,
   User,
   Flag,
+  CheckCircle2,
 } from "lucide-react";
 
 const priorityOptions = ["low", "medium", "high", "critical"].map((v) => ({
@@ -23,13 +26,6 @@ const statusOptions = ["backlog", "in progress", "review", "done"].map((v) => ({
   value: v,
   label: v,
 }));
-
-// const priorityStyles = {
-//   critical: "bg-danger text-danger-text",
-//   high: "bg-warning text-warning-text",
-//   medium: "bg-info text-info-text",
-//   low: "bg-primary-light text-dark",
-// };
 
 const priorityBadgeMap = {
   critical: "glass-badge--danger",
@@ -60,34 +56,79 @@ export default function TaskModal() {
     addTask,
     updateTask,
     deleteTask,
+    completeTask,
     togglePin,
     pendingProjectId,
   } = useTaskStore();
+  const { user } = useAuthStore();
+  const canManageTasks = user?.role === "admin" || user?.role === "manager";
 
-  // key changes whenever a different task (or "new task") is being edited,
-  // so React resets the form's internal state automatically — no effect needed.
+  const [users, setUsers] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [formError, setFormError] = useState(null);
+
+  useEffect(() => {
+    if (isTaskModalOpen) {
+      usersApi
+        .getAllUsers()
+        .then(setUsers)
+        .catch(() => setUsers([]));
+    }
+  }, [isTaskModalOpen]);
+
   const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
   const [form, setForm] = useState(() =>
     editingTask
-      ? { ...editingTask }
+      ? {
+          ...editingTask,
+          assignedTo: editingTask.assignedTo
+            ? String(editingTask.assignedTo)
+            : "",
+        }
       : { ...emptyForm, projectId: pendingProjectId || null },
   );
 
-  function handleSubmit(e) {
+  const userOptions = [
+    { value: "", label: "Unassigned" },
+    ...users.map((u) => ({ value: String(u.id), label: u.name })),
+  ];
+
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!(form.title || "").trim()) return;
 
+    setFormError(null);
+    setIsSubmitting(true);
+
+    const ok = editingTask
+      ? await updateTask(editingTask.id, form)
+      : await addTask(form);
+
+    setIsSubmitting(false);
+
+    if (!ok) {
+      setFormError(useTaskStore.getState().error);
+      return;
+    }
+
     if (editingTask) {
-      updateTask(editingTask.id, form);
       useTaskStore.setState({ modalMode: "view" });
     } else {
-      addTask(form);
       closeTaskModal();
     }
   }
 
-  function handleDelete() {
-    if (editingTask) deleteTask(editingTask.id);
+  async function handleDelete() {
+    if (editingTask) await deleteTask(editingTask.id);
+    closeTaskModal();
+  }
+
+  async function handleComplete() {
+    if (!editingTask) return;
+    setIsCompleting(true);
+    await completeTask(editingTask.id);
+    setIsCompleting(false);
     closeTaskModal();
   }
 
@@ -140,14 +181,14 @@ export default function TaskModal() {
             <Input
               label="Due Date"
               type="date"
-              value={form.dueDate}
+              value={form.dueDate || ""}
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
             />
-            <Input
+            <Dropdown
               label="Assigned To"
               value={form.assignedTo}
-              onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
-              placeholder="e.g. Sara"
+              onChange={(v) => setForm({ ...form, assignedTo: v })}
+              options={userOptions}
             />
           </div>
 
@@ -165,6 +206,12 @@ export default function TaskModal() {
               placeholder="https://github.com/..."
             />
           </div>
+
+          {formError && (
+            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              {formError}
+            </p>
+          )}
 
           <div className="flex items-center justify-between pt-2">
             {editingTask ? (
@@ -186,8 +233,12 @@ export default function TaskModal() {
               >
                 {editingTask ? "Back" : "Cancel"}
               </Button>
-              <Button variant="primary" type="submit">
-                {editingTask ? "Save Changes" : "Create Task"}
+              <Button variant="primary" type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingTask
+                    ? "Save Changes"
+                    : "Create Task"}
               </Button>
             </div>
           </div>
@@ -218,10 +269,10 @@ export default function TaskModal() {
                   {editingTask.dueDate}
                 </div>
               )}
-              {editingTask.assignedTo && (
+              {editingTask.assignedToName && (
                 <div className="flex items-center gap-2 text-dark">
                   <User size={14} className="text-muted" /> Assigned to{" "}
-                  {editingTask.assignedTo}
+                  {editingTask.assignedToName}
                 </div>
               )}
             </div>
@@ -260,12 +311,27 @@ export default function TaskModal() {
                 {editingTask.pinned ? "Unpin" : "Pin to top"}
               </button>
 
-              <Button
-                variant="primary"
-                onClick={() => openTaskEdit(editingTask)}
-              >
-                <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
-              </Button>
+              {canManageTasks ? (
+                <Button
+                  variant="primary"
+                  onClick={() => openTaskEdit(editingTask)}
+                >
+                  <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
+                </Button>
+              ) : editingTask.status === "done" ? (
+                <span className="flex items-center gap-1.5 text-xs text-success-text">
+                  <CheckCircle2 size={14} /> Completed
+                </span>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={handleComplete}
+                  disabled={isCompleting}
+                >
+                  <CheckCircle2 size={14} className="inline mr-1.5 -mt-0.5" />
+                  {isCompleting ? "Completing…" : "Mark Complete"}
+                </Button>
+              )}
             </div>
           </div>
         )
