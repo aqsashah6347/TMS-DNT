@@ -1,14 +1,14 @@
 import { Plus, Filter, List, Kanban, Calendar } from "lucide-react";
 import { useTaskStore } from "../Features/tasks/taskStore";
+import { useAuthStore } from "../store/useAuthStore";
 import TaskListView from "../Features/tasks/components/TaskListView";
 import TaskKanbanView from "../Features/tasks/components/TaskKanbanView";
 import TaskCalendarView from "../Features/tasks/components/TaskCalendarView";
 import TaskModal from "../Features/tasks/components/TaskModal";
 import TaskFiltersModal from "../Features/tasks/components/TaskFiltersModal";
-import Button from "../components/ui/Button"
+import Button from "../components/ui/Button";
 import { useEffect, useRef } from "react";
 import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
-
 
 const viewOptions = [
   { key: "list", label: "List View", icon: List },
@@ -21,11 +21,13 @@ export default function Tasks() {
     useTaskStore();
   const tasks = getFilteredTasks();
   const { fetchTasks, isLoading, error } = useTaskStore();
+  const { user } = useAuthStore();
+  const canManageTasks = user?.role === "admin" || user?.role === "manager";
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
-    const containerRef = useRef(null);
+  const containerRef = useRef(null);
   return (
     <div
       ref={containerRef}
@@ -71,13 +73,15 @@ export default function Tasks() {
               <Filter size={18} className="inline mr-1.5 -mt-0.5" /> Filters
             </Button>
 
-            <Button
-              variant="primary"
-              onClick={openCreateModal}
-              className="text-base px-5 py-3"
-            >
-              <Plus size={18} className="inline mr-1.5 -mt-0.5" /> New Task
-            </Button>
+            {canManageTasks && (
+              <Button
+                variant="primary"
+                onClick={openCreateModal}
+                className="text-base px-5 py-3"
+              >
+                <Plus size={18} className="inline mr-1.5 -mt-0.5" /> New Task
+              </Button>
+            )}
           </div>
         </div>
         {isLoading && tasks.length === 0 && (
@@ -100,4 +104,3 @@ export default function Tasks() {
     </div>
   );
 }
-

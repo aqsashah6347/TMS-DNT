@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import Modal from "../../../components/ui/Modal";
-import { Input, Textarea } from "../../../components/ui/input";
+import { Input, Textarea } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
 import Button from "../../../components/ui/Button";
 import { useTaskStore } from "../taskStore";
+import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import {
   Pencil,
@@ -14,6 +15,7 @@ import {
   Calendar,
   User,
   Flag,
+  CheckCircle2,
 } from "lucide-react";
 
 const priorityOptions = ["low", "medium", "high", "critical"].map((v) => ({
@@ -54,12 +56,16 @@ export default function TaskModal() {
     addTask,
     updateTask,
     deleteTask,
+    completeTask,
     togglePin,
     pendingProjectId,
   } = useTaskStore();
+  const { user } = useAuthStore();
+  const canManageTasks = user?.role === "admin" || user?.role === "manager";
 
   const [users, setUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [formError, setFormError] = useState(null);
 
   useEffect(() => {
@@ -115,6 +121,14 @@ export default function TaskModal() {
 
   async function handleDelete() {
     if (editingTask) await deleteTask(editingTask.id);
+    closeTaskModal();
+  }
+
+  async function handleComplete() {
+    if (!editingTask) return;
+    setIsCompleting(true);
+    await completeTask(editingTask.id);
+    setIsCompleting(false);
     closeTaskModal();
   }
 
@@ -297,12 +311,27 @@ export default function TaskModal() {
                 {editingTask.pinned ? "Unpin" : "Pin to top"}
               </button>
 
-              <Button
-                variant="primary"
-                onClick={() => openTaskEdit(editingTask)}
-              >
-                <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
-              </Button>
+              {canManageTasks ? (
+                <Button
+                  variant="primary"
+                  onClick={() => openTaskEdit(editingTask)}
+                >
+                  <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
+                </Button>
+              ) : editingTask.status === "done" ? (
+                <span className="flex items-center gap-1.5 text-xs text-success-text">
+                  <CheckCircle2 size={14} /> Completed
+                </span>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={handleComplete}
+                  disabled={isCompleting}
+                >
+                  <CheckCircle2 size={14} className="inline mr-1.5 -mt-0.5" />
+                  {isCompleting ? "Completing…" : "Mark Complete"}
+                </Button>
+              )}
             </div>
           </div>
         )

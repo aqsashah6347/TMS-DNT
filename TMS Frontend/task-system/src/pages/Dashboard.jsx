@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import TaskCompletionChart from "../features/dashboard/components/TaskCompletionChart";
 import PriorityTaskList from "../features/dashboard/components/PriorityTaskList";
 import InboxPreview from "../features/dashboard/components/InboxPreview";
@@ -8,16 +9,39 @@ import QuickActions from "../features/dashboard/components/QuickActions";
 import { TrendingUp, Star, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTaskStore } from "../features/tasks/taskStore";
+import { useProjectStore } from "../features/projects/projectStore";
+import { useAuthStore } from "../store/useAuthStore";
 import Card from "../components/ui/Card";
 import PresentEmployeesButton from "../features/dashboard/components/AvailableEmployeesButton";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { tasks } = useTaskStore();
+  const { tasks, fetchTasks } = useTaskStore();
+  const { projects, fetchProjects } = useProjectStore();
+  const user = useAuthStore((s) => s.user);
+
+  // Dashboard is often the first page a user lands on after login, so it
+  // needs to fetch its own data instead of relying on Tasks.jsx/Projects.jsx
+  // having already been visited.
+  useEffect(() => {
+    fetchTasks();
+    fetchProjects();
+  }, [fetchTasks, fetchProjects]);
 
   const completed = tasks.filter((t) => t.status === "done").length;
   const total = tasks.length || 1;
   const pct = Math.round((completed / total) * 100);
+
+  const activeProjectsCount = projects.filter(
+    (p) => p.status === "active",
+  ).length;
+
+  const today = new Date().toISOString().split("T")[0];
+  const overdueCount = tasks.filter(
+    (t) => t.dueDate && t.dueDate < today && t.status !== "done",
+  ).length;
+
+  const firstName = user?.name?.split(" ")[0] || "there";
 
   return (
     <div className="grid grid-cols-3 gap-4">
@@ -28,13 +52,14 @@ export default function Dashboard() {
             <div className="flex-1 min-w-0">
               <div className="glass-dark mb-6">
                 <span className="glass-badge glass-badge--primary mb-3 inline-flex">
-                  <span className="glass-badge__dot" /> Department Name
+                  <span className="glass-badge__dot" />{" "}
+                  {user?.role || "Team Member"}
                 </span>
                 <h2
                   className="text-2xl text-white"
                   style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
                 >
-                  Welcome back, Aqsa
+                  Welcome back, {firstName}
                 </h2>
                 <p className="text-white/50 text-sm">
                   Here's what's happening across your projects today.
@@ -47,8 +72,16 @@ export default function Dashboard() {
                   value={completed}
                   color="#2e261f"
                 />
-                <StatBox label="Active projects" value="7" color="#2e261f" />
-                <StatBox label="Overdue tasks" value="3" color="#2e261f" />
+                <StatBox
+                  label="Active projects"
+                  value={activeProjectsCount}
+                  color="#2e261f"
+                />
+                <StatBox
+                  label="Overdue tasks"
+                  value={overdueCount}
+                  color="#2e261f"
+                />
               </div>
             </div>
             <div className="md:w-52 shrink-0 md:border-l md:border-white/10 md:pl-8">
@@ -58,7 +91,6 @@ export default function Dashboard() {
               <QuickActions columns={2} />
               <div className="mt-2.5">
                 <PresentEmployeesButton />
-              
               </div>
             </div>
           </div>

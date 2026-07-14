@@ -1,41 +1,11 @@
 import { create } from "zustand";
-
-// Placeholder seed data — replace with projectApi.getAllProjects() later.
-const seedProjects = [
-  {
-    id: 1,
-    name: "DreamsPortal CRM",
-    description: "Full-stack CRM for lead management",
-    teamId: 1,
-    teamName: "Frontend Squad",
-    members: ["Aqsa", "Sara"],
-    status: "active",
-    progress: 65,
-  },
-  {
-    id: 2,
-    name: "Mobile App Revamp",
-    description: "UI refresh for the mobile client",
-    teamId: 2,
-    teamName: "Design Team",
-    members: ["Ali", "Zara"],
-    status: "planning",
-    progress: 15,
-  },
-  {
-    id: 3,
-    name: "Internal Analytics Tool",
-    description: "",
-    teamId: 1,
-    teamName: "Frontend Squad",
-    members: ["Aqsa"],
-    status: "completed",
-    progress: 100,
-  },
-];
+import { projectApi } from "../../api/projectApi";
 
 export const useProjectStore = create((set, get) => ({
-  projects: seedProjects,
+  projects: [],
+  isLoading: false,
+  error: null,
+
   isModalOpen: false,
   editingProject: null,
   modalMode: "view",
@@ -49,23 +19,56 @@ export const useProjectStore = create((set, get) => ({
   closeModal: () =>
     set({ isModalOpen: false, editingProject: null, modalMode: "view" }),
 
-  addProject: (project) =>
-    set((state) => ({
-      projects: [
-        ...state.projects,
-        { ...project, id: Date.now(), progress: 0 },
-      ],
-    })),
+  // Call this from Projects.jsx on mount.
+  fetchProjects: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const projects = await projectApi.getAllProjects();
+      set({ projects, isLoading: false });
+    } catch (err) {
+      set({
+        isLoading: false,
+        error: err.response?.data?.message || "Couldn't load projects",
+      });
+    }
+  },
 
-  updateProject: (id, updates) =>
-    set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === id ? { ...p, ...updates } : p,
-      ),
-    })),
+  addProject: async (project) => {
+    set({ error: null });
+    try {
+      await projectApi.createProject(project);
+      await get().fetchProjects();
+      return true;
+    } catch (err) {
+      set({ error: err.response?.data?.message || "Couldn't create project" });
+      return false;
+    }
+  },
 
-  deleteProject: (id) =>
-    set((state) => ({
-      projects: state.projects.filter((p) => p.id !== id),
-    })),
+  updateProject: async (id, updates) => {
+    set({ error: null });
+    try {
+      const updated = await projectApi.updateProject(id, updates);
+      await get().fetchProjects();
+      if (get().editingProject?.id === id) {
+        set({ editingProject: updated });
+      }
+      return true;
+    } catch (err) {
+      set({ error: err.response?.data?.message || "Couldn't update project" });
+      return false;
+    }
+  },
+
+  deleteProject: async (id) => {
+    set({ error: null });
+    try {
+      await projectApi.deleteProject(id);
+      await get().fetchProjects();
+      return true;
+    } catch (err) {
+      set({ error: err.response?.data?.message || "Couldn't delete project" });
+      return false;
+    }
+  },
 }));
