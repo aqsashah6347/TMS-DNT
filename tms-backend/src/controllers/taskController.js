@@ -21,6 +21,34 @@ async function fetchTaskWithJoins(pool, id) {
   return result.recordset[0] ? mapTask(result.recordset[0]) : null;
 }
 
+// Recomputes tms_projects.progress as "% of this project's tasks that
+// are done", straight from tms_tasks. Called after any create/update/
+// delete that could change a project's task mix, so the number on the
+// Projects page is always live instead of a manually-set static value.
+async function recalcProjectProgress(pool, projectId) {
+  if (!projectId) return;
+
+  const result = await pool.request().input("projectId", sql.Int, projectId)
+    .query(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS doneCount
+      FROM tms_tasks
+      WHERE project_id = @projectId AND deleted_at IS NULL
+    `);
+
+  const { total, doneCount } = result.recordset[0];
+  const progress = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+
+  await pool
+    .request()
+    .input("projectId", sql.Int, projectId)
+    .input("progress", sql.Int, progress)
+    .query(
+      "UPDATE tms_projects SET progress = @progress WHERE id = @projectId",
+    );
+}
+
 // GET /api/tasks?priority=&assignedTo=&search=&status=&projectId=
 async function getAllTasks(req, res, next) {
   try {
@@ -109,6 +137,11 @@ async function createTask(req, res, next) {
 
     const newId = result.recordset[0].id;
     const task = await fetchTaskWithJoins(pool, newId);
+
+    if (task.projectId) {
+      await recalcProjectProgress(pool, task.projectId);
+    }
+
     res.status(201).json(task);
   } catch (err) {
     next(err);
@@ -122,6 +155,17 @@ async function updateTask(req, res, next) {
     const id = req.params.id;
     const updates = req.body;
     const pool = await poolPromise;
+
+    // Grab the current project_id before we change anything — if this
+    // update moves the task to a different project (or off one entirely),
+    // we need to recalc progress for BOTH the old and new project.
+    const before = await pool
+      .request()
+      .input("id", sql.Int, id)
+      .query(
+        "SELECT project_id FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
+      );
+    const previousProjectId = before.recordset[0]?.project_id ?? null;
 
     if (req.user.role === "user") {
       const existing = await pool
@@ -189,19 +233,19 @@ async function updateTask(req, res, next) {
     const request = pool.request().input("id", sql.Int, id);
     const setClauses = [];
 
-   for (const [key, column] of Object.entries(fieldMap)) {
-     if (updates[key] !== undefined) {
-       // Empty string ("" from a blank date input) isn't a valid SQL DATE —
-       // normalize to null so SQL Server doesn't choke on the conversion.
-       const value = updates[key] === "" ? null : updates[key];
-       if (key === "dueDate") {
-         request.input(key, sql.Date, value);
-       } else {
-         request.input(key, value);
-       }
-       setClauses.push(`${column} = @${key}`);
-     }
-   }
+    for (const [key, column] of Object.entries(fieldMap)) {
+      if (updates[key] !== undefined) {
+        // Empty string ("" from a blank date input) isn't a valid SQL DATE —
+        // normalize to null so SQL Server doesn't choke on the conversion.
+        const value = updates[key] === "" ? null : updates[key];
+        if (key === "dueDate") {
+          request.input(key, sql.Date, value);
+        } else {
+          request.input(key, value);
+        }
+        setClauses.push(`${column} = @${key}`);
+      }
+    }
 
     if (setClauses.length === 0) {
       return res.status(400).json({ message: "No fields to update" });
@@ -220,6 +264,16 @@ async function updateTask(req, res, next) {
     }
 
     const task = await fetchTaskWithJoins(pool, result.recordset[0].id);
+
+    // Any change to status or project_id can shift a project's % done,
+    // so recalc both the project it's on now and the one it left (if any).
+    if (previousProjectId && previousProjectId !== task.projectId) {
+      await recalcProjectProgress(pool, previousProjectId);
+    }
+    if (task.projectId) {
+      await recalcProjectProgress(pool, task.projectId);
+    }
+
     res.json(task);
   } catch (err) {
     next(err);
@@ -232,12 +286,17 @@ async function deleteTask(req, res, next) {
     const result = await pool.request().input("id", sql.Int, req.params.id)
       .query(`
         DELETE FROM tms_tasks
-        OUTPUT DELETED.id
+        OUTPUT DELETED.id, DELETED.project_id
         WHERE id = @id
       `);
 
     if (result.recordset.length === 0) {
       return res.status(404).json({ message: "Task not found" });
+    }
+
+    const deletedProjectId = result.recordset[0].project_id;
+    if (deletedProjectId) {
+      await recalcProjectProgress(pool, deletedProjectId);
     }
 
     res.json({ message: "Task deleted" });

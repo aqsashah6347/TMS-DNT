@@ -168,9 +168,20 @@ async function updateProject(req, res, next) {
 async function deleteProject(req, res, next) {
   try {
     const pool = await poolPromise;
+    const id = req.params.id;
+
+    // tms_tasks.project_id has no ON DELETE rule, so SQL Server will
+    // reject the project delete with a foreign key error if any tasks
+    // still point at it. A project is a container for its tasks, so we
+    // delete those first — same as clicking delete on each task.
+    await pool
+      .request()
+      .input("projectId", sql.Int, id)
+      .query("DELETE FROM tms_tasks WHERE project_id = @projectId");
+
     const result = await pool
       .request()
-      .input("id", sql.Int, req.params.id)
+      .input("id", sql.Int, id)
       .query("DELETE FROM tms_projects OUTPUT DELETED.id WHERE id = @id");
 
     if (result.recordset.length === 0)

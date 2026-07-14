@@ -1,24 +1,23 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useProjectStore } from "../Features/projects/projectStore";
+import { useTaskStore } from "../Features/tasks/taskStore";
 import ProjectCard from "../Features/projects/components/ProjectCard";
 import ProjectModal from "../Features/projects/components/ProjectModal";
 import Button from "../components/ui/Button";
-import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
 
 export default function Projects() {
   const { projects, isLoading, error, fetchProjects, openCreateModal } =
     useProjectStore();
-  const containerRef = useRef(null);
+  const fetchTasks = useTaskStore((s) => s.fetchTasks);
 
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+    fetchTasks();
+  }, [fetchProjects, fetchTasks]);
 
   return (
-    <div ref={containerRef} className="relative overflow-hidden min-h-screen w-full">
-      <TeamFluidCursor containerRef={containerRef} />
-      
+    <div>
       <div className="flex items-center justify-between mb-6">
         <h2
           className="text-4xl font-semibold text-white"
