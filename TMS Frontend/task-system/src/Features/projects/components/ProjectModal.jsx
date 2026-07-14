@@ -44,6 +44,7 @@ function ProjectForm({
   updateProject,
   deleteProject,
   closeModal,
+  taskCount,
 }) {
   const [form, setForm] = useState(() => getInitialForm(editingProject));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,7 +106,16 @@ function ProjectForm({
   }
 
   async function handleDelete() {
-    if (editingProject?.id) await deleteProject(editingProject.id);
+    if (!editingProject?.id) return;
+
+    const warning =
+      taskCount > 0
+        ? `This project has ${taskCount} task${taskCount === 1 ? "" : "s"}. Deleting it will also delete ${taskCount === 1 ? "that task" : "all of those tasks"}. This can't be undone. Delete anyway?`
+        : "Delete this project? This can't be undone.";
+
+    if (!window.confirm(warning)) return;
+
+    await deleteProject(editingProject.id);
     closeModal();
   }
 
@@ -253,7 +263,9 @@ export default function ProjectModal() {
 
   const isEditing = modalMode === "edit";
   const isNew = !editingProject.id;
-  const projectTasks = editingProject.id ? getTasksByProject(editingProject.id) : [];
+  const projectTasks = editingProject.id
+    ? getTasksByProject(editingProject.id)
+    : [];
   const doneCount = projectTasks.filter((t) => t.status === "done").length;
 
   return (
@@ -275,6 +287,7 @@ export default function ProjectModal() {
           updateProject={updateProject}
           deleteProject={deleteProject}
           closeModal={closeModal}
+          taskCount={projectTasks.length}
         />
       ) : (
         <div className="flex flex-col gap-5">
