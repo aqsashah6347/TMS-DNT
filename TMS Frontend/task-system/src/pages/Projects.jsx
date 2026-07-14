@@ -1,14 +1,19 @@
 import { Plus } from "lucide-react";
-import { useProjectStore } from "../features/projects/projectStore";
-import ProjectCard from "../features/projects/components/ProjectCard";
-import ProjectModal from "../features/projects/components/ProjectModal";
+import { useProjectStore } from "../Features/projects/projectStore";
+import ProjectCard from "../Features/projects/components/ProjectCard";
+import ProjectModal from "../Features/projects/components/ProjectModal";
 import Button from "../components/ui/Button";
+import { useRef } from "react";
+import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
 
-export default function Projects() {
+   export default function Projects() {
   const { projects, openCreateModal } = useProjectStore();
+  const containerRef = useRef(null);
 
   return (
     <div>
+         <div ref={containerRef} className="relative overflow-hidden min-h-screen w-full">
+      <TeamFluidCursor containerRef={containerRef} />
       <div className="flex items-center justify-between mb-6">
         <h2
           className="text-4xl font-semibold text-white"
@@ -34,6 +39,7 @@ export default function Projects() {
       )}
 
       <ProjectModal />
+    </div>
     </div>
   );
 }
