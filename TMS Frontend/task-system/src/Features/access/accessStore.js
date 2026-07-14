@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { accessApi } from "../../api/accessApi";
+import { usersApi } from "../../api/usersApi";
 
 // Real data comes from GET /api/permissions and /api/permissions/audit-log.
 //   permissions: [{ userId, userName, role, overrides: { module: [actions] } }]
@@ -14,9 +15,11 @@ export const useAccessStore = create((set, get) => ({
 
   // The roster employee currently open in the panel — { userId, employeeCode,
   // name, role }. userId is null when this employee has no tms_users login
-  // account yet; the panel handles that case instead of the list blocking it.
+  // account yet.
   selectedEmployee: null,
   selectEmployee: (employee) => set({ selectedEmployee: employee }),
+
+  isAssigning: false,
 
   // Call this from Access.jsx on mount.
   fetchAll: async () => {
@@ -48,6 +51,39 @@ export const useAccessStore = create((set, get) => ({
     } catch {
       // Non-critical — the toggle/role change already succeeded, so
       // just leave the audit log stale rather than surfacing an error.
+    }
+  },
+
+  // This is the actual "assign a role" entry point for someone who
+  // hasn't logged into TMS yet — creates (or links) their tms_users row
+  // right from the Access page, no backend/DB editing needed.
+  assignRoleToRosterEmployee: async (employee, role) => {
+    set({ isAssigning: true, error: null });
+    try {
+      const user = await usersApi.createFromRoster({
+        name: employee.name,
+        employeeCode: employee.employeeCode,
+        role,
+      });
+
+      set({
+        selectedEmployee: {
+          userId: user.id,
+          employeeCode: employee.employeeCode,
+          name: user.name,
+          role: user.role,
+        },
+        isAssigning: false,
+      });
+
+      await get().fetchAll();
+      return true;
+    } catch (err) {
+      set({
+        isAssigning: false,
+        error: err.response?.data?.message || "Couldn't assign role",
+      });
+      return false;
     }
   },
 
@@ -93,7 +129,6 @@ export const useAccessStore = create((set, get) => ({
     try {
       await accessApi.setRole(userId, role);
       get().refreshAuditLog();
-      // Keep the panel's role badge in sync if this is the open employee.
       const selected = get().selectedEmployee;
       if (selected?.userId === userId) {
         set({ selectedEmployee: { ...selected, role } });
