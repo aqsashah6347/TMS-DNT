@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const { sql, poolPromise } = require("../config/db");
 
 // Used both by /auth/register (first-time setup) and by admins adding
@@ -39,6 +40,89 @@ async function register(req, res, next) {
       `);
 
     res.status(201).json(result.recordset[0]);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /api/users/from-roster — the Access page's "quick assign" flow.
+// Lets an admin give a ZK roster employee a role before they've ever
+// logged into TMS, instead of waiting for authController's login-time
+// auto-create. Mirrors that exact same creation shape (random unused
+// password hash, since real login always goes through the HRM API, plus
+// an auto email and enroll_no link) so if this employee later logs in
+// with their employee ID, authController finds this same row by
+// enroll_no instead of creating a duplicate.
+async function createFromRoster(req, res, next) {
+  try {
+    const { name, employeeCode, role = "user" } = req.body;
+
+    if (!name || !employeeCode) {
+      return res
+        .status(400)
+        .json({ message: "name and employeeCode are required" });
+    }
+    if (!["admin", "manager", "user"].includes(role)) {
+      return res.status(400).json({ message: `Unknown role: ${role}` });
+    }
+
+    const pool = await poolPromise;
+
+    const existing = await pool
+      .request()
+      .input("enrollNo", sql.NVarChar, employeeCode)
+      .query("SELECT * FROM tms_users WHERE enroll_no = @enrollNo");
+
+    let user;
+    let created;
+
+    if (existing.recordset[0]) {
+      // Already linked (they may have logged in once already) — just
+      // apply the role the admin picked rather than making a duplicate.
+      const updated = await pool
+        .request()
+        .input("id", sql.Int, existing.recordset[0].id)
+        .input("role", sql.NVarChar, role).query(`
+          UPDATE tms_users SET role = @role
+          OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.status, INSERTED.enroll_no
+          WHERE id = @id
+        `);
+      user = updated.recordset[0];
+      created = false;
+    } else {
+      const randomHash = await bcrypt.hash(
+        crypto.randomBytes(20).toString("hex"),
+        10,
+      );
+
+      const inserted = await pool
+        .request()
+        .input("name", sql.NVarChar, name)
+        .input("email", sql.NVarChar, `${employeeCode}@dnt.local`)
+        .input("passwordHash", sql.NVarChar, randomHash)
+        .input("role", sql.NVarChar, role)
+        .input("enrollNo", sql.NVarChar, employeeCode).query(`
+          INSERT INTO tms_users (name, email, password_hash, role, enroll_no)
+          OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.status, INSERTED.enroll_no
+          VALUES (@name, @email, @passwordHash, @role, @enrollNo)
+        `);
+      user = inserted.recordset[0];
+      created = true;
+    }
+
+    await pool
+      .request()
+      .input("actorId", sql.Int, req.user.id)
+      .input(
+        "action",
+        sql.NVarChar,
+        `${created ? "Created" : "Linked"} account for ${name}, assigned role '${role}'`,
+      )
+      .query(
+        "INSERT INTO tms_audit_log (actor_id, action) VALUES (@actorId, @action)",
+      );
+
+    res.status(created ? 201 : 200).json(user);
   } catch (err) {
     next(err);
   }
@@ -117,4 +201,10 @@ async function deleteUser(req, res, next) {
   }
 }
 
-module.exports = { register, getAllUsers, updateUser, deleteUser };
+module.exports = {
+  register,
+  createFromRoster,
+  getAllUsers,
+  updateUser,
+  deleteUser,
+};
