@@ -131,6 +131,9 @@ export const useTaskStore = create((set, get) => ({
     await get().updateTask(id, { pinned: !task.pinned });
   },
 
+  // Used by the "Mark Complete" button regular users get instead of Edit.
+  completeTask: async (id) => get().updateTask(id, { status: "done" }),
+
   getTasksByProject: (projectId) =>
     get().tasks.filter((t) => t.projectId === projectId),
 

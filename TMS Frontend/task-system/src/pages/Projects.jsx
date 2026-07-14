@@ -1,11 +1,17 @@
+import { useEffect } from "react";
 import { Plus } from "lucide-react";
-import { useProjectStore } from "../features/projects/projectStore";
-import ProjectCard from "../features/projects/components/ProjectCard";
-import ProjectModal from "../features/projects/components/ProjectModal";
+import { useProjectStore } from "../Features/projects/projectStore";
+import ProjectCard from "../Features/projects/components/ProjectCard";
+import ProjectModal from "../Features/projects/components/ProjectModal";
 import Button from "../components/ui/Button";
 
 export default function Projects() {
-  const { projects, openCreateModal } = useProjectStore();
+  const { projects, isLoading, error, fetchProjects, openCreateModal } =
+    useProjectStore();
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   return (
     <div>
@@ -21,7 +27,17 @@ export default function Projects() {
         </Button>
       </div>
 
-      {projects.length === 0 ? (
+      {error && (
+        <div className="mb-4 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      {isLoading && projects.length === 0 ? (
+        <p className="text-sm text-muted text-center py-12">
+          Loading projects…
+        </p>
+      ) : projects.length === 0 ? (
         <p className="text-sm text-muted text-center py-12">
           No projects yet. Create one to get started.
         </p>

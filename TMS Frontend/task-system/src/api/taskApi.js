@@ -22,7 +22,7 @@ export const taskApi = {
   },
 
   deleteTask: async (id) => {
-    // Soft delete, per your spec — backend should set a deletedAt flag, not actually remove the row
+    // Hard delete — row is fully removed from tms_tasks
     const res = await axiosInstance.delete(`/tasks/${id}`);
     return res.data;
   },

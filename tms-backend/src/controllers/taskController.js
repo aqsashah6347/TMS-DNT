@@ -231,9 +231,9 @@ async function deleteTask(req, res, next) {
     const pool = await poolPromise;
     const result = await pool.request().input("id", sql.Int, req.params.id)
       .query(`
-        UPDATE tms_tasks SET deleted_at = SYSUTCDATETIME()
-        OUTPUT INSERTED.id
-        WHERE id = @id AND deleted_at IS NULL
+        DELETE FROM tms_tasks
+        OUTPUT DELETED.id
+        WHERE id = @id
       `);
 
     if (result.recordset.length === 0) {

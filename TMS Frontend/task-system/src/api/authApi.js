@@ -1,8 +1,13 @@
 import axiosInstance from "./axiosInstance";
 
 export const authApi = {
-  login: async (email, password) => {
-    const res = await axiosInstance.post("/auth/login", { email, password });
+  // identifier is the employee ID (e.g. "EMP-1001"). The backend also
+  // still accepts an email address here for legacy/admin accounts.
+  login: async (identifier, password) => {
+    const res = await axiosInstance.post("/auth/login", {
+      employeeId: identifier,
+      password,
+    });
     return res.data; // expected: { user, requiresTwoFactor, tempToken }
   },
 
