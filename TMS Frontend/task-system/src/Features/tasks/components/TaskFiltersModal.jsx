@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import Modal from "../../../components/ui/Modal";
 import { Input } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
 import Button from "../../../components/ui/Button";
 import { useTaskStore } from "../taskStore";
+import { usersApi } from "../../../api/usersApi";
 
 const priorityOptions = [
   { value: "", label: "All priorities" },
@@ -12,6 +14,22 @@ const priorityOptions = [
 export default function TaskFiltersModal() {
   const { isFiltersModalOpen, closeFiltersModal, filters, setFilters } =
     useTaskStore();
+
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    if (isFiltersModalOpen) {
+      usersApi
+        .getAllUsers()
+        .then(setUsers)
+        .catch(() => setUsers([]));
+    }
+  }, [isFiltersModalOpen]);
+
+  const userOptions = [
+    { value: "", label: "Everyone" },
+    ...users.map((u) => ({ value: String(u.id), label: u.name })),
+  ];
 
   return (
     <Modal
@@ -35,11 +53,11 @@ export default function TaskFiltersModal() {
           options={priorityOptions}
         />
 
-        <Input
+        <Dropdown
           label="Assigned to"
           value={filters.assignedTo}
-          onChange={(e) => setFilters({ assignedTo: e.target.value })}
-          placeholder="e.g. Sara"
+          onChange={(v) => setFilters({ assignedTo: v })}
+          options={userOptions}
         />
 
         <div className="flex justify-end gap-2 pt-2">

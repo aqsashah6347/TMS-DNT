@@ -14,7 +14,7 @@ import TwoFactorForm from "./TwoFactorForm";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginForm() {
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ employeeId: "", password: "" });
   const [step, setStep] = useState("credentials"); // "credentials" | "2fa"
   const [tempToken, setTempToken] = useState(null);
   const [error, setError] = useState("");
@@ -29,7 +29,7 @@ export default function LoginForm() {
     setError("");
     setIsLoading(true);
     try {
-      const data = await authApi.login(form.email, form.password);
+      const data = await authApi.login(form.employeeId, form.password);
 
       if (data.requiresTwoFactor) {
         setTempToken(data.tempToken);
@@ -41,7 +41,9 @@ export default function LoginForm() {
       login(data.user, data.token);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid email or password");
+      setError(
+        err.response?.data?.message || "Invalid Employee ID or password",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -59,11 +61,11 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full">
       <Input
-        type="email"
+        type="text"
         required
-        value={form.email}
-        onChange={(e) => setForm({ ...form, email: e.target.value })}
-        placeholder="Email"
+        value={form.employeeId}
+        onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
+        placeholder="Employee ID"
         className="login-pill-input"
       />
     <div className="relative">

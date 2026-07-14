@@ -67,9 +67,9 @@ export default function TaskCard({ task }) {
               <Calendar size={12} /> {task.dueDate}
             </span>
           )}
-          {task.assignedTo && (
+          {task.assignedToName && (
             <span className="flex items-center gap-1 text-xs">
-              <User size={12} /> {task.assignedTo}
+              <User size={12} /> {task.assignedToName}
             </span>
           )}
         </div>
