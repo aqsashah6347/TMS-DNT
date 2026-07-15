@@ -59,7 +59,10 @@ export default function Dashboard() {
                   </span>
                   <h2
                     className="text-xl text-white"
-                    style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 600,
+                    }}
                   >
                     Welcome back, {firstName}
                   </h2>
@@ -100,8 +103,11 @@ export default function Dashboard() {
                       {pct}%
                     </span>
                   </div>
-                  <div className="progress-track" style={{ height: '6px' }}>
-                    <div className="progress-fill" style={{ width: `${pct}%` }} />
+                  <div className="progress-track" style={{ height: "6px" }}>
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                   <p className="text-[11px] text-white/40 mt-1">
                     {completed} of {total} tasks completed
@@ -109,7 +115,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            
+
             {/* Quick Actions column layout intact but slightly more compact spacing */}
             <div className="md:w-52 shrink-0 md:border-l md:border-white/10 md:pl-6">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-2">
@@ -169,10 +175,10 @@ export default function Dashboard() {
 
         <Card className="cascade-in" style={{ animationDelay: "0.1s" }}>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-white">Inbox</h3>
+            <h3 className="text-sm font-semibold text-white">Activity</h3>
             <button
               className="view-all-link"
-              onClick={() => navigate("/inbox")}
+              onClick={() => navigate("/activity")} 
             >
               View all
             </button>

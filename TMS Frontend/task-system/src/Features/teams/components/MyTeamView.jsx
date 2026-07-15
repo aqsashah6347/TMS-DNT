@@ -1,4 +1,4 @@
-// src/Features/teams/components/MyTeamView.jsx  (NEW FILE)
+import Avatar from "../../../components/ui/Avatar";
 import { useEffect } from "react";
 import { Crown, Users, Flag, Calendar, User } from "lucide-react";
 import { useTeamStore } from "../teamStore";
@@ -113,9 +113,13 @@ export default function MyTeamView() {
                 key={m.id}
                 className="flex items-center gap-2 bg-white/5 rounded-full pl-1 pr-3 py-1"
               >
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-orange-700 flex items-center justify-center text-[10px] font-semibold text-white">
-                  {m.name.charAt(0).toUpperCase()}
-                </div>
+                <Avatar
+                  name={m.name}
+                  color={m.avatarColor}
+                  size={24}
+                  className="text-[10px]"
+                />
+                <span className="text-xs text-white">{m.name}</span>
                 <span className="text-xs text-white">{m.name}</span>
                 {m.id === myTeam.managerId && (
                   <Crown size={11} className="text-amber-300" />
