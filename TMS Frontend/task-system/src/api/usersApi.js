@@ -20,6 +20,12 @@ export const usersApi = {
     const res = await axiosInstance.put(`/users/${id}`, updates);
     return res.data;
   },
+  // Self-service — updates the CURRENT user's own avatar color and saves
+  // it to the DB, so it follows them everywhere (not just this device).
+  updateAvatarColor: async (color) => {
+    const res = await axiosInstance.put("/users/me/avatar-color", { color });
+    return res.data;
+  },
 
   deleteUser: async (id) => {
     const res = await axiosInstance.delete(`/users/${id}`);

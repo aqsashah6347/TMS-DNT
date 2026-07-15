@@ -132,13 +132,47 @@ async function createFromRoster(req, res, next) {
 async function getAllUsers(req, res, next) {
   try {
     const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .query(
-        "SELECT id, name, email, role, status, enroll_no FROM tms_users ORDER BY name ASC",
-      );
+    const result = await pool.request().query(`
+        SELECT id, name, email, role, status, enroll_no, avatar_color AS avatarColor
+        FROM tms_users ORDER BY name ASC
+      `);
 
     res.json(result.recordset);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// PUT /api/users/me/avatar-color — self-service only. Any logged-in user can
+// change their own profile icon color (not anyone else's). Storing it here
+// instead of localStorage means it follows them to any device and shows up
+// correctly wherever OTHER users see their avatar too (teams, projects...).
+const AVATAR_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+async function updateMyAvatarColor(req, res, next) {
+  try {
+    const { color } = req.body;
+    if (!color || !AVATAR_COLOR_RE.test(color)) {
+      return res
+        .status(400)
+        .json({ message: "color must be a hex string like #f97316" });
+    }
+
+    const pool = await poolPromise;
+    const result = await pool
+      .request()
+      .input("id", sql.Int, req.user.id)
+      .input("color", sql.NVarChar, color).query(`
+        UPDATE tms_users SET avatar_color = @color
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role,
+               INSERTED.status, INSERTED.enroll_no, INSERTED.avatar_color AS avatarColor
+        WHERE id = @id
+      `);
+
+    if (result.recordset.length === 0)
+      return res.status(404).json({ message: "User not found" });
+
+    res.json(result.recordset[0]);
   } catch (err) {
     next(err);
   }
@@ -206,5 +240,6 @@ module.exports = {
   createFromRoster,
   getAllUsers,
   updateUser,
+  updateMyAvatarColor,
   deleteUser,
 };

@@ -249,6 +249,7 @@ function publicUser(user) {
     status: user.status,
     twoFactorEnabled: user.two_factor_enabled,
     avatarUrl: user.avatar_url,
+    avatarColor: user.avatar_color,
   };
 }
 

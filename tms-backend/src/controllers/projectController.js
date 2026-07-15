@@ -238,15 +238,12 @@ async function deleteProject(req, res, next) {
   }
 }
 
-// Small helper: fetches member names for a project and shapes the
-// response the way projectStore.js's seed data already looks (so you
-// don't have to change any frontend component when you wire this up).
 function attachMembers(pool) {
   return async (project) => {
     const membersResult = await pool
       .request()
       .input("projectId", sql.Int, project.id).query(`
-        SELECT u.name FROM tms_project_members pm
+        SELECT u.id, u.name, u.avatar_color AS avatarColor FROM tms_project_members pm
         JOIN tms_users u ON pm.user_id = u.id
         WHERE pm.project_id = @projectId
       `);
@@ -257,7 +254,12 @@ function attachMembers(pool) {
       description: project.description,
       teamId: project.team_id,
       teamName: project.teamName,
+      // Plain name strings — kept exactly as-is since ProjectModal's
+      // comma-separated members text field depends on this shape.
       members: membersResult.recordset.map((r) => r.name),
+      // Same members, but as full objects (id/name/avatarColor) so avatar
+      // stacks (ProjectCard etc.) can render each person's real color.
+      memberDetails: membersResult.recordset,
       status: project.status,
       progress: project.progress,
       color: project.color,
