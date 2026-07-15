@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -7,20 +8,65 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { taskApi } from "../../../api/taskApi";
 
-// Placeholder data — swap this with real data from your API later,
-// e.g. const data = await taskApi.getCompletionStats()
-const data = [
-  { day: "Mon", completed: 4 },
-  { day: "Tue", completed: 7 },
-  { day: "Wed", completed: 5 },
-  { day: "Thu", completed: 9 },
-  { day: "Fri", completed: 6 },
-  { day: "Sat", completed: 3 },
-  { day: "Sun", completed: 8 },
-];
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Builds a full 7-day series (oldest -> today) even for days with zero
+// completions, since the backend only returns rows that have activity.
+function buildSeries(rows) {
+  const byDate = new Map(rows.map((r) => [r.date.slice(0, 10), r.completedCount]));
+
+  const series = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split("T")[0];
+    series.push({
+      day: DAY_LABELS[d.getDay()],
+      completed: byDate.get(key) || 0,
+    });
+  }
+  return series;
+}
 
 export default function TaskCompletionChart() {
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    taskApi
+      .getCompletionStats("7d")
+      .then((rows) => {
+        if (!cancelled) setData(buildSeries(rows));
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(
+            err.response?.data?.message || "Couldn't load completion stats",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (isLoading) {
+    return <p className="text-sm text-white/40">Loading chart…</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-red-400">{error}</p>;
+  }
+
   return (
     <div className="h-40">
       <ResponsiveContainer width="100%" height="100%">
@@ -42,6 +88,7 @@ export default function TaskCompletionChart() {
             tickLine={false}
           />
           <YAxis
+            allowDecimals={false}
             tick={{ fontSize: 12, fill: "#515A47" }}
             axisLine={false}
             tickLine={false}

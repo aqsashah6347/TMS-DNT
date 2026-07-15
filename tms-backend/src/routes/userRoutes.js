@@ -8,6 +8,12 @@ router.use(requireAuth);
 
 router.get("/", userController.getAllUsers);
 
+router.post(
+  "/from-roster",
+  requirePermission("admin", "create"),
+  userController.createFromRoster,
+);
+
 router.put(
   "/:id",
   requirePermission("admin", "edit"),
