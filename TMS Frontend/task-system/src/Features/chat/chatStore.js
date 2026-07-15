@@ -5,12 +5,16 @@ import { useAuthStore } from "../../store/useAuthStore";
 
 export const useChatStore = create((set, get) => ({
   conversations: [],
-  messagesByUser: {}, // { [userId]: Message[] }
+  messagesByUser: {},
   activeUserId: null,
   onlineUserIds: new Set(),
   typingUserIds: new Set(),
   isLoading: false,
   error: null,
+
+  allEmployees: [],
+  employeesLoading: false,
+  pinnedUserIds: new Set(),
 
   fetchConversations: async () => {
     set({ isLoading: true, error: null });
@@ -25,8 +29,36 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  fetchAvailableEmployees: async () => {
+    set({ employeesLoading: true });
+    try {
+      const allEmployees = await chatApi.getAllUsers();
+      set({ allEmployees, employeesLoading: false });
+    } catch (err) {
+      set({
+        error: err.response?.data?.message || "Failed to load employees",
+        employeesLoading: false,
+      });
+    }
+  },
+
+  startConversation: (userId) => {
+    set((state) => ({
+      pinnedUserIds: new Set(state.pinnedUserIds).add(userId),
+    }));
+    get().openConversation(userId);
+  },
+
   openConversation: async (userId) => {
     set({ activeUserId: userId });
+
+    // Optimistic: zero out the badge immediately instead of waiting on
+    // the mark_read round trip or the next fetchConversations poll.
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.userId === userId ? { ...c, unreadCount: 0 } : c,
+      ),
+    }));
 
     if (!get().messagesByUser[userId]) {
       try {
@@ -35,21 +67,39 @@ export const useChatStore = create((set, get) => ({
           messagesByUser: { ...state.messagesByUser, [userId]: messages },
         }));
       } catch (err) {
-        set({ error: err.response?.data?.message || "Failed to load messages" });
+        set({
+          error: err.response?.data?.message || "Failed to load messages",
+        });
       }
     }
 
     getSocket()?.emit("mark_read", { senderId: userId });
   },
 
-  sendMessage: (receiverId, message) => {
+  // Now supports an optional File — uploads it first (via REST), then
+  // sends the resulting {url, name, type, size} alongside the text.
+  sendMessage: async (receiverId, message, file = null) => {
     const socket = getSocket();
-    if (!socket || !message.trim()) return;
-    socket.emit("send_message", { receiverId, message: message.trim() });
+    if (!socket) return;
+    if (!message.trim() && !file) return;
+
+    let attachment = null;
+    if (file) {
+      try {
+        attachment = await chatApi.uploadFile(file);
+      } catch (err) {
+        set({ error: "File upload failed" });
+        return;
+      }
+    }
+
+    socket.emit("send_message", {
+      receiverId,
+      message: message.trim(),
+      attachment,
+    });
   },
 
-  // Wires socket events into store state. Safe to call every time the
-  // Chat page mounts — it clears old listeners first.
   initSocketListeners: () => {
     const socket = getSocket();
     if (!socket) return;
@@ -60,24 +110,49 @@ export const useChatStore = create((set, get) => ({
     socket.off("user_offline");
     socket.off("typing");
     socket.off("stop_typing");
+    socket.off("messages_read");
 
     socket.on("receive_message", (msg) => {
       const myId = useAuthStore.getState().user?.id;
-      const otherUserId = msg.sender_id === myId ? msg.receiver_id : msg.sender_id;
+      const otherUserId =
+        msg.sender_id === myId ? msg.receiver_id : msg.sender_id;
 
       set((state) => {
         const existing = state.messagesByUser[otherUserId] || [];
         return {
-          messagesByUser: { ...state.messagesByUser, [otherUserId]: [...existing, msg] },
+          messagesByUser: {
+            ...state.messagesByUser,
+            [otherUserId]: [...existing, msg],
+          },
+          pinnedUserIds: new Set(state.pinnedUserIds).add(otherUserId),
         };
       });
       get().fetchConversations();
     });
 
+    // The "seen" receipt: fires on MY client when the person I'm chatting
+    // with reads the messages I sent them. Flips is_read on my copies of
+    // those messages so the checkmark updates without a refetch.
+    socket.on("messages_read", ({ readBy }) => {
+      set((state) => {
+        const existing = state.messagesByUser[readBy] || [];
+        return {
+          messagesByUser: {
+            ...state.messagesByUser,
+            [readBy]: existing.map((m) =>
+              m.sender_id !== readBy ? { ...m, is_read: true } : m,
+            ),
+          },
+        };
+      });
+    });
+
     socket.on("online_users", (ids) => set({ onlineUserIds: new Set(ids) }));
 
     socket.on("user_online", ({ userId }) =>
-      set((state) => ({ onlineUserIds: new Set(state.onlineUserIds).add(userId) })),
+      set((state) => ({
+        onlineUserIds: new Set(state.onlineUserIds).add(userId),
+      })),
     );
 
     socket.on("user_offline", ({ userId }) =>
@@ -89,7 +164,9 @@ export const useChatStore = create((set, get) => ({
     );
 
     socket.on("typing", ({ userId }) =>
-      set((state) => ({ typingUserIds: new Set(state.typingUserIds).add(userId) })),
+      set((state) => ({
+        typingUserIds: new Set(state.typingUserIds).add(userId),
+      })),
     );
 
     socket.on("stop_typing", ({ userId }) =>

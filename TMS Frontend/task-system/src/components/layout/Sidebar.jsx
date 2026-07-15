@@ -1,10 +1,10 @@
-import { NavLink } from "react-router-dom"; // useState import removed
+import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   CheckSquare,
   FolderKanban,
   Users,
-  Inbox,
+  Bell, // was: Inbox
   MessageCircle,
   BarChart3,
   ShieldCheck,
@@ -20,8 +20,8 @@ const navItems = [
   { to: "/tasks", label: "Tasks", icon: CheckSquare },
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/teams", label: "Teams", icon: Users },
-  { to: "/inbox", label: "Inbox", icon: Inbox },
-  { to: "/chat", label: "Chat", icon: MessageCircle },   // ADD THIS
+  { to: "/activity", label: "Activity Log", icon: Bell }, // was: { to: "/inbox", label: "Inbox", icon: Inbox }
+  { to: "/chat", label: "Chat", icon: MessageCircle },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 

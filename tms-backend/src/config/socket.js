@@ -38,22 +38,31 @@ function initSocket(httpServer) {
     io.emit("user_online", { userId });
     socket.emit("online_users", Array.from(onlineUsers.keys()));
 
-    socket.on("send_message", async ({ receiverId, message }, callback) => {
-      try {
-        const trimmed = (message || "").trim();
-        if (!trimmed || !receiverId) return;
+   socket.on(
+     "send_message",
+     async ({ receiverId, message, attachment }, callback) => {
+       try {
+         const trimmed = (message || "").trim();
+         if (!receiverId || (!trimmed && !attachment)) return;
 
-        const saved = await chatService.saveMessage(userId, receiverId, trimmed);
+         const saved = await chatService.saveMessage(
+           userId,
+           receiverId,
+           trimmed || null,
+           attachment,
+         );
 
-        io.to(`user_${receiverId}`).emit("receive_message", saved);
-        io.to(`user_${userId}`).emit("receive_message", saved); // sync sender's other tabs
+         io.to(`user_${receiverId}`).emit("receive_message", saved);
+         io.to(`user_${userId}`).emit("receive_message", saved); // sync sender's other tabs
 
-        if (typeof callback === "function") callback({ status: "ok", message: saved });
-      } catch (err) {
-        if (typeof callback === "function") callback({ status: "error", error: err.message });
-      }
-    });
-
+         if (typeof callback === "function")
+           callback({ status: "ok", message: saved });
+       } catch (err) {
+         if (typeof callback === "function")
+           callback({ status: "error", error: err.message });
+       }
+     },
+   );
     socket.on("typing", ({ receiverId }) => {
       io.to(`user_${receiverId}`).emit("typing", { userId });
     });

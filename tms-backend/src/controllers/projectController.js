@@ -1,4 +1,5 @@
 const { sql, poolPromise } = require("../config/db");
+const { logActivity } = require("../services/activityService");
 
 async function getAllProjects(req, res, next) {
   try {
@@ -16,6 +17,24 @@ async function getAllProjects(req, res, next) {
     res.json(projects);
   } catch (err) {
     next(err);
+  }
+}
+// Notifies every member of a team when their team is assigned to a project.
+async function notifyTeamAssigned(pool, teamId, projectId, projectName, actorId) {
+  const members = await pool
+    .request()
+    .input("teamId", sql.Int, teamId)
+    .query("SELECT id FROM tms_users WHERE team_id = @teamId");
+
+  for (const member of members.recordset) {
+    if (member.id === actorId) continue; // don't notify whoever just did it
+    await logActivity({
+      userId: member.id,
+      type: "project_assigned",
+      title: "New project for your team",
+      message: `Your team was assigned to the project "${projectName}".`,
+      projectId,
+    });
   }
 }
 
@@ -77,7 +96,15 @@ async function createProject(req, res, next) {
           "INSERT INTO tms_project_members (project_id, user_id) VALUES (@projectId, @userId)",
         );
     }
-
+if (project.team_id) {
+  await notifyTeamAssigned(
+    pool,
+    project.team_id,
+    project.id,
+    project.name,
+    req.user.id,
+  );
+}
     res.status(201).json(await attachMembers(pool)(project));
   } catch (err) {
     next(err);
@@ -91,6 +118,11 @@ async function updateProject(req, res, next) {
       req.body;
 
     const pool = await poolPromise;
+    const before = await pool
+      .request()
+      .input("id", sql.Int, id)
+      .query("SELECT team_id FROM tms_projects WHERE id = @id");
+    const previousTeamId = before.recordset[0]?.team_id ?? null;
     const request = pool.request().input("id", sql.Int, id);
     const setClauses = [];
 
@@ -160,6 +192,20 @@ async function updateProject(req, res, next) {
     }
 
     res.json(await attachMembers(pool)(project));
+
+    if (
+      teamId !== undefined &&
+      project.team_id &&
+      project.team_id !== previousTeamId
+    ) {
+      await notifyTeamAssigned(
+        pool,
+        project.team_id,
+        project.id,
+        project.name,
+        req.user.id,
+      );
+    }
   } catch (err) {
     next(err);
   }

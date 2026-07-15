@@ -1,5 +1,6 @@
 const { sql, poolPromise } = require("../config/db");
 const { hasPermission } = require("../middleware/permissions");
+const { logActivity } = require("../services/activityService");
 
 const JOIN_QUERY = `
   SELECT t.*, u1.name AS assignedToName, u2.name AS assignedByName, u3.name AS completedByName
@@ -19,6 +20,13 @@ async function fetchTaskWithJoins(pool, id) {
     .input("id", sql.Int, id)
     .query(`${JOIN_QUERY} WHERE t.id = @id AND t.deleted_at IS NULL`);
   return result.recordset[0] ? mapTask(result.recordset[0]) : null;
+}
+async function getProjectName(pool, projectId) {
+  const result = await pool
+    .request()
+    .input("projectId", sql.Int, projectId)
+    .query("SELECT name FROM tms_projects WHERE id = @projectId");
+  return result.recordset[0]?.name || null;
 }
 
 // Recomputes tms_projects.progress as "% of this project's tasks that
@@ -137,7 +145,19 @@ async function createTask(req, res, next) {
 
     const newId = result.recordset[0].id;
     const task = await fetchTaskWithJoins(pool, newId);
-
+if (task.assignedTo && task.assignedTo !== req.user.id) {
+  const projectName = task.projectId
+    ? await getProjectName(pool, task.projectId)
+    : null;
+  await logActivity({
+    userId: task.assignedTo,
+    type: "task_assigned",
+    title: "New task assigned",
+    message: `${task.assignedByName || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+    taskId: task.id,
+    projectId: task.projectId,
+  });
+}
     if (task.projectId) {
       await recalcProjectProgress(pool, task.projectId);
     }
@@ -155,30 +175,25 @@ async function updateTask(req, res, next) {
     const id = req.params.id;
     const updates = req.body;
     const pool = await poolPromise;
-
-    // Grab the current project_id before we change anything — if this
-    // update moves the task to a different project (or off one entirely),
-    // we need to recalc progress for BOTH the old and new project.
+    // Grab the current project/status/assignee before we change anything —
+    // needed to (a) recalc progress for old + new project, (b) detect a
+    // done-transition for the task_completed activity, and (c) detect a
+    // reassignment for the task_assigned activity.
     const before = await pool
       .request()
       .input("id", sql.Int, id)
       .query(
-        "SELECT project_id FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
+        "SELECT project_id, status, assigned_to FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
       );
     const previousProjectId = before.recordset[0]?.project_id ?? null;
+    const previousStatus = before.recordset[0]?.status ?? null;
+    const previousAssignedTo = before.recordset[0]?.assigned_to ?? null;
 
     if (req.user.role === "user") {
-      const existing = await pool
-        .request()
-        .input("id", sql.Int, id)
-        .query(
-          "SELECT assigned_to FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
-        );
+      if (!before.recordset[0])
+        return res.status(404).json({ message: "Task not found" });
 
-      const task = existing.recordset[0];
-      if (!task) return res.status(404).json({ message: "Task not found" });
-
-      if (task.assigned_to !== req.user.id) {
+      if (previousAssignedTo !== req.user.id) {
         return res
           .status(403)
           .json({ message: "You can only update tasks assigned to you" });
@@ -196,11 +211,7 @@ async function updateTask(req, res, next) {
     }
 
     if (updates.status === "done" && !updates.completedBy) {
-      const existing = await pool
-        .request()
-        .input("id", sql.Int, id)
-        .query("SELECT assigned_to FROM tms_tasks WHERE id = @id");
-      updates.completedBy = existing.recordset[0]?.assigned_to || null;
+      updates.completedBy = previousAssignedTo || null;
     }
     if (updates.assignedTo !== undefined && req.user.role !== "admin") {
       const canAssign = await hasPermission(
@@ -273,7 +284,43 @@ async function updateTask(req, res, next) {
     if (task.projectId) {
       await recalcProjectProgress(pool, task.projectId);
     }
+if (
+  updates.status === "done" &&
+  previousStatus !== "done" &&
+  task.assignedBy &&
+  task.assignedBy !== task.completedBy
+) {
+  const projectName = task.projectId
+    ? await getProjectName(pool, task.projectId)
+    : null;
+  await logActivity({
+    userId: task.assignedBy,
+    type: "task_completed",
+    title: "Task completed",
+    message: `${task.completedByName || task.assignedToName || "Someone"} completed "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+    taskId: task.id,
+    projectId: task.projectId,
+  });
+}
 
+if (
+  updates.assignedTo !== undefined &&
+  task.assignedTo &&
+  task.assignedTo !== previousAssignedTo &&
+  task.assignedTo !== req.user.id
+) {
+  const projectName = task.projectId
+    ? await getProjectName(pool, task.projectId)
+    : null;
+  await logActivity({
+    userId: task.assignedTo,
+    type: "task_assigned",
+    title: "New task assigned",
+    message: `${req.user.name || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+    taskId: task.id,
+    projectId: task.projectId,
+  });
+}
     res.json(task);
   } catch (err) {
     next(err);

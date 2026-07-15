@@ -7,7 +7,7 @@ const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Tasks = lazy(() => import("../pages/Tasks"));
 const Projects = lazy(() => import("../pages/Projects"));
 const Teams = lazy(() => import("../pages/Teams"));
-const Inbox = lazy(() => import("../pages/Inbox"));
+const ActivityLog = lazy(() => import("../pages/ActivityLog"));
 const Analytics = lazy(() => import("../pages/Analytics"));
 const Admin = lazy(() => import("../pages/Admin"));
 const Chat = lazy(() => import("../pages/Chat"));   
@@ -71,10 +71,10 @@ export default function AppRoutes() {
           }
         />
         <Route
-          path="/inbox"
+          path="/activity"
           element={
             <ProtectedRoute>
-              <Inbox />
+              <ActivityLog />
             </ProtectedRoute>
           }
         />
