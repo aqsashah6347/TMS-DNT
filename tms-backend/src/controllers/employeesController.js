@@ -26,7 +26,15 @@ async function getRoster(req, res, next) {
       };
     });
 
-    roster.sort((a, b) => a.name.localeCompare(b.name));
+// Most recent check-in first. Employees with no check-in today
+    // (checkIn === null) are pushed to the bottom, alphabetically among
+    // themselves so their order stays stable and predictable.
+    roster.sort((a, b) => {
+      if (!a.checkIn && !b.checkIn) return a.name.localeCompare(b.name);
+      if (!a.checkIn) return 1;
+      if (!b.checkIn) return -1;
+      return new Date(b.checkIn) - new Date(a.checkIn);
+    });
 
     res.json({ date: dateStr, employees: roster });
   } catch (err) {
