@@ -97,6 +97,34 @@
 
 /* Base Global Styles & Overrides */
 @layer base {
+  @layer base {
+  /* ...existing rules... */
+
+  /* App-wide themed scrollbar — same orange accent as .activity-scroll,
+     just applied globally instead of one component. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(251, 146, 60, 0.35) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: rgba(251, 146, 60, 0.35);
+    border-radius: 999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(251, 146, 60, 0.55);
+  }
+}
   * {
     box-sizing: border-box;
   }
