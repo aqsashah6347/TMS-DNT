@@ -52,10 +52,7 @@ export default function ProjectCard({ project }) {
     >
       <div className="flip-card-inner">
         {/* ---- FRONT: description + team members ---- */}
-      <div
-          className="flip-card-face glass glass-card glass-card-hover w-full cursor-pointer flex flex-col gap-3 !p-5 !rounded-[32px]"
-        >
-        
+        <div className="flip-card-face glass glass-card glass-card-hover w-full cursor-pointer flex flex-col gap-3 !p-5 !rounded-[32px]">
           <div className="glass-content flex flex-col gap-3 h-full">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
@@ -82,7 +79,7 @@ export default function ProjectCard({ project }) {
             </div>
 
             {project.description ? (
-             <p className="text-xs text-white/90 line-clamp-3 flex-1">
+              <p className="text-xs text-white/90 line-clamp-3 flex-1">
                 {project.description}
               </p>
             ) : (
@@ -111,7 +108,9 @@ export default function ProjectCard({ project }) {
               <span className="text-[11px] text-white/90">
                 {project.teamName}
               </span>
-              <ProjectMembers members={project.members} />
+              <ProjectMembers
+                members={project.memberDetails || project.members}
+              />
             </div>
 
             <p className="text-[10px] text-white/30 text-center mt-1">
@@ -121,9 +120,7 @@ export default function ProjectCard({ project }) {
         </div>
 
         {/* ---- BACK: tasks for this project ---- */}
-       <div
-          className="flip-card-face flip-card-face--back glass glass-card w-full cursor-pointer flex flex-col gap-3 !p-5 !rounded-[32px]"
-        >
+        <div className="flip-card-face flip-card-face--back glass glass-card w-full cursor-pointer flex flex-col gap-3 !p-5 !rounded-[32px]">
           <div className="glass-content flex flex-col gap-3 h-full">
             <div className="flex items-center justify-between gap-2">
               <h4 className="glass-card__title !mb-0 !text-base text-white truncate">

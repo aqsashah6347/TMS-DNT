@@ -211,7 +211,7 @@ function attachTeamDetails(pool) {
   return async (team) => {
     const membersResult = await pool.request().input("teamId", sql.Int, team.id)
       .query(`
-        SELECT id, name, role FROM tms_users
+        SELECT id, name, role, avatar_color AS avatarColor FROM tms_users
         WHERE team_id = @teamId
         ORDER BY name ASC
       `);
