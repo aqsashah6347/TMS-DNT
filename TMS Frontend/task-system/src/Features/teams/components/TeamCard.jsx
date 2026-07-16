@@ -5,10 +5,9 @@ import TeamGlassCard from "./TeamGlassCard";
 
 export default function TeamCard({ team, onClick }) {
   return (
-    <TeamGlassCard 
-      onClick={() => onClick?.(team)} 
+    <TeamGlassCard
+      onClick={() => onClick?.(team)}
       className="flex flex-col gap-4"
-      // Front side ka content yahan aayega
       front={
         <>
           <div className="flex items-center justify-between">
@@ -25,16 +24,27 @@ export default function TeamCard({ team, onClick }) {
             <p className="text-[11px] text-white/40 mb-2">Workload</p>
             <TeamWorkload members={team.members} />
           </div>
+
+          {team.createdByName && (
+            <p className="text-[11px] text-white/40">
+              Created by {team.createdByName}
+            </p>
+          )}
         </>
       }
-      // Back side ka content yahan aayega (jo flip honay par dikhega)
       back={
         <div className="text-white p-2">
-          <h5 className="font-semibold mb-2 text-sm text-orange-200">Team Details</h5>
+          <h5 className="font-semibold mb-2 text-sm text-orange-200">
+            Team Details
+          </h5>
           <p className="text-xs text-white/70">
             Total Members: {team.members?.length || 0}
           </p>
-          {/* Aap yahan piche dikhane ke liye koi bhi mazeed data add kar sakte hain */}
+          {team.createdByName && (
+            <p className="text-xs text-white/70 mt-1">
+              Created by: {team.createdByName}
+            </p>
+          )}
         </div>
       }
     />

@@ -1,21 +1,19 @@
 import { useState, useMemo } from "react";
-import { Pencil, RotateCcw, CheckCircle2, Circle } from "lucide-react";
+import { Pencil, RotateCcw, CheckCircle2, Circle, Plus } from "lucide-react";
 import ProjectMembers from "./ProjectMembers";
 import { useProjectStore } from "../projectStore";
 import { useTaskStore } from "../../tasks/taskStore";
+import { useAuthStore } from "../../../store/useAuthStore";
 
-// Turns a picked project color into a two-stop gradient for a richer look,
-// without changing what color the user actually picked.
 function colorGradient(hex) {
-  const safeHex = hex || "#fb923c"; // falls back to theme orange if a project has no color set
+  const safeHex = hex || "#fb923c";
   const num = parseInt(safeHex.replace("#", ""), 16);
   const r = Math.min(255, (num >> 16) + 60);
   const g = Math.min(255, ((num >> 8) & 0x00ff) + 60);
   const b = Math.min(255, (num & 0x0000ff) + 60);
-const lighter = `rgb(${r}, ${g}, ${b})`;
+  const lighter = `rgb(${r}, ${g}, ${b})`;
   return `linear-gradient(90deg, ${lighter}, ${safeHex})`;
 }
-
 
 const statusBadge = {
   planning: "glass-badge--violet",
@@ -27,11 +25,12 @@ export default function ProjectCard({ project }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const openProjectView = useProjectStore((s) => s.openProjectView);
   const openTaskView = useTaskStore((s) => s.openTaskView);
+  const openCreateModalForProject = useTaskStore(
+    (s) => s.openCreateModalForProject,
+  );
+  const user = useAuthStore((s) => s.user);
+  const canManageTasks = user?.role === "admin" || user?.role === "manager";
 
-  // Select the raw (stable) tasks array, then filter locally. Calling
-  // getTasksByProject() directly inside the selector returns a brand-new
-  // array every render, which makes Zustand think the store "changed"
-  // every time and triggers an infinite render loop.
   const allTasks = useTaskStore((s) => s.tasks);
   const tasks = useMemo(
     () => allTasks.filter((t) => t.projectId === project.id),
@@ -43,6 +42,11 @@ export default function ProjectCard({ project }) {
   function handleEditClick(e) {
     e.stopPropagation();
     openProjectView(project);
+  }
+
+  function handleAddTaskClick(e) {
+    e.stopPropagation();
+    openCreateModalForProject(project.id);
   }
 
   return (
@@ -88,6 +92,12 @@ export default function ProjectCard({ project }) {
               </p>
             )}
 
+            {project.createdByName && (
+              <p className="text-[11px] text-white/40">
+                Created by {project.createdByName}
+              </p>
+            )}
+
             <div>
               <div className="flex justify-between text-[11px] text-white/90 mb-1">
                 <span>Progress</span>
@@ -129,16 +139,27 @@ export default function ProjectCard({ project }) {
                   ({doneCount}/{tasks.length})
                 </span>
               </h4>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsFlipped(false);
-                }}
-                className="text-white/40 hover:text-white transition-colors p-1 shrink-0"
-                title="Flip back"
-              >
-                <RotateCcw size={13} />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                {canManageTasks && (
+                  <button
+                    onClick={handleAddTaskClick}
+                    className="text-white/40 hover:text-white transition-colors p-1"
+                    title="Add task to this project"
+                  >
+                    <Plus size={14} />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFlipped(false);
+                  }}
+                  className="text-white/40 hover:text-white transition-colors p-1"
+                  title="Flip back"
+                >
+                  <RotateCcw size={13} />
+                </button>
+              </div>
             </div>
 
             {tasks.length === 0 ? (

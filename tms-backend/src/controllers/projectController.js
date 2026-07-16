@@ -5,9 +5,10 @@ async function getAllProjects(req, res, next) {
   try {
     const pool = await poolPromise;
     const result = await pool.request().query(`
-      SELECT p.*, t.name AS teamName
+      SELECT p.*, t.name AS teamName, cu.name AS createdByName
       FROM tms_projects p
       LEFT JOIN tms_teams t ON p.team_id = t.id
+      LEFT JOIN tms_users cu ON p.created_by = cu.id
       ORDER BY p.created_at DESC
     `);
 
@@ -19,15 +20,20 @@ async function getAllProjects(req, res, next) {
     next(err);
   }
 }
-// Notifies every member of a team when their team is assigned to a project.
-async function notifyTeamAssigned(pool, teamId, projectId, projectName, actorId) {
+async function notifyTeamAssigned(
+  pool,
+  teamId,
+  projectId,
+  projectName,
+  actorId,
+) {
   const members = await pool
     .request()
     .input("teamId", sql.Int, teamId)
     .query("SELECT id FROM tms_users WHERE team_id = @teamId");
 
   for (const member of members.recordset) {
-    if (member.id === actorId) continue; // don't notify whoever just did it
+    if (member.id === actorId) continue;
     await logActivity({
       userId: member.id,
       type: "project_assigned",
@@ -43,9 +49,10 @@ async function getProjectById(req, res, next) {
     const pool = await poolPromise;
     const result = await pool.request().input("id", sql.Int, req.params.id)
       .query(`
-        SELECT p.*, t.name AS teamName
+        SELECT p.*, t.name AS teamName, cu.name AS createdByName
         FROM tms_projects p
         LEFT JOIN tms_teams t ON p.team_id = t.id
+        LEFT JOIN tms_users cu ON p.created_by = cu.id
         WHERE p.id = @id
       `);
 
@@ -86,6 +93,10 @@ async function createProject(req, res, next) {
       `);
 
     const project = result.recordset[0];
+    // OUTPUT INSERTED.* only has created_by as a raw id — the creator IS
+    // the current user, so their name is already on the token, no extra
+    // lookup needed.
+    project.createdByName = req.user.name;
 
     for (const userId of members) {
       await pool
@@ -96,15 +107,15 @@ async function createProject(req, res, next) {
           "INSERT INTO tms_project_members (project_id, user_id) VALUES (@projectId, @userId)",
         );
     }
-if (project.team_id) {
-  await notifyTeamAssigned(
-    pool,
-    project.team_id,
-    project.id,
-    project.name,
-    req.user.id,
-  );
-}
+    if (project.team_id) {
+      await notifyTeamAssigned(
+        pool,
+        project.team_id,
+        project.id,
+        project.name,
+        req.user.id,
+      );
+    }
     res.status(201).json(await attachMembers(pool)(project));
   } catch (err) {
     next(err);
@@ -171,9 +182,6 @@ async function updateProject(req, res, next) {
       project = result.recordset[0];
     }
 
-    // Members are a separate join table, so they're replaced wholesale
-    // whenever the array is provided (matches how the edit form sends
-    // its full comma-separated member list on every save).
     if (members !== undefined) {
       await pool
         .request()
@@ -216,10 +224,6 @@ async function deleteProject(req, res, next) {
     const pool = await poolPromise;
     const id = req.params.id;
 
-    // tms_tasks.project_id has no ON DELETE rule, so SQL Server will
-    // reject the project delete with a foreign key error if any tasks
-    // still point at it. A project is a container for its tasks, so we
-    // delete those first — same as clicking delete on each task.
     await pool
       .request()
       .input("projectId", sql.Int, id)
@@ -248,21 +252,31 @@ function attachMembers(pool) {
         WHERE pm.project_id = @projectId
       `);
 
+    // createdByName already comes back from the SELECT JOIN (list/detail
+    // views) or was set manually after INSERT (createProject). updateProject's
+    // OUTPUT INSERTED.* doesn't have it though, so fall back to a lookup here.
+    let createdByName = project.createdByName ?? null;
+    if (!createdByName && project.created_by) {
+      const creatorResult = await pool
+        .request()
+        .input("id", sql.Int, project.created_by)
+        .query("SELECT name FROM tms_users WHERE id = @id");
+      createdByName = creatorResult.recordset[0]?.name || null;
+    }
+
     return {
       id: project.id,
       name: project.name,
       description: project.description,
       teamId: project.team_id,
       teamName: project.teamName,
-      // Plain name strings — kept exactly as-is since ProjectModal's
-      // comma-separated members text field depends on this shape.
       members: membersResult.recordset.map((r) => r.name),
-      // Same members, but as full objects (id/name/avatarColor) so avatar
-      // stacks (ProjectCard etc.) can render each person's real color.
       memberDetails: membersResult.recordset,
       status: project.status,
       progress: project.progress,
       color: project.color,
+      createdBy: project.created_by,
+      createdByName,
     };
   };
 }

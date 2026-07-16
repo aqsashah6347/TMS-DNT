@@ -1,21 +1,19 @@
 // tms-backend/src/controllers/teamController.js
 const { sql, poolPromise } = require("../config/db");
 
-// Matches taskController.js's formatDate — keeps due_date shaped as a
-// plain YYYY-MM-DD string here too instead of a raw SQL DATE/Date object.
 function formatDate(value) {
   if (!value) return null;
   return new Date(value).toISOString().split("T")[0];
 }
 
-// GET /api/teams — admin/manager collection view (grid of every team).
 async function getAllTeams(req, res, next) {
   try {
     const pool = await poolPromise;
     const result = await pool.request().query(`
-      SELECT t.*, m.name AS managerName, m.id AS managerId
+      SELECT t.*, m.name AS managerName, m.id AS managerId, cu.name AS createdByName
       FROM tms_teams t
       LEFT JOIN tms_users m ON t.manager_id = m.id
+      LEFT JOIN tms_users cu ON t.created_by = cu.id
       ORDER BY t.created_at DESC
     `);
 
@@ -28,9 +26,6 @@ async function getAllTeams(req, res, next) {
   }
 }
 
-// GET /api/teams/mine — the "My Team" view. Any authenticated user can hit
-// this; it always resolves off req.user.id rather than a param so there's
-// no way to fetch someone else's team context by guessing an id.
 async function getMyTeam(req, res, next) {
   try {
     const pool = await poolPromise;
@@ -47,9 +42,10 @@ async function getMyTeam(req, res, next) {
 
     const teamResult = await pool.request().input("teamId", sql.Int, teamId)
       .query(`
-        SELECT t.*, m.name AS managerName, m.id AS managerId
+        SELECT t.*, m.name AS managerName, m.id AS managerId, cu.name AS createdByName
         FROM tms_teams t
         LEFT JOIN tms_users m ON t.manager_id = m.id
+        LEFT JOIN tms_users cu ON t.created_by = cu.id
         WHERE t.id = @teamId
       `);
 
@@ -66,7 +62,6 @@ async function getMyTeam(req, res, next) {
   }
 }
 
-// POST /api/teams — admin-only (enforced in teamRoutes.js via requireRole).
 async function createTeam(req, res, next) {
   try {
     const {
@@ -91,6 +86,7 @@ async function createTeam(req, res, next) {
       `);
 
     const team = result.recordset[0];
+    team.createdByName = req.user.name;
 
     await assignMembers(pool, team.id, members, managerId);
 
@@ -100,7 +96,6 @@ async function createTeam(req, res, next) {
   }
 }
 
-// PUT /api/teams/:id — admin-only (enforced in teamRoutes.js).
 async function updateTeam(req, res, next) {
   try {
     const { name, description, managerId, members } = req.body;
@@ -141,8 +136,6 @@ async function updateTeam(req, res, next) {
       team = result.recordset[0];
     }
 
-    // Members are replaced wholesale whenever the array is provided —
-    // matches how the edit form sends its full member list on every save.
     if (members !== undefined) {
       await pool
         .request()
@@ -158,14 +151,11 @@ async function updateTeam(req, res, next) {
   }
 }
 
-// DELETE /api/teams/:id — admin-only (enforced in teamRoutes.js).
 async function deleteTeam(req, res, next) {
   try {
     const pool = await poolPromise;
     const id = req.params.id;
 
-    // Unlink members/projects first so the FK constraints added in
-    // 005_add_team_manager_and_user_team.sql don't block the delete.
     await pool
       .request()
       .input("teamId", sql.Int, id)
@@ -188,8 +178,6 @@ async function deleteTeam(req, res, next) {
   }
 }
 
-// Sets tms_users.team_id for every member (and the manager, if given) so
-// the manager always shows up as part of their own team's roster too.
 async function assignMembers(pool, teamId, memberIds, managerId) {
   const ids = new Set(memberIds.map((id) => Number(id)));
   if (managerId) ids.add(Number(managerId));
@@ -203,10 +191,6 @@ async function assignMembers(pool, teamId, memberIds, managerId) {
   }
 }
 
-// Attaches member list + project count to a raw tms_teams row. Keeps
-// `members` as a flat name array (what TeamCard.jsx / TeamWorkload.jsx
-// already expect) and adds `memberDetails`/`manager` for the modal and
-// the My Team dashboard.
 function attachTeamDetails(pool) {
   return async (team) => {
     const membersResult = await pool.request().input("teamId", sql.Int, team.id)
@@ -223,6 +207,16 @@ function attachTeamDetails(pool) {
         "SELECT COUNT(*) AS count FROM tms_projects WHERE team_id = @teamId",
       );
 
+    let createdByName = team.createdByName ?? null;
+    const createdBy = team.createdBy ?? team.created_by ?? null;
+    if (!createdByName && createdBy) {
+      const creatorResult = await pool
+        .request()
+        .input("id", sql.Int, createdBy)
+        .query("SELECT name FROM tms_users WHERE id = @id");
+      createdByName = creatorResult.recordset[0]?.name || null;
+    }
+
     return {
       id: team.id,
       name: team.name,
@@ -233,14 +227,12 @@ function attachTeamDetails(pool) {
       memberDetails: membersResult.recordset,
       projectCount: projectCountResult.recordset[0].count,
       createdAt: team.created_at,
+      createdBy,
+      createdByName,
     };
   };
 }
 
-// Shared by getMyTeam: every project pointed at this team, plus every
-// (non-deleted) task inside those projects — this is what makes the
-// dashboard-style "Projects & Tasks" section on the My Team view live
-// data instead of another mock array.
 async function getTeamProjectsAndTasks(pool, teamId) {
   const projectsResult = await pool.request().input("teamId", sql.Int, teamId)
     .query(`

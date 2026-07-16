@@ -2,6 +2,62 @@ const { poolPromise } = require("../config/db");
 const attendanceService = require("../services/attendanceService");
 const { fetchAllEmployees } = require("../services/zkEmployeeService");
 
+// GET /api/employees/directory — a lighter version of /roster for member
+// pickers (project members, task assignees, etc). Any authenticated user
+// can hit this (unlike /roster, which is admin-only because it exposes
+// attendance/check-in data). Only name/department/userId go out — no
+// gender, no check-in/out, no attendance status.
+//
+// If the ZK employees API is unreachable (e.g. off the work network),
+// this falls back to the plain tms_users list grouped under "Unassigned"
+// instead of failing the whole picker — better to show flat results than
+// to block project/team creation entirely.
+async function getDirectory(req, res, next) {
+  try {
+    const pool = await poolPromise;
+    const usersResult = await pool
+      .request()
+      .query(
+        "SELECT id, name, role, enroll_no FROM tms_users WHERE status = 'active'",
+      );
+
+    let employees;
+    try {
+      employees = await fetchAllEmployees();
+    } catch (err) {
+      const directory = usersResult.recordset.map((u) => ({
+        userId: u.id,
+        name: u.name,
+        department: "Unassigned",
+      }));
+      return res.json({ employees: directory });
+    }
+
+    const userByCode = new Map(
+      usersResult.recordset
+        .filter((u) => u.enroll_no)
+        .map((u) => [attendanceService.normalizeEmployeeCode(u.enroll_no), u]),
+    );
+
+    const directory = employees
+      .map((emp) => {
+        const code = attendanceService.normalizeEmployeeCode(emp.employeeCode);
+        const account = userByCode.get(code);
+        return {
+          employeeCode: emp.employeeCode,
+          name: emp.fullName,
+          department: emp.departmentName || "Unassigned",
+          userId: account?.id || null,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({ employees: directory });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function getRoster(req, res, next) {
   try {
     const dateStr = attendanceService.todayDateString();
@@ -14,11 +70,6 @@ async function getRoster(req, res, next) {
 
     const logByCode = new Map(logRanges.map((l) => [l.enrollNo, l]));
 
-    // tms_users.enroll_no links a login account back to a ZK employeeCode
-    // (see 003_add_enroll_no.sql). Matched here so the Access page can
-    // assign roles/permissions directly from the ZK roster without a
-    // separate employee picker — employees with no matching row just
-    // don't have a login account yet.
     const usersResult = await pool
       .request()
       .query(
@@ -48,9 +99,6 @@ async function getRoster(req, res, next) {
       };
     });
 
-// Most recent check-in first. Employees with no check-in today
-    // (checkIn === null) are pushed to the bottom, alphabetically among
-    // themselves so their order stays stable and predictable.
     roster.sort((a, b) => {
       if (!a.checkIn && !b.checkIn) return a.name.localeCompare(b.name);
       if (!a.checkIn) return 1;
@@ -64,4 +112,4 @@ async function getRoster(req, res, next) {
   }
 }
 
-module.exports = { getRoster };
+module.exports = { getRoster, getDirectory };

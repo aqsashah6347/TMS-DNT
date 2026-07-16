@@ -4,6 +4,7 @@ import { useProjectStore } from "../Features/projects/projectStore";
 import { useTaskStore } from "../Features/tasks/taskStore";
 import ProjectCard from "../Features/projects/components/ProjectCard";
 import ProjectModal from "../Features/projects/components/ProjectModal";
+import TaskModal from "../Features/tasks/components/TaskModal";
 import Button from "../components/ui/Button";
 
 export default function Projects() {
@@ -53,6 +54,7 @@ export default function Projects() {
       )}
 
       <ProjectModal />
+      <TaskModal />
     </div>
   );
 }
