@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
@@ -7,6 +7,8 @@ import { useTaskStore } from "../taskStore";
 import { useProjectStore } from "../../projects/projectStore";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
+import { employeesApi } from "../../../api/employeesApi";
+import { getProjectColor } from "../../../utils/projectColors";
 import {
   Pencil,
   Pin,
@@ -36,6 +38,19 @@ const priorityBadgeMap = {
   low: "glass-badge--primary",
 };
 
+// Palette a user picks from when a task has no project (same rotating-swatch
+// pattern as PROJECT_COLORS / TEAM_COLORS elsewhere in the app).
+const TASK_COLORS = [
+  "#d68394", // rose (app accent)
+  "#70b3b1", // teal
+  "#d3b19a", // sand
+  "#8ea8d0", // dusty blue
+  "#b490f5", // violet
+  "#a8c98a", // sage
+  "#f2c6a0", // apricot
+  "#f87171", // coral
+];
+
 const emptyForm = {
   title: "",
   description: "",
@@ -46,6 +61,7 @@ const emptyForm = {
   zoomLink: "",
   githubLink: "",
   projectId: null,
+  color: TASK_COLORS[0],
 };
 
 export default function TaskModal() {
@@ -64,22 +80,37 @@ export default function TaskModal() {
   } = useTaskStore();
   const { user } = useAuthStore();
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
+  const isAdmin = user?.role === "admin";
 
   const { projects, fetchProjects } = useProjectStore();
 
-  const [users, setUsers] = useState([]);
+  // Assignable users — usersApi.getAssignableUsers() already returns just
+  // this manager's team for managers and everyone for admins, so no
+  // team-filtering logic needs to live here.
+  const [assignableUsers, setAssignableUsers] = useState([]);
+  // Roster is only fetched for admins, purely to get each person's
+  // department for the tab bar (same source TeamMemberPicker.jsx uses).
+  const [roster, setRoster] = useState([]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [formError, setFormError] = useState(null);
 
   useEffect(() => {
-    if (isTaskModalOpen) {
-      usersApi
-        .getAllUsers()
-        .then(setUsers)
-        .catch(() => setUsers([]));
-    }
+    if (!isTaskModalOpen) return;
+    usersApi
+      .getAssignableUsers()
+      .then(setAssignableUsers)
+      .catch(() => setAssignableUsers([]));
   }, [isTaskModalOpen]);
+
+  useEffect(() => {
+    if (!isTaskModalOpen || !isAdmin) return;
+    employeesApi
+      .getRoster()
+      .then((data) => setRoster(data.employees || []))
+      .catch(() => setRoster([]));
+  }, [isTaskModalOpen, isAdmin]);
 
   // Projects load once (from the Projects page) but the Task modal can be
   // opened before that ever happens — e.g. straight from the Tasks page —
@@ -98,14 +129,46 @@ export default function TaskModal() {
           assignedTo: editingTask.assignedTo
             ? String(editingTask.assignedTo)
             : "",
+          color: editingTask.color || TASK_COLORS[0],
         }
       : { ...emptyForm, projectId: pendingProjectId || null },
   );
 
-  const userOptions = [
-    { value: "", label: "Unassigned" },
-    ...users.map((u) => ({ value: String(u.id), label: u.name })),
+  // employee.userId links a roster row to its real tms_users account —
+  // only those rows are relevant for tagging an assignable user's department.
+  const departmentByUserId = useMemo(() => {
+    const map = {};
+    roster.forEach((emp) => {
+      if (emp.userId) map[String(emp.userId)] = emp.department || "Unassigned";
+    });
+    return map;
+  }, [roster]);
+
+  const assigneeOptions = [
+    { value: "", label: "Unassigned", group: "all" },
+    ...assignableUsers.map((u) => ({
+      value: String(u.id),
+      label: u.name,
+      group: isAdmin ? departmentByUserId[String(u.id)] || "Unassigned" : undefined,
+    })),
   ];
+
+  // Tabs only make sense for admins, since managers already get a
+  // pre-filtered (single-team) list from the backend.
+  const departmentTabs = isAdmin
+    ? [
+        { key: "all", label: "All" },
+        ...Array.from(
+          new Set(
+            assignableUsers.map(
+              (u) => departmentByUserId[String(u.id)] || "Unassigned",
+            ),
+          ),
+        )
+          .sort((a, b) => a.localeCompare(b))
+          .map((dept) => ({ key: dept, label: dept })),
+      ]
+    : null;
 
   const projectOptions = [
     { value: "", label: "No project" },
@@ -116,6 +179,13 @@ export default function TaskModal() {
     (p) => p.id === (editingTask?.projectId ?? form.projectId),
   );
 
+  // Live project color — looked up the same way TaskCard.jsx does, so the
+  // preview always matches the project's *current* color even if form.color
+  // (the task's own standalone color) is stale from before it was linked.
+  const inheritedColor = form.projectId
+    ? getProjectColor(form.projectId, projects)
+    : null;
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!(form.title || "").trim()) return;
@@ -123,9 +193,17 @@ export default function TaskModal() {
     setFormError(null);
     setIsSubmitting(true);
 
+    // When a task belongs to a project, its color comes from the project
+    // (see TaskCard.jsx / TaskKanbanView.jsx), so don't send a stale
+    // standalone color that could shadow it.
+    const payload = { ...form };
+    if (payload.projectId) {
+      delete payload.color;
+    }
+
     const ok = editingTask
-      ? await updateTask(editingTask.id, form)
-      : await addTask(form);
+      ? await updateTask(editingTask.id, payload)
+      : await addTask(payload);
 
     setIsSubmitting(false);
 
@@ -210,7 +288,10 @@ export default function TaskModal() {
               label="Assigned To"
               value={form.assignedTo}
               onChange={(v) => setForm({ ...form, assignedTo: v })}
-              options={userOptions}
+              options={assigneeOptions}
+              searchable
+              tabs={departmentTabs}
+              placeholder="Unassigned"
             />
           </div>
 
@@ -221,7 +302,41 @@ export default function TaskModal() {
               setForm({ ...form, projectId: v ? Number(v) : null })
             }
             options={projectOptions}
+            searchable
+            placeholder="No project"
           />
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wide">
+              Task Color
+            </label>
+            {form.projectId ? (
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <span
+                  className="w-5 h-5 rounded-full border border-bg shrink-0"
+                  style={{ backgroundColor: inheritedColor }}
+                />
+                Matches {selectedProject?.name || "project"}'s color
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                {TASK_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setForm({ ...form, color: c })}
+                    className="w-6 h-6 rounded-full border-2 transition-transform"
+                    style={{
+                      backgroundColor: c,
+                      borderColor: form.color === c ? "#001021" : "transparent",
+                      transform: form.color === c ? "scale(1.1)" : "scale(1)",
+                    }}
+                    aria-label={`Select color ${c}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -278,6 +393,14 @@ export default function TaskModal() {
         editingTask && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className="w-3 h-3 rounded-full border border-bg shrink-0"
+                style={{
+                  backgroundColor: editingTask.projectId
+                    ? getProjectColor(editingTask.projectId, projects)
+                    : editingTask.color || TASK_COLORS[0],
+                }}
+              />
               <span
                 className={`glass-badge ${priorityBadgeMap[editingTask.priority]}`}
               >
