@@ -69,6 +69,7 @@ async function createTeam(req, res, next) {
       description = null,
       managerId = null,
       members = [],
+      color = null,
     } = req.body;
     if (!name)
       return res.status(400).json({ message: "Team name is required" });
@@ -79,10 +80,11 @@ async function createTeam(req, res, next) {
       .input("name", sql.NVarChar, name)
       .input("description", sql.NVarChar, description)
       .input("managerId", sql.Int, managerId)
+      .input("color", sql.NVarChar, color)
       .input("createdBy", sql.Int, req.user.id).query(`
-        INSERT INTO tms_teams (name, description, manager_id, created_by)
+        INSERT INTO tms_teams (name, description, manager_id, color, created_by)
         OUTPUT INSERTED.*
-        VALUES (@name, @description, @managerId, @createdBy)
+        VALUES (@name, @description, @managerId, @color, @createdBy)
       `);
 
     const team = result.recordset[0];
@@ -98,7 +100,7 @@ async function createTeam(req, res, next) {
 
 async function updateTeam(req, res, next) {
   try {
-    const { name, description, managerId, members } = req.body;
+    const { name, description, managerId, members, color } = req.body;
     const pool = await poolPromise;
     const request = pool.request().input("id", sql.Int, req.params.id);
     const setClauses = [];
@@ -114,6 +116,10 @@ async function updateTeam(req, res, next) {
     if (managerId !== undefined) {
       request.input("managerId", sql.Int, managerId);
       setClauses.push("manager_id = @managerId");
+    }
+    if (color !== undefined) {
+      request.input("color", sql.NVarChar, color);
+      setClauses.push("color = @color");
     }
 
     let team;
@@ -195,7 +201,8 @@ function attachTeamDetails(pool) {
   return async (team) => {
     const membersResult = await pool.request().input("teamId", sql.Int, team.id)
       .query(`
-        SELECT id, name, role, avatar_color AS avatarColor FROM tms_users
+        SELECT id, name, role, avatar_color AS avatarColor, enroll_no AS enrollNo
+        FROM tms_users
         WHERE team_id = @teamId
         ORDER BY name ASC
       `);
@@ -223,6 +230,7 @@ function attachTeamDetails(pool) {
       description: team.description,
       managerId: team.managerId ?? team.manager_id ?? null,
       managerName: team.managerName || null,
+      color: team.color || null,
       members: membersResult.recordset.map((r) => r.name),
       memberDetails: membersResult.recordset,
       projectCount: projectCountResult.recordset[0].count,

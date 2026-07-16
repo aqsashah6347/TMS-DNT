@@ -10,7 +10,7 @@ export default function TaskListView({ tasks }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="taskello-grid">
       {tasks.map((task) => (
         <TaskCard key={task.id} task={task} />
       ))}

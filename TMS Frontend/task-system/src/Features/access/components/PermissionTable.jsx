@@ -2,6 +2,18 @@ import { Check } from "lucide-react";
 import { useAccessStore } from "../accessStore";
 import RolePresets from "./RolePresets";
 
+// The backend hardcodes these module+action combos to specific roles via
+// requireRole (not requirePermission), so toggling them here would do
+// nothing — teams create/edit/delete are admin-only no matter what.
+// Keep this in sync with tms-backend/src/routes/teamRoutes.js.
+const INERT_COMBOS = {
+  teams: ["create", "edit", "delete", "assign"],
+};
+
+function isInert(module, action) {
+  return INERT_COMBOS[module]?.includes(action) ?? false;
+}
+
 export default function PermissionTable() {
   const { permissions, modules, actions, toggleAction } = useAccessStore();
 
@@ -47,6 +59,12 @@ export default function PermissionTable() {
                   <tr key={mod}>
                     <td className="text-white capitalize">{mod}</td>
                     {actions.map((action) => {
+                      if (isInert(mod, action)) {
+                        // No toggle rendered — this combo is locked to a
+                        // fixed role server-side and can't be granted here.
+                        return <td key={action} />;
+                      }
+
                       const active = perm.overrides[mod]?.includes(action);
                       return (
                         <td key={action} style={{ textAlign: "center" }}>

@@ -7,8 +7,15 @@ import Button from "../../../components/ui/Button";
 import { useTeamStore } from "../teamStore";
 import { usersApi } from "../../../api/usersApi";
 import TeamMemberPicker from "./TeamMemberPicker";
+import { TEAM_COLORS } from "../../../utils/teamColors";
 
-const emptyForm = { name: "", description: "", managerId: "", members: [] };
+const emptyForm = {
+  name: "",
+  description: "",
+  managerId: "",
+  members: [],
+  color: TEAM_COLORS[0],
+};
 
 function getInitialForm(team) {
   if (!team) return emptyForm;
@@ -19,6 +26,7 @@ function getInitialForm(team) {
     members: (team.memberDetails || [])
       .filter((m) => m.id !== team.managerId)
       .map((m) => m.id),
+    color: team.color || emptyForm.color,
   };
 }
 
@@ -59,6 +67,7 @@ function TeamForm({
       description: form.description,
       managerId: form.managerId ? Number(form.managerId) : null,
       members: form.members,
+      color: form.color,
     };
 
     setFormError(null);
@@ -115,6 +124,26 @@ function TeamForm({
         selectedIds={form.members}
         onChange={(members) => setForm({ ...form, members })}
       />
+
+      <div>
+        <label className="text-xs font-medium text-muted mb-1.5 block">
+          Team color
+        </label>
+        <div className="flex gap-2">
+          {TEAM_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setForm({ ...form, color: c })}
+              className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
+              style={{
+                backgroundColor: c,
+                borderColor: form.color === c ? "#ffffff" : "transparent",
+              }}
+            />
+          ))}
+        </div>
+      </div>
 
       {formError && (
         <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
