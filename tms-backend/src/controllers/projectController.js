@@ -231,7 +231,16 @@ async function deleteProject(req, res, next) {
   try {
     const pool = await poolPromise;
     const id = req.params.id;
-
+await pool.request().input("projectId", sql.Int, id).query(`
+  UPDATE tms_notifications SET task_id = NULL
+  WHERE task_id IN (SELECT id FROM tms_tasks WHERE project_id = @projectId)
+`);
+await pool
+  .request()
+  .input("projectId", sql.Int, id)
+  .query(
+    "UPDATE tms_notifications SET project_id = NULL WHERE project_id = @projectId",
+  );
     await pool
       .request()
       .input("projectId", sql.Int, id)

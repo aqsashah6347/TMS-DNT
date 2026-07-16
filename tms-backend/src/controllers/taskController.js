@@ -184,17 +184,17 @@ async function createTask(req, res, next) {
       projectId: task.projectId,
     });
 
-if (task.assignedTo && task.assignedTo !== req.user.id) {
-  const projectName = createProjectName;
-  await logActivity({
-    userId: task.assignedTo,
-    type: "task_assigned",
-    title: "New task assigned",
-    message: `${task.assignedByName || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
-    taskId: task.id,
-    projectId: task.projectId,
-  });
-}
+    if (task.assignedTo && task.assignedTo !== req.user.id) {
+      const projectName = createProjectName;
+      await logActivity({
+        userId: task.assignedTo,
+        type: "task_assigned",
+        title: "New task assigned",
+        message: `${task.assignedByName || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+        taskId: task.id,
+        projectId: task.projectId,
+      });
+    }
     if (task.projectId) {
       await recalcProjectProgress(pool, task.projectId);
     }
@@ -324,163 +324,172 @@ async function updateTask(req, res, next) {
     if (task.projectId) {
       await recalcProjectProgress(pool, task.projectId);
     }
-if (
-  updates.status === "done" &&
-  previousStatus !== "done" &&
-  task.assignedBy &&
-  task.assignedBy !== task.completedBy
-) {
-  const projectName = task.projectId
-    ? await getProjectName(pool, task.projectId)
-    : null;
-  await logActivity({
-    userId: task.assignedBy,
-    type: "task_completed",
-    title: "Task completed",
-    message: `${task.completedByName || task.assignedToName || "Someone"} completed "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
-    taskId: task.id,
-    projectId: task.projectId,
-  });
-}
+    if (
+      updates.status === "done" &&
+      previousStatus !== "done" &&
+      task.assignedBy &&
+      task.assignedBy !== task.completedBy
+    ) {
+      const projectName = task.projectId
+        ? await getProjectName(pool, task.projectId)
+        : null;
+      await logActivity({
+        userId: task.assignedBy,
+        type: "task_completed",
+        title: "Task completed",
+        message: `${task.completedByName || task.assignedToName || "Someone"} completed "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+        taskId: task.id,
+        projectId: task.projectId,
+      });
+    }
 
-if (
-  updates.assignedTo !== undefined &&
-  task.assignedTo &&
-  task.assignedTo !== previousAssignedTo &&
-  task.assignedTo !== req.user.id
-) {
-  const projectName = task.projectId
-    ? await getProjectName(pool, task.projectId)
-    : null;
-  await logActivity({
-    userId: task.assignedTo,
-    type: "task_assigned",
-    title: "New task assigned",
-    message: `${req.user.name || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
-    taskId: task.id,
-    projectId: task.projectId,
-  });
-}
+    if (
+      updates.assignedTo !== undefined &&
+      task.assignedTo &&
+      task.assignedTo !== previousAssignedTo &&
+      task.assignedTo !== req.user.id
+    ) {
+      const projectName = task.projectId
+        ? await getProjectName(pool, task.projectId)
+        : null;
+      await logActivity({
+        userId: task.assignedTo,
+        type: "task_assigned",
+        title: "New task assigned",
+        message: `${req.user.name || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+        taskId: task.id,
+        projectId: task.projectId,
+      });
+    }
 
-// Self-logged edit trail for Box 1 / Action Activity. Every field
-// touched by a single PUT (due date, assignment, status, priority,
-// title, ...) is collected into one `changes` list and logged as a
-// single "task_edited" activity, instead of a separate activity row
-// per field — the Activity page shows one "Edited by <user>" card with
-// the individual field changes tucked inside an expandable dropdown.
-if (
-  updates.dueDate !== undefined ||
-  updates.assignedTo !== undefined ||
-  (updates.status !== undefined && updates.status !== "done") ||
-  ["title", "description", "priority", "projectId", "zoomLink", "githubLink"].some(
-    (f) => updates[f] !== undefined,
-  )
-) {
-  const projectName = task.projectId
-    ? await getProjectName(pool, task.projectId)
-    : null;
-  const suffix = projectName ? ` in ${projectName}` : "";
+    // Self-logged edit trail for Box 1 / Action Activity. Every field
+    // touched by a single PUT (due date, assignment, status, priority,
+    // title, ...) is collected into one `changes` list and logged as a
+    // single "task_edited" activity, instead of a separate activity row
+    // per field — the Activity page shows one "Edited by <user>" card with
+    // the individual field changes tucked inside an expandable dropdown.
+    if (
+      updates.dueDate !== undefined ||
+      updates.assignedTo !== undefined ||
+      (updates.status !== undefined && updates.status !== "done") ||
+      [
+        "title",
+        "description",
+        "priority",
+        "projectId",
+        "zoomLink",
+        "githubLink",
+      ].some((f) => updates[f] !== undefined)
+    ) {
+      const projectName = task.projectId
+        ? await getProjectName(pool, task.projectId)
+        : null;
+      const suffix = projectName ? ` in ${projectName}` : "";
 
-  const changes = [];
+      const changes = [];
 
-  if (updates.dueDate !== undefined) {
-    changes.push({
-      field: "Due Date",
-      oldValue: formatShortDate(previousDueDate),
-      newValue: formatShortDate(updates.dueDate),
-    });
-  }
+      if (updates.dueDate !== undefined) {
+        changes.push({
+          field: "Due Date",
+          oldValue: formatShortDate(previousDueDate),
+          newValue: formatShortDate(updates.dueDate),
+        });
+      }
 
-  if (
-    updates.assignedTo !== undefined &&
-    task.assignedTo !== previousAssignedTo
-  ) {
-    const previousAssignedToName = previousAssignedTo
-      ? await getUserName(pool, previousAssignedTo)
-      : null;
-    changes.push({
-      field: "Assigned To",
-      oldValue: previousAssignedToName || "Unassigned",
-      newValue: task.assignedToName || "Unassigned",
-    });
-  }
+      if (
+        updates.assignedTo !== undefined &&
+        task.assignedTo !== previousAssignedTo
+      ) {
+        const previousAssignedToName = previousAssignedTo
+          ? await getUserName(pool, previousAssignedTo)
+          : null;
+        changes.push({
+          field: "Assigned To",
+          oldValue: previousAssignedToName || "Unassigned",
+          newValue: task.assignedToName || "Unassigned",
+        });
+      }
 
-  // "done" is intentionally excluded here — that transition is already
-  // covered by the task_completed activity above, so this only fires
-  // for the other status changes (backlog/in progress/review/etc).
-  if (updates.status !== undefined && updates.status !== "done") {
-    changes.push({
-      field: "Status",
-      oldValue: titleCase(previousStatus),
-      newValue: titleCase(updates.status),
-    });
-  }
+      // "done" is intentionally excluded here — that transition is already
+      // covered by the task_completed activity above, so this only fires
+      // for the other status changes (backlog/in progress/review/etc).
+      if (updates.status !== undefined && updates.status !== "done") {
+        changes.push({
+          field: "Status",
+          oldValue: titleCase(previousStatus),
+          newValue: titleCase(updates.status),
+        });
+      }
 
-  if (
-    updates.priority !== undefined &&
-    updates.priority !== previousPriority
-  ) {
-    changes.push({
-      field: "Priority",
-      oldValue: titleCase(previousPriority),
-      newValue: titleCase(updates.priority),
-    });
-  }
+      if (
+        updates.priority !== undefined &&
+        updates.priority !== previousPriority
+      ) {
+        changes.push({
+          field: "Priority",
+          oldValue: titleCase(previousPriority),
+          newValue: titleCase(updates.priority),
+        });
+      }
 
-  if (updates.title !== undefined && updates.title !== previousTitle) {
-    changes.push({
-      field: "Title",
-      oldValue: previousTitle || "—",
-      newValue: updates.title,
-    });
-  }
+      if (updates.title !== undefined && updates.title !== previousTitle) {
+        changes.push({
+          field: "Title",
+          oldValue: previousTitle || "—",
+          newValue: updates.title,
+        });
+      }
 
-  if (updates.description !== undefined) {
-    changes.push({
-      field: "Description",
-      oldValue: "Previous version",
-      newValue: "Updated",
-    });
-  }
+      if (updates.description !== undefined) {
+        changes.push({
+          field: "Description",
+          oldValue: "Previous version",
+          newValue: "Updated",
+        });
+      }
 
-  if (
-    updates.projectId !== undefined &&
-    previousProjectId !== task.projectId
-  ) {
-    const previousProjectName = previousProjectId
-      ? await getProjectName(pool, previousProjectId)
-      : null;
-    changes.push({
-      field: "Project",
-      oldValue: previousProjectName || "None",
-      newValue: projectName || "None",
-    });
-  }
+      if (
+        updates.projectId !== undefined &&
+        previousProjectId !== task.projectId
+      ) {
+        const previousProjectName = previousProjectId
+          ? await getProjectName(pool, previousProjectId)
+          : null;
+        changes.push({
+          field: "Project",
+          oldValue: previousProjectName || "None",
+          newValue: projectName || "None",
+        });
+      }
 
-  if (updates.zoomLink !== undefined) {
-    changes.push({ field: "Zoom Link", oldValue: "—", newValue: "Updated" });
-  }
+      if (updates.zoomLink !== undefined) {
+        changes.push({
+          field: "Zoom Link",
+          oldValue: "—",
+          newValue: "Updated",
+        });
+      }
 
-  if (updates.githubLink !== undefined) {
-    changes.push({
-      field: "GitHub Link",
-      oldValue: "—",
-      newValue: "Updated",
-    });
-  }
+      if (updates.githubLink !== undefined) {
+        changes.push({
+          field: "GitHub Link",
+          oldValue: "—",
+          newValue: "Updated",
+        });
+      }
 
-  if (changes.length > 0) {
-    await logActivity({
-      userId: req.user.id,
-      type: "task_edited",
-      title: "Task edited",
-      message: `You edited "${task.title}"${suffix}.`,
-      taskId: task.id,
-      projectId: task.projectId,
-      changes,
-    });
-  }
-}
+      if (changes.length > 0) {
+        await logActivity({
+          userId: req.user.id,
+          type: "task_edited",
+          title: "Task edited",
+          message: `You edited "${task.title}"${suffix}.`,
+          taskId: task.id,
+          projectId: task.projectId,
+          changes,
+        });
+      }
+    }
     res.json(task);
   } catch (err) {
     next(err);
@@ -490,6 +499,15 @@ if (
 async function deleteTask(req, res, next) {
   try {
     const pool = await poolPromise;
+
+    // tms_notifications.task_id has a FK to tms_tasks(id) with no cascade
+    // action, so a hard delete would otherwise throw FK_notifications_task.
+    // Notification history is kept — only the now-dangling task pointer is
+    // cleared.
+    await pool.request().input("id", sql.Int, req.params.id).query(`
+      UPDATE tms_notifications SET task_id = NULL WHERE task_id = @id
+    `);
+
     const result = await pool.request().input("id", sql.Int, req.params.id)
       .query(`
         DELETE FROM tms_tasks

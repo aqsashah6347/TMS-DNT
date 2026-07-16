@@ -4,6 +4,7 @@ import { Input, Textarea } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
 import Button from "../../../components/ui/Button";
 import { useTaskStore } from "../taskStore";
+import { useProjectStore } from "../../projects/projectStore";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import {
@@ -15,6 +16,7 @@ import {
   Calendar,
   User,
   Flag,
+  Folder,
   CheckCircle2,
 } from "lucide-react";
 
@@ -63,6 +65,8 @@ export default function TaskModal() {
   const { user } = useAuthStore();
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
 
+  const { projects, fetchProjects } = useProjectStore();
+
   const [users, setUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -76,6 +80,15 @@ export default function TaskModal() {
         .catch(() => setUsers([]));
     }
   }, [isTaskModalOpen]);
+
+  // Projects load once (from the Projects page) but the Task modal can be
+  // opened before that ever happens — e.g. straight from the Tasks page —
+  // so make sure the dropdown always has data to show.
+  useEffect(() => {
+    if (isTaskModalOpen && projects.length === 0) {
+      fetchProjects();
+    }
+  }, [isTaskModalOpen, projects.length, fetchProjects]);
 
   const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
   const [form, setForm] = useState(() =>
@@ -93,6 +106,15 @@ export default function TaskModal() {
     { value: "", label: "Unassigned" },
     ...users.map((u) => ({ value: String(u.id), label: u.name })),
   ];
+
+  const projectOptions = [
+    { value: "", label: "No project" },
+    ...projects.map((p) => ({ value: String(p.id), label: p.name })),
+  ];
+
+  const selectedProject = projects.find(
+    (p) => p.id === (editingTask?.projectId ?? form.projectId),
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -192,6 +214,15 @@ export default function TaskModal() {
             />
           </div>
 
+          <Dropdown
+            label="Project"
+            value={form.projectId ? String(form.projectId) : ""}
+            onChange={(v) =>
+              setForm({ ...form, projectId: v ? Number(v) : null })
+            }
+            options={projectOptions}
+          />
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Zoom link"
@@ -256,6 +287,18 @@ export default function TaskModal() {
               <span className="glass-badge glass-badge--violet">
                 {editingTask.status}
               </span>
+              {selectedProject && (
+                <span
+                  className="glass-badge flex items-center gap-1"
+                  style={{
+                    backgroundColor: `${selectedProject.color}33`,
+                    color: selectedProject.color,
+                  }}
+                >
+                  <Folder size={10} />
+                  {selectedProject.name}
+                </span>
+              )}
             </div>
 
             {editingTask.description && (
