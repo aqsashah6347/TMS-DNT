@@ -72,7 +72,13 @@ export default function InboxNotificationsBox({
   onMarkAllAsRead,
 }) {
   return (
-    <div className="glass glass-card h-full">
+    <div
+      className="activity-noise-card h-full"
+      style={{
+        background:
+          "linear-gradient(155deg, #303034 0%, #232326 45%, #2b2b2f 75%, #1e1e21 100%)",
+      }}
+    >
       <div className="glass-content p-4 flex flex-col h-full">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -101,7 +107,7 @@ export default function InboxNotificationsBox({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto max-h-[420px] flex flex-col gap-1 pr-1">
+        <div className="activity-scroll flex-1 overflow-y-auto max-h-[420px] flex flex-col gap-1 pr-1">
           {loading && activities.length === 0 ? (
             <div className="py-10 text-center text-white/40 text-xs">
               Loading notifications...
