@@ -98,6 +98,14 @@ async function createProject(req, res, next) {
     // lookup needed.
     project.createdByName = req.user.name;
 
+    await logActivity({
+      userId: req.user.id,
+      type: "project_created",
+      title: "Project created",
+      message: `You created the project "${project.name}".`,
+      projectId: project.id,
+    });
+
     for (const userId of members) {
       await pool
         .request()
@@ -232,10 +240,20 @@ async function deleteProject(req, res, next) {
     const result = await pool
       .request()
       .input("id", sql.Int, id)
-      .query("DELETE FROM tms_projects OUTPUT DELETED.id WHERE id = @id");
+      .query("DELETE FROM tms_projects OUTPUT DELETED.id, DELETED.name WHERE id = @id");
 
     if (result.recordset.length === 0)
       return res.status(404).json({ message: "Project not found" });
+
+    // projectId omitted — FK_notifications_project references a row that
+    // no longer exists after this delete, so the name goes in the message.
+    await logActivity({
+      userId: req.user.id,
+      type: "project_deleted",
+      title: "Project deleted",
+      message: `You deleted the project "${result.recordset[0].name}".`,
+    });
+
     res.json({ message: "Project deleted" });
   } catch (err) {
     next(err);

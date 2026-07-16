@@ -29,6 +29,29 @@ async function getProjectName(pool, projectId) {
   return result.recordset[0]?.name || null;
 }
 
+async function getUserName(pool, userId) {
+  const result = await pool
+    .request()
+    .input("userId", sql.Int, userId)
+    .query("SELECT name FROM tms_users WHERE id = @userId");
+  return result.recordset[0]?.name || null;
+}
+
+// "15 Jul" style — used for the Due Date row inside the grouped edit
+// activity's changes list.
+function formatShortDate(date) {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+// "in progress" -> "In Progress" — used for Status/Priority rows.
+function titleCase(value) {
+  if (!value) return "—";
+  return value.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // Recomputes tms_projects.progress as "% of this project's tasks that
 // are done", straight from tms_tasks. Called after any create/update/
 // delete that could change a project's task mix, so the number on the
@@ -145,10 +168,24 @@ async function createTask(req, res, next) {
 
     const newId = result.recordset[0].id;
     const task = await fetchTaskWithJoins(pool, newId);
+    const createProjectName = task.projectId
+      ? await getProjectName(pool, task.projectId)
+      : null;
+
+    // Self-logged so the creator sees it on their own Activity page
+    // (Box 1 / Action Activity — distinct from the task_assigned
+    // notification below, which goes to the assignee instead).
+    await logActivity({
+      userId: req.user.id,
+      type: "task_created",
+      title: "Task created",
+      message: `You created "${task.title}"${createProjectName ? ` in ${createProjectName}` : ""}.`,
+      taskId: task.id,
+      projectId: task.projectId,
+    });
+
 if (task.assignedTo && task.assignedTo !== req.user.id) {
-  const projectName = task.projectId
-    ? await getProjectName(pool, task.projectId)
-    : null;
+  const projectName = createProjectName;
   await logActivity({
     userId: task.assignedTo,
     type: "task_assigned",
@@ -183,11 +220,14 @@ async function updateTask(req, res, next) {
       .request()
       .input("id", sql.Int, id)
       .query(
-        "SELECT project_id, status, assigned_to FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
+        "SELECT project_id, status, assigned_to, due_date, title, priority FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
       );
     const previousProjectId = before.recordset[0]?.project_id ?? null;
     const previousStatus = before.recordset[0]?.status ?? null;
     const previousAssignedTo = before.recordset[0]?.assigned_to ?? null;
+    const previousDueDate = before.recordset[0]?.due_date ?? null;
+    const previousTitle = before.recordset[0]?.title ?? null;
+    const previousPriority = before.recordset[0]?.priority ?? null;
 
     if (req.user.role === "user") {
       if (!before.recordset[0])
@@ -321,6 +361,126 @@ if (
     projectId: task.projectId,
   });
 }
+
+// Self-logged edit trail for Box 1 / Action Activity. Every field
+// touched by a single PUT (due date, assignment, status, priority,
+// title, ...) is collected into one `changes` list and logged as a
+// single "task_edited" activity, instead of a separate activity row
+// per field — the Activity page shows one "Edited by <user>" card with
+// the individual field changes tucked inside an expandable dropdown.
+if (
+  updates.dueDate !== undefined ||
+  updates.assignedTo !== undefined ||
+  (updates.status !== undefined && updates.status !== "done") ||
+  ["title", "description", "priority", "projectId", "zoomLink", "githubLink"].some(
+    (f) => updates[f] !== undefined,
+  )
+) {
+  const projectName = task.projectId
+    ? await getProjectName(pool, task.projectId)
+    : null;
+  const suffix = projectName ? ` in ${projectName}` : "";
+
+  const changes = [];
+
+  if (updates.dueDate !== undefined) {
+    changes.push({
+      field: "Due Date",
+      oldValue: formatShortDate(previousDueDate),
+      newValue: formatShortDate(updates.dueDate),
+    });
+  }
+
+  if (
+    updates.assignedTo !== undefined &&
+    task.assignedTo !== previousAssignedTo
+  ) {
+    const previousAssignedToName = previousAssignedTo
+      ? await getUserName(pool, previousAssignedTo)
+      : null;
+    changes.push({
+      field: "Assigned To",
+      oldValue: previousAssignedToName || "Unassigned",
+      newValue: task.assignedToName || "Unassigned",
+    });
+  }
+
+  // "done" is intentionally excluded here — that transition is already
+  // covered by the task_completed activity above, so this only fires
+  // for the other status changes (backlog/in progress/review/etc).
+  if (updates.status !== undefined && updates.status !== "done") {
+    changes.push({
+      field: "Status",
+      oldValue: titleCase(previousStatus),
+      newValue: titleCase(updates.status),
+    });
+  }
+
+  if (
+    updates.priority !== undefined &&
+    updates.priority !== previousPriority
+  ) {
+    changes.push({
+      field: "Priority",
+      oldValue: titleCase(previousPriority),
+      newValue: titleCase(updates.priority),
+    });
+  }
+
+  if (updates.title !== undefined && updates.title !== previousTitle) {
+    changes.push({
+      field: "Title",
+      oldValue: previousTitle || "—",
+      newValue: updates.title,
+    });
+  }
+
+  if (updates.description !== undefined) {
+    changes.push({
+      field: "Description",
+      oldValue: "Previous version",
+      newValue: "Updated",
+    });
+  }
+
+  if (
+    updates.projectId !== undefined &&
+    previousProjectId !== task.projectId
+  ) {
+    const previousProjectName = previousProjectId
+      ? await getProjectName(pool, previousProjectId)
+      : null;
+    changes.push({
+      field: "Project",
+      oldValue: previousProjectName || "None",
+      newValue: projectName || "None",
+    });
+  }
+
+  if (updates.zoomLink !== undefined) {
+    changes.push({ field: "Zoom Link", oldValue: "—", newValue: "Updated" });
+  }
+
+  if (updates.githubLink !== undefined) {
+    changes.push({
+      field: "GitHub Link",
+      oldValue: "—",
+      newValue: "Updated",
+    });
+  }
+
+  if (changes.length > 0) {
+    await logActivity({
+      userId: req.user.id,
+      type: "task_edited",
+      title: "Task edited",
+      message: `You edited "${task.title}"${suffix}.`,
+      taskId: task.id,
+      projectId: task.projectId,
+      changes,
+    });
+  }
+}
     res.json(task);
   } catch (err) {
     next(err);
@@ -333,7 +493,7 @@ async function deleteTask(req, res, next) {
     const result = await pool.request().input("id", sql.Int, req.params.id)
       .query(`
         DELETE FROM tms_tasks
-        OUTPUT DELETED.id, DELETED.project_id
+        OUTPUT DELETED.id, DELETED.title, DELETED.project_id
         WHERE id = @id
       `);
 
@@ -341,10 +501,22 @@ async function deleteTask(req, res, next) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    const deletedProjectId = result.recordset[0].project_id;
+    const { title: deletedTitle, project_id: deletedProjectId } =
+      result.recordset[0];
     if (deletedProjectId) {
       await recalcProjectProgress(pool, deletedProjectId);
     }
+
+    // taskId/projectId are intentionally omitted here — both FK columns
+    // on tms_notifications reference rows that either no longer exist
+    // (the task) or aren't guaranteed still relevant, so the task name
+    // is embedded directly in the message instead.
+    await logActivity({
+      userId: req.user.id,
+      type: "task_deleted",
+      title: "Task deleted",
+      message: `You deleted "${deletedTitle}".`,
+    });
 
     res.json({ message: "Task deleted" });
   } catch (err) {
@@ -402,6 +574,8 @@ function mapTask(row) {
     githubLink: row.github_link,
     completedBy: row.completed_by,
     completedByName: row.completedByName || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

@@ -4,9 +4,10 @@ import { employeesApi } from "../api/employeesApi";
 
 function formatTime(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString([], {
-    hour: "2-digit",
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   });
 }
 
@@ -17,15 +18,27 @@ function formatCheckOut(iso) {
   return formatTime(iso);
 }
 
+// Today's date, spelled out as "July 16, 2026" — shown on each attendance
+// card since Check In/Check Out only make sense in the context of a
+// specific day. Recomputed fresh on every render so it can't go stale on
+// a page left open across midnight.
+function formatCardDate() {
+  return new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 // showOnlineDot defaults to false, so every other caller of Avatar (e.g.
 // the List View table row below) renders exactly as before — only
 // EmployeeCard opts in, and only when emp.status === "present".
 function Avatar({ name, gender, size = "sm", showOnlineDot = false }) {
   const initial = name?.[0]?.toUpperCase() || "?";
   const isFemale = (gender || "").toLowerCase() === "female";
-  const dims = size === "lg" ? "w-16 h-16" : "w-9 h-9";
-  const iconSize = size === "lg" ? 28 : 16;
-  const dotSize = size === "lg" ? "w-4 h-4" : "w-2.5 h-2.5";
+  const dims = size === "lg" ? "w-14 h-14" : "w-9 h-9";
+  const iconSize = size === "lg" ? 24 : 16;
+  const dotSize = size === "lg" ? "w-3.5 h-3.5" : "w-2.5 h-2.5";
 
   return (
     <div className="relative shrink-0">
@@ -75,23 +88,28 @@ function StatusPill({ status }) {
 // as a green online dot on the avatar, condition = emp.status === "present".
 function EmployeeCard({ emp }) {
   return (
-    <div className="rounded-2xl bg-white/5 border border-white/10 p-5 flex flex-col items-center text-center hover:border-orange-500/30 hover:bg-white/[0.07] transition-colors">
+    <div className="rounded-2xl bg-white/5 border border-white/10 p-4 flex flex-col items-center text-center hover:border-orange-500/30 hover:bg-white/[0.07] transition-colors">
+      <div className="w-full flex items-center justify-between mb-2">
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-white/10 text-white/70 border border-white/10">
+          Emp # {emp.employeeCode}
+        </span>
+        <span className="text-[11px] text-white/40 font-medium">
+          {formatCardDate()}
+        </span>
+      </div>
       <Avatar
         name={emp.name}
         gender={emp.gender}
         size="lg"
         showOnlineDot={emp.status === "present"}
       />
-      <p className="text-sm font-medium text-white mt-3 truncate w-full">
+      <p className="text-sm font-medium text-white mt-2 truncate w-full">
         {emp.name}
       </p>
       <p className="text-xs text-white/40 truncate w-full">
         {emp.department}
       </p>
-      <div className="mt-4 pt-4 border-t border-white/10 w-full text-xs text-white/50">
-        Emp # {emp.employeeCode}
-      </div>
-      <div className="mt-2 w-full flex items-center justify-between text-xs">
+      <div className="mt-3 pt-3 border-t border-white/10 w-full flex items-center justify-between text-xs">
         <div className="flex flex-col items-start gap-0.5">
           <span className="text-blue-400 font-medium">Check In</span>
           <span className="text-white/70">{formatTime(emp.checkIn)}</span>
@@ -410,7 +428,7 @@ export default function Employees() {
               </table>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {filtered.map((emp) => (
                 <EmployeeCard key={emp.employeeCode} emp={emp} />
               ))}
