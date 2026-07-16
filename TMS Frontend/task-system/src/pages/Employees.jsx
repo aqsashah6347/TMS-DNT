@@ -11,40 +11,51 @@ function formatTime(iso) {
 }
 
 // Check-out specifically shows "00:00" instead of "—" while the employee
-// hasn't checked out yet, per the new card requirement. Check-in keeps
-// using formatTime's normal "—" fallback, unchanged.
+// hasn't checked out yet. Check-in keeps using formatTime's "—" fallback.
 function formatCheckOut(iso) {
   if (!iso) return "00:00";
   return formatTime(iso);
 }
 
-function Avatar({ name, gender, size = "sm" }) {
+// showOnlineDot defaults to false, so every other caller of Avatar (e.g.
+// the List View table row below) renders exactly as before — only
+// EmployeeCard opts in, and only when emp.status === "present".
+function Avatar({ name, gender, size = "sm", showOnlineDot = false }) {
   const initial = name?.[0]?.toUpperCase() || "?";
   const isFemale = (gender || "").toLowerCase() === "female";
   const dims = size === "lg" ? "w-16 h-16" : "w-9 h-9";
   const iconSize = size === "lg" ? 28 : 16;
+  const dotSize = size === "lg" ? "w-4 h-4" : "w-2.5 h-2.5";
 
   return (
-    <div
-      className={`${dims} rounded-full flex items-center justify-center shrink-0 border`}
-      style={
-        isFemale
-          ? {
-              background: "rgba(244,114,182,0.15)",
-              borderColor: "rgba(244,114,182,0.3)",
-            }
-          : {
-              background: "rgba(96,165,250,0.15)",
-              borderColor: "rgba(96,165,250,0.3)",
-            }
-      }
-    >
-      <User size={iconSize} color={isFemale ? "#f472b6" : "#60a5fa"} />
-      <span className="sr-only">{initial}</span>
+    <div className="relative shrink-0">
+      <div
+        className={`${dims} rounded-full flex items-center justify-center shrink-0 border`}
+        style={
+          isFemale
+            ? {
+                background: "rgba(244,114,182,0.15)",
+                borderColor: "rgba(244,114,182,0.3)",
+              }
+            : {
+                background: "rgba(96,165,250,0.15)",
+                borderColor: "rgba(96,165,250,0.3)",
+              }
+        }
+      >
+        <User size={iconSize} color={isFemale ? "#f472b6" : "#60a5fa"} />
+        <span className="sr-only">{initial}</span>
+      </div>
+      {showOnlineDot && (
+        <span
+          className={`absolute bottom-0 right-0 ${dotSize} rounded-full bg-green-500 border-2 border-[#18181b]`}
+        />
+      )}
     </div>
   );
 }
 
+// Kept exactly as-is — still used by List View's Status column below.
 function StatusPill({ status }) {
   const isPresent = status === "present";
   return (
@@ -60,21 +71,23 @@ function StatusPill({ status }) {
   );
 }
 
-// Card used in Card View — reuses Avatar/StatusPill/formatTime so both
-// view modes render the exact same underlying employee data.
+// Card used in Card View — "Present" pill removed; presence is now shown
+// as a green online dot on the avatar, condition = emp.status === "present".
 function EmployeeCard({ emp }) {
   return (
     <div className="rounded-2xl bg-white/5 border border-white/10 p-5 flex flex-col items-center text-center hover:border-orange-500/30 hover:bg-white/[0.07] transition-colors">
-      <Avatar name={emp.name} gender={emp.gender} size="lg" />
+      <Avatar
+        name={emp.name}
+        gender={emp.gender}
+        size="lg"
+        showOnlineDot={emp.status === "present"}
+      />
       <p className="text-sm font-medium text-white mt-3 truncate w-full">
         {emp.name}
       </p>
       <p className="text-xs text-white/40 truncate w-full">
         {emp.department}
       </p>
-      <div className="mt-3">
-        <StatusPill status={emp.status} />
-      </div>
       <div className="mt-4 pt-4 border-t border-white/10 w-full text-xs text-white/50">
         Emp # {emp.employeeCode}
       </div>
@@ -226,18 +239,20 @@ export default function Employees() {
 
   return (
     <div>
-      <h2
-        className="text-4xl font-semibold text-white"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        Employees
-      </h2>
-      <p className="text-sm text-white/50 mt-1">
-        Live attendance status, synced from the biometric device.
-      </p>
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+        <div className="shrink-0">
+          <h2
+            className="text-4xl font-semibold text-white"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Employees
+          </h2>
+          <p className="text-sm text-white/50 mt-1">
+            Live attendance status, synced from the biometric device.
+          </p>
+        </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mt-6">
-        <div className="relative flex-1">
+        <div className="relative w-full lg:w-96 lg:mx-auto shrink-0">
           <Search
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"
@@ -246,71 +261,73 @@ export default function Employees() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or employee number..."
+            placeholder="Search Employee..."
             className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
           />
         </div>
 
-        <DepartmentDropdown
-          departments={departments}
-          value={departmentFilter}
-          onChange={setDepartmentFilter}
-        />
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <DepartmentDropdown
+            departments={departments}
+            value={departmentFilter}
+            onChange={setDepartmentFilter}
+          />
 
-        <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
-          <button
-            onClick={() => setViewMode("present")}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              viewMode === "present"
-                ? "bg-orange-500/20 text-orange-400"
-                : "text-white/50 hover:text-white/80"
-            }`}
-          >
-            Present ({presentCount})
-          </button>
-          <button
-            onClick={() => setViewMode("all")}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              viewMode === "all"
-                ? "bg-orange-500/20 text-orange-400"
-                : "text-white/50 hover:text-white/80"
-            }`}
-          >
-            All ({employees.length})
-          </button>
-        </div>
+          <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
+            <button
+              onClick={() => setViewMode("present")}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === "present"
+                  ? "bg-orange-500/20 text-orange-400"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+            >
+              Present ({presentCount})
+            </button>
+            <button
+              onClick={() => setViewMode("all")}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === "all"
+                  ? "bg-orange-500/20 text-orange-400"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+            >
+              All ({employees.length})
+            </button>
+          </div>
 
-        <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
-          <button
-            onClick={() => setViewLayout("card")}
-            className={`p-2 rounded-lg transition-colors ${
-              viewLayout === "card"
-                ? "bg-orange-500/20 text-orange-400"
-                : "text-white/50 hover:text-white/80"
-            }`}
-            title="Card view"
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button
-            onClick={() => setViewLayout("list")}
-            className={`p-2 rounded-lg transition-colors ${
-              viewLayout === "list"
-                ? "bg-orange-500/20 text-orange-400"
-                : "text-white/50 hover:text-white/80"
-            }`}
-            title="List view"
-          >
-            <List size={16} />
-          </button>
+          <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
+            <button
+              onClick={() => setViewLayout("card")}
+              className={`p-2 rounded-lg transition-colors ${
+                viewLayout === "card"
+                  ? "bg-orange-500/20 text-orange-400"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+              title="Card view"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewLayout("list")}
+              className={`p-2 rounded-lg transition-colors ${
+                viewLayout === "list"
+                  ? "bg-orange-500/20 text-orange-400"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+              title="List view"
+            >
+              <List size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
       <div
         className={
           viewLayout === "list"
-            ? "mt-6 rounded-2xl bg-white/5 border border-white/10 overflow-hidden"
-            : "mt-6"
+            ? "mt-4 rounded-2xl bg-white/5 border border-white/10 overflow-hidden"
+            : "mt-4"
         }
       >
         {isLoading && (
@@ -393,7 +410,7 @@ export default function Employees() {
               </table>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
               {filtered.map((emp) => (
                 <EmployeeCard key={emp.employeeCode} emp={emp} />
               ))}
