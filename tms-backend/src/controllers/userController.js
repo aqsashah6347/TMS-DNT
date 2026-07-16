@@ -234,11 +234,57 @@ async function deleteUser(req, res, next) {
     next(err);
   }
 }
+// GET /api/users/assignable — role-aware list for the task modal's
+// Assign To dropdown. Admins get everyone (with teamId/teamName so the
+// frontend can build department tabs); managers only get the members of
+// the team they manage.
+async function getAssignableUsers(req, res, next) {
+  try {
+    const pool = await poolPromise;
+
+    if (req.user.role === "admin") {
+      const result = await pool.request().query(`
+        SELECT u.id, u.name, u.email, u.role, u.avatar_color AS avatarColor,
+               u.team_id AS teamId, t.name AS teamName
+        FROM tms_users u
+        LEFT JOIN tms_teams t ON u.team_id = t.id
+        WHERE u.status = 'active'
+        ORDER BY t.name ASC, u.name ASC
+      `);
+      return res.json(result.recordset);
+    }
+
+    // manager (or anyone else) — only the team they manage
+    const teamResult = await pool
+      .request()
+      .input("managerId", sql.Int, req.user.id)
+      .query("SELECT id, name FROM tms_teams WHERE manager_id = @managerId");
+
+    const team = teamResult.recordset[0];
+    if (!team) return res.json([]);
+
+    const membersResult = await pool
+      .request()
+      .input("teamId", sql.Int, team.id).query(`
+        SELECT id, name, email, role, avatar_color AS avatarColor, team_id AS teamId
+        FROM tms_users
+        WHERE team_id = @teamId AND status = 'active'
+        ORDER BY name ASC
+      `);
+
+    res.json(
+      membersResult.recordset.map((u) => ({ ...u, teamName: team.name })),
+    );
+  } catch (err) {
+    next(err);
+  }
+}
 
 module.exports = {
   register,
   createFromRoster,
   getAllUsers,
+  getAssignableUsers,
   updateUser,
   updateMyAvatarColor,
   deleteUser,

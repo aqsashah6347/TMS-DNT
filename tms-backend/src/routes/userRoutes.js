@@ -7,6 +7,7 @@ const userController = require("../controllers/userController");
 router.use(requireAuth);
 
 router.get("/", userController.getAllUsers);
+router.get("/assignable", userController.getAssignableUsers);
 
 // Self-service — any logged-in user can change their OWN avatar color.
 // Placed above "/:id" but doesn't actually need to be (different path
