@@ -186,8 +186,8 @@ function ActivityRow({ activity, meta, userName }) {
                     {c.field}:
                   </span>
                   <span className="min-w-0">
-                    {c.oldValue}{" "}
-                    <span className="text-white/30">→</span> {c.newValue}
+                    {c.oldValue} <span className="text-white/30">→</span>{" "}
+                    {c.newValue}
                   </span>
                 </div>
               ))}
