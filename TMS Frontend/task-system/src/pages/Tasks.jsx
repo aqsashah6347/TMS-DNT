@@ -11,7 +11,7 @@ import { useEffect, useRef } from "react";
 import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
 
 const viewOptions = [
-  { key: "list", label: "List View", icon: List },
+  { key: "list", label: "Card View", icon: List },
   { key: "kanban", label: "Kanban View", icon: Kanban },
   { key: "calendar", label: "Calendar View", icon: Calendar },
 ];
