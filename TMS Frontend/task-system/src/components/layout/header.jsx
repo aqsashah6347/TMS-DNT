@@ -71,39 +71,49 @@ export default function Header() {
       return;
     }
 
-    setSearching(true);
-    const handle = setTimeout(async () => {
-      try {
-        const lower = q.toLowerCase();
-        const [tasks, allProjects, allTeams] = await Promise.all([
-          taskApi.getAllTasks({ search: q }),
-          projectApi.getAllProjects(),
-          teamApi.getAllTeams(),
-        ]);
+  setSearching(true);
+  const handle = setTimeout(async () => {
+    try {
+      const lower = q.toLowerCase();
 
-        const projects = allProjects
-          .filter(
-            (p) =>
-              p.name?.toLowerCase().includes(lower) ||
-              p.description?.toLowerCase().includes(lower),
-          )
-          .slice(0, 5);
+      // "user" role can't call getAllTeams anymore (admin/manager only
+      // on the backend) — fall back to their own team via /teams/mine
+      // instead of letting that request 403 and take the whole
+      // Promise.all down with it.
+      const teamsPromise =
+        user?.role === "admin" || user?.role === "manager"
+          ? teamApi.getAllTeams()
+          : teamApi.getMyTeam().then((r) => (r.team ? [r.team] : []));
 
-        const teams = allTeams
-          .filter((t) => t.name?.toLowerCase().includes(lower))
-          .slice(0, 5);
+      const [tasks, allProjects, allTeams] = await Promise.all([
+        taskApi.getAllTasks({ search: q }),
+        projectApi.getAllProjects(),
+        teamsPromise,
+      ]);
 
-        setResults({ tasks: tasks.slice(0, 5), projects, teams });
-      } catch (err) {
-        console.error("Global search failed:", err);
-        setResults(EMPTY_RESULTS);
-      } finally {
-        setSearching(false);
-      }
-    }, 300);
+      const projects = allProjects
+        .filter(
+          (p) =>
+            p.name?.toLowerCase().includes(lower) ||
+            p.description?.toLowerCase().includes(lower),
+        )
+        .slice(0, 5);
+
+      const teams = allTeams
+        .filter((t) => t.name?.toLowerCase().includes(lower))
+        .slice(0, 5);
+
+      setResults({ tasks: tasks.slice(0, 5), projects, teams });
+    } catch (err) {
+      console.error("Global search failed:", err);
+      setResults(EMPTY_RESULTS);
+    } finally {
+      setSearching(false);
+    }
+  }, 300);
 
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [query , user]);
 
   function goToTask(task) {
     useTaskStore.getState().openTaskView(task);

@@ -1,8 +1,9 @@
-// src/pages/Teams.jsx
 import { useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 import { useTeamStore } from "../Features/teams/teamStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useTaskStore } from "../Features/tasks/taskStore";
+import { useProjectStore } from "../Features/projects/projectStore";
 import TeamCard from "../Features/teams/components/TeamCard";
 import TeamModal from "../Features/teams/components/TeamModal";
 import MyTeamView from "../Features/teams/components/MyTeamView";
@@ -22,14 +23,22 @@ export default function Teams() {
     openCreateModal,
     openEditModal,
   } = useTeamStore();
+  const fetchTasks = useTaskStore((s) => s.fetchTasks);
+  const fetchProjects = useProjectStore((s) => s.fetchProjects);
   const containerRef = useRef(null);
 
   useEffect(() => {
     // Admin/manager get the full teams collection; the "user" role only
     // ever needs their own team, fetched inside MyTeamView instead.
-    if (!isUserRole) fetchTeams();
-  }, [isUserRole, fetchTeams]);
-
+    // Tasks + projects are fetched here too so TeamCard's workload bars
+    // and "Active Projects" back face reflect real assignments instead
+    // of whatever happened to already be in the store.
+    if (!isUserRole) {
+      fetchTeams();
+      fetchTasks();
+      fetchProjects();
+    }
+  }, [isUserRole, fetchTeams, fetchTasks, fetchProjects]);
   return (
     <div
       ref={containerRef}
