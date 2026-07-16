@@ -275,6 +275,12 @@ export default function TaskModal() {
                   {editingTask.assignedToName}
                 </div>
               )}
+              {editingTask.assignedByName && (
+                <div className="flex items-center gap-2 text-dark">
+                  <User size={14} className="text-muted" /> Created by{" "}
+                  {editingTask.assignedByName}
+                </div>
+              )}
             </div>
 
             {(editingTask.zoomLink || editingTask.githubLink) && (

@@ -74,6 +74,12 @@ export default function TaskCard({ task }) {
           )}
         </div>
       </div>
+
+      {task.assignedByName && (
+        <p className="text-[10px] text-white/35 mt-1.5">
+          Created by {task.assignedByName}
+        </p>
+      )}
     </Card>
   );
 }
