@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import LoginForm from "../features/auth/LoginForm";
-import Logo from "../components/layout/Logo";
 
 export default function Login() {
   const [fact, setFact] = useState("");
@@ -11,6 +10,7 @@ export default function Login() {
       .then((data) => setFact(data.text))
       .catch(() => setFact("Honey never spoils."));
   }, []);
+  
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4">
       <div className="login-ring">
@@ -20,7 +20,8 @@ export default function Login() {
 
         <div className="absolute w-72 flex flex-col items-center gap-6 z-10">
           <div className="flex flex-col items-center gap-2">
-            <Logo size={40} />
+            {/* Replaced Logo component with img tag */}
+            <img src="/dreamsLogo.png" alt="DreamsLogo" className="w-000 h-" />
             <h2
               className="text-2xl text-white"
               style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}

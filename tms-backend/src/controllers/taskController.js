@@ -3,11 +3,13 @@ const { hasPermission } = require("../middleware/permissions");
 const { logActivity } = require("../services/activityService");
 
 const JOIN_QUERY = `
-  SELECT t.*, u1.name AS assignedToName, u2.name AS assignedByName, u3.name AS completedByName
+  SELECT t.*, u1.name AS assignedToName, u2.name AS assignedByName, u3.name AS completedByName,
+         p.color AS projectColor, p.name AS projectName
   FROM tms_tasks t
   LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
   LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
   LEFT JOIN tms_users u3 ON t.completed_by = u3.id
+  LEFT JOIN tms_projects p ON t.project_id = p.id
 `;
 
 // Re-fetches a task WITH its joined names after an insert/update, since
@@ -132,7 +134,7 @@ async function getTaskById(req, res, next) {
 
 async function createTask(req, res, next) {
   try {
-    const {
+   const {
       title,
       description = "",
       priority = "medium",
@@ -140,13 +142,14 @@ async function createTask(req, res, next) {
       dueDate = null,
       assignedTo = null,
       projectId = null,
+      color = null,
       zoomLink = "",
       githubLink = "",
     } = req.body;
 
     if (!title) return res.status(400).json({ message: "Title is required" });
 
-    const pool = await poolPromise;
+const pool = await poolPromise;
     const result = await pool
       .request()
       .input("title", sql.NVarChar, title)
@@ -157,15 +160,15 @@ async function createTask(req, res, next) {
       .input("assignedTo", sql.Int, assignedTo || null)
       .input("assignedBy", sql.Int, req.user.id)
       .input("projectId", sql.Int, projectId || null)
+      .input("color", sql.NVarChar, color)
       .input("zoomLink", sql.NVarChar, zoomLink)
       .input("githubLink", sql.NVarChar, githubLink).query(`
         INSERT INTO tms_tasks
-          (title, description, priority, status, due_date, assigned_to, assigned_by, project_id, zoom_link, github_link)
+          (title, description, priority, status, due_date, assigned_to, assigned_by, project_id, color, zoom_link, github_link)
         OUTPUT INSERTED.id
         VALUES
-          (@title, @description, @priority, @status, @dueDate, @assignedTo, @assignedBy, @projectId, @zoomLink, @githubLink)
+          (@title, @description, @priority, @status, @dueDate, @assignedTo, @assignedBy, @projectId, @color, @zoomLink, @githubLink)
       `);
-
     const newId = result.recordset[0].id;
     const task = await fetchTaskWithJoins(pool, newId);
     const createProjectName = task.projectId
@@ -267,7 +270,7 @@ async function updateTask(req, res, next) {
       }
     }
 
-    const fieldMap = {
+      const fieldMap = {
       title: "title",
       description: "description",
       priority: "priority",
@@ -276,6 +279,7 @@ async function updateTask(req, res, next) {
       assignedTo: "assigned_to",
       projectId: "project_id",
       pinned: "pinned",
+      color: "color",
       zoomLink: "zoom_link",
       githubLink: "github_link",
       completedBy: "completed_by",
@@ -587,7 +591,10 @@ function mapTask(row) {
     assignedBy: row.assigned_by,
     assignedByName: row.assignedByName || null,
     projectId: row.project_id,
+    projectName: row.projectName || null,
+    projectColor: row.projectColor || null,
     pinned: row.pinned,
+    color: row.color || null,
     zoomLink: row.zoom_link,
     githubLink: row.github_link,
     completedBy: row.completed_by,
