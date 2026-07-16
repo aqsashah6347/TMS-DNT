@@ -1,5 +1,6 @@
 // tms-backend/src/controllers/teamController.js
 const { sql, poolPromise } = require("../config/db");
+const { logActivity } = require("../services/activityService");
 
 function formatDate(value) {
   if (!value) return null;
@@ -89,6 +90,13 @@ async function createTeam(req, res, next) {
     team.createdByName = req.user.name;
 
     await assignMembers(pool, team.id, members, managerId);
+
+    await logActivity({
+      userId: req.user.id,
+      type: "team_created",
+      title: "Team created",
+      message: `You created the team "${team.name}".`,
+    });
 
     res.status(201).json(await attachTeamDetails(pool)(team));
   } catch (err) {

@@ -8,6 +8,11 @@ async function logActivity({
   message,
   taskId = null,
   projectId = null,
+  // Optional list of { field, oldValue, newValue } objects — used by
+  // task_edited so every field touched in one PUT collapses into a
+  // single activity row instead of one row per field. Stored as JSON
+  // in the `changes` column and parsed back out in mapActivity below.
+  changes = null,
 }) {
   if (!userId) return null;
 
@@ -20,10 +25,15 @@ async function logActivity({
       .input("title", sql.NVarChar, title)
       .input("message", sql.NVarChar, message)
       .input("taskId", sql.Int, taskId)
-      .input("projectId", sql.Int, projectId).query(`
-        INSERT INTO tms_notifications (user_id, type, title, message, task_id, project_id)
+      .input("projectId", sql.Int, projectId)
+      .input(
+        "changes",
+        sql.NVarChar(sql.MAX),
+        changes && changes.length ? JSON.stringify(changes) : null,
+      ).query(`
+        INSERT INTO tms_notifications (user_id, type, title, message, task_id, project_id, changes)
         OUTPUT INSERTED.*
-        VALUES (@userId, @type, @title, @message, @taskId, @projectId)
+        VALUES (@userId, @type, @title, @message, @taskId, @projectId, @changes)
       `);
 
     const activity = mapActivity(result.recordset[0]);
@@ -56,7 +66,21 @@ function mapActivity(row) {
     projectId: row.project_id,
     read: row.is_read,
     createdAt: row.created_at,
+    changes: parseChanges(row.changes),
   };
+}
+
+// `changes` is stored as a JSON string (or NULL for activities that don't
+// carry a change list, e.g. task_created/task_deleted). Parsed defensively
+// so a malformed/legacy value never breaks the whole activities list.
+function parseChanges(raw) {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 module.exports = { logActivity, mapActivity };
