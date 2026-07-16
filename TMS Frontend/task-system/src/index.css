@@ -329,6 +329,79 @@
     box-shadow: var(--shadow-float);
     background: var(--color-glass-white-md);
   }
+
+  /* Dark grain/noise card background used ONLY by the Activity page's
+     3 boxes (ActionActivityBox, TaskActivityBox, InboxNotificationsBox).
+     Self-contained (border/shadow/radius included) — deliberately not
+     layered on .glass, since .glass's white reflection overlay would
+     wash out the flat, uniform grain look that was asked for. Doesn't
+     touch .glass/.glass-card, so nothing else in the app is affected. */
+  .activity-noise-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    border: 1px solid rgba(251, 146, 60, 0.12);
+    box-shadow: var(--shadow-glass);
+    /* Grout/mortar color — shows through in the gaps between bricks */
+    background-color: #17120e;
+    background-repeat:
+      repeat,
+      no-repeat, no-repeat, no-repeat,
+      repeat, repeat, repeat, repeat;
+    background-image:
+      /* fine grain, tiled on top for weathering/texture */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.14'/%3E%3C/svg%3E"),
+      /* warm orange glow, corner-lit like a torch/ambient theme accent */
+      radial-gradient(ellipse at 100% 0%, rgba(251, 146, 60, 0.14) 0%, transparent 55%),
+      /* dark vignette — darkens the edges so the center reads brighter */
+      radial-gradient(ellipse at 50% 40%, transparent 35%, rgba(0, 0, 0, 0.55) 100%),
+      /* base tone wash behind the bricks */
+      linear-gradient(160deg, #1c150f 0%, #14100c 50%, #100c09 100%),
+      /* brick shapes — 4 diagonal-cut gradients tiled at 58px form a
+         staggered brick-wall pattern; #2a241d is the brick fill, the
+         background-color above shows through as mortar/grout lines */
+      linear-gradient(335deg, #2a241d 23px, transparent 23px),
+      linear-gradient(155deg, #2a241d 23px, transparent 23px),
+      linear-gradient(335deg, #2a241d 23px, transparent 23px),
+      linear-gradient(155deg, #2a241d 23px, transparent 23px);
+    background-size:
+      140px 140px,
+      100% 100%, 100% 100%, 100% 100%,
+      58px 58px, 58px 58px, 58px 58px, 58px 58px;
+    background-position:
+      0 0,
+      0 0, 0 0, 0 0,
+      0px 2px, 4px 35px, 29px 31px, 34px 6px;
+    transition:
+      transform var(--dur-mid) var(--ease-glass),
+      box-shadow var(--dur-mid) var(--ease-glass);
+  }
+
+  /* Dark scrollbar for the Activity page boxes' scroll areas — replaces
+     the OS-default light/white scrollbar so it matches the dark card
+     background instead of standing out. Scoped to .activity-scroll only. */
+  .activity-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(251, 146, 60, 0.35) transparent;
+  }
+
+  .activity-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .activity-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .activity-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(251, 146, 60, 0.35);
+    border-radius: 999px;
+  }
+
+  .activity-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(251, 146, 60, 0.55);
+  }
   /* Flip cards — used by ProjectCard (front = description/members,
      back = tasks list). .flip-card sets up the 3D perspective,
      .is-flipped rotates the inner wrapper 180deg, and each face hides

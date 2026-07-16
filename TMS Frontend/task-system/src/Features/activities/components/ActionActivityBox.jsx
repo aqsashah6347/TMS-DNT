@@ -205,7 +205,13 @@ export default function ActionActivityBox({ activities, loading }) {
   const actionItems = activities.filter((a) => ACTION_TYPES[a.type]);
 
   return (
-    <div className="glass glass-card h-full">
+    <div
+      className="activity-noise-card h-full"
+      style={{
+        background:
+          "linear-gradient(155deg, #303034 0%, #232326 45%, #2b2b2f 75%, #1e1e21 100%)",
+      }}
+    >
       <div className="glass-content p-4 flex flex-col h-full">
         <div className="flex items-center gap-2 mb-3">
           <ListChecks size={16} className="text-orange-400" />
@@ -217,7 +223,7 @@ export default function ActionActivityBox({ activities, loading }) {
           </h3>
         </div>
 
-        <div className="flex-1 overflow-y-auto max-h-[880px] flex flex-col gap-1.5 pr-1">
+        <div className="activity-scroll flex-1 overflow-y-auto max-h-[880px] flex flex-col gap-1.5 pr-1">
           {loading && actionItems.length === 0 ? (
             <div className="py-10 text-center text-white/40 text-xs">
               Loading activity...
