@@ -29,15 +29,10 @@ export default function ActivityLog() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="section-glass-header mb-6">
         <div>
-          <h2
-            className="text-2xl text-white"
-            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-          >
-            Activity
-          </h2>
-          <p className="text-white/40 text-xs mt-0.5">
+          <h2 className="section-glass-header__title !text-3xl">Activity</h2>
+          <p className="text-silver-muted text-sm mt-1">
             Task actions, task timelines, and real-time notifications in one
             place.
           </p>

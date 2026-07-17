@@ -159,29 +159,36 @@ async function getCompletedLog(req, res, next) {
     const pool = await poolPromise;
     const request = pool.request();
 
-    let query = `
-      SELECT id, title, completed_at
-      FROM tms_tasks
-      WHERE deleted_at IS NULL AND status = 'done' AND completed_at IS NOT NULL
-    `;
+let query = `
+  SELECT t.id, t.title, t.completed_at, t.assigned_to, t.assigned_by,
+         u1.name AS assignedToName, u2.name AS assignedByName
+  FROM tms_tasks t
+  LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
+  LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
+  WHERE t.deleted_at IS NULL AND t.status = 'done' AND t.completed_at IS NOT NULL
+`;
 
-    // Same visibility rule as getAllTasks — regular users only see their
-    // own completed tasks in the log.
-    if (req.user.role === "user") {
-      query += " AND assigned_to = @scopedAssignedTo";
-      request.input("scopedAssignedTo", sql.Int, req.user.id);
-    }
+// Same visibility rule as getAllTasks — regular users only see their
+// own completed tasks in the log.
+if (req.user.role === "user") {
+  query += " AND t.assigned_to = @scopedAssignedTo";
+  request.input("scopedAssignedTo", sql.Int, req.user.id);
+}
 
-    query += " ORDER BY completed_at DESC";
+query += " ORDER BY t.completed_at DESC";
 
-    const result = await request.query(query);
-    res.json(
-      result.recordset.map((r) => ({
-        id: r.id,
-        title: r.title,
-        completedAt: r.completed_at,
-      })),
-    );
+const result = await request.query(query);
+res.json(
+  result.recordset.map((r) => ({
+    id: r.id,
+    title: r.title,
+    completedAt: r.completed_at,
+    assignedTo: r.assigned_to,
+    assignedBy: r.assigned_by,
+    assignedToName: r.assignedToName,
+    assignedByName: r.assignedByName,
+  })),
+);
   } catch (err) {
     next(err);
   }
