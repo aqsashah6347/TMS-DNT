@@ -19,18 +19,27 @@ export default function TaskActivityBox() {
     let cancelled = false;
     if (!user?.id) return;
 
-    setLoading(true);
-    taskApi
-      .getAllTasks({ assignedTo: user.id })
-      .then((data) => {
+    const loadTasks = async () => {
+      setLoading(true);
+
+      try {
+        const data = await taskApi.getAllTasks({ assignedTo: user.id });
         if (cancelled) return;
+
         const sorted = [...data].sort(
           (a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0),
         );
         setTasks(sorted);
-      })
-      .catch(() => {})
-      .finally(() => !cancelled && setLoading(false));
+      } catch (error) {
+        // Intentionally silent: no-op for dashboard widget.
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadTasks();
 
     return () => {
       cancelled = true;
@@ -43,31 +52,24 @@ export default function TaskActivityBox() {
     dueDate < new Date().toISOString().split("T")[0];
 
   return (
-    <div
-      className="activity-noise-card h-full"
-      style={{
-        background:
-          "linear-gradient(155deg, #303034 0%, #232326 45%, #2b2b2f 75%, #1e1e21 100%)",
-      }}
-    >
-      <div className="glass-content p-4 flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-3">
-          <Layers size={16} className="text-orange-400" />
-          <h3
-            className="text-sm text-white"
-            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-          >
+    <div className="bronze-panel h-full flex flex-col">
+      <div className="section-glass-header">
+        <div className="flex items-center gap-2.5">
+          <Layers size={18} className="text-amber-dim" />
+          <h3 className="section-glass-header__title !text-base">
             Task Activity
           </h3>
         </div>
+      </div>
 
+      <div className="bronze-panel__body flex-1 min-h-0 flex flex-col">
         <div className="activity-scroll flex-1 overflow-y-auto max-h-[420px] flex flex-col gap-1.5 pr-1">
           {loading && tasks.length === 0 ? (
-            <div className="py-10 text-center text-white/40 text-xs">
+            <div className="py-10 text-center text-silver-muted text-sm">
               Loading tasks...
             </div>
           ) : tasks.length === 0 ? (
-            <div className="py-10 text-center text-white/40 text-xs">
+            <div className="py-10 text-center text-silver-muted text-sm">
               No tasks assigned to you yet
             </div>
           ) : (
@@ -75,30 +77,30 @@ export default function TaskActivityBox() {
               <button
                 key={t.id}
                 onClick={() => navigate("/tasks")}
-                className="text-left rounded-xl px-2.5 py-2.5 hover:bg-white/[0.04] transition-colors"
+                className="text-left rounded-xl px-3 py-3 hover:bg-white/[0.04] transition-colors"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-white/90 font-medium truncate">
+                  <span className="text-sm text-white/90 font-medium truncate">
                     {t.title}
                   </span>
                   {isOverdue(t.dueDate, t.status) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 shrink-0">
+                    <span className="status-pill status-pill--backlog !text-red-300 !border-red-500/30 !bg-red-500/10 shrink-0">
                       Overdue
                     </span>
                   )}
                 </div>
 
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-white/40">
-                  <span className="flex items-center gap-1">
-                    <CalendarClock size={11} className="text-white/30" />
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-silver-muted">
+                  <span className="flex items-center gap-1.5">
+                    <CalendarClock size={13} className="text-white/30" />
                     Assigned {formatPlainDate(t.createdAt)}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <CalendarCheck size={11} className="text-white/30" />
+                  <span className="flex items-center gap-1.5">
+                    <CalendarCheck size={13} className="text-white/30" />
                     Due {formatPlainDate(t.dueDate)}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <RefreshCw size={11} className="text-white/30" />
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw size={13} className="text-white/30" />
                     Updated {formatRelativeTime(t.updatedAt)}
                   </span>
                 </div>

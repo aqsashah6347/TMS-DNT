@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, CheckCircle2, Clock } from "lucide-react";
 import { useUIStore } from "../../../store/useUIStore";
+import { useAuthStore } from "../../../store/useAuthStore";
 import { useTaskStore } from "../taskStore";
 
 export default function CompletedLogPanel() {
@@ -9,12 +10,25 @@ export default function CompletedLogPanel() {
   const closeCompletedLog = useUIStore((s) => s.closeCompletedLog);
   const completedLog = useTaskStore((s) => s.completedLog);
   const fetchCompletedLog = useTaskStore((s) => s.fetchCompletedLog);
+  const { user } = useAuthStore();
+  const canManageTasks = user?.role === "admin" || user?.role === "manager";
+
+  const [logScope, setLogScope] = useState("myTasks");
 
   useEffect(() => {
     if (isOpen) fetchCompletedLog();
   }, [isOpen, fetchCompletedLog]);
 
   if (!isOpen) return null;
+
+  const visibleLog = canManageTasks
+    ? completedLog.filter((t) =>
+        logScope === "myTasks"
+          ? String(t.assignedTo) === String(user?.id)
+          : String(t.assignedBy) === String(user?.id) &&
+            String(t.assignedTo) !== String(user?.id),
+      )
+    : completedLog;
 
   return createPortal(
     <>
@@ -36,13 +50,36 @@ export default function CompletedLogPanel() {
           </button>
         </div>
 
+        {canManageTasks && (
+          <div className="flex gap-1 px-3 pt-3 shrink-0">
+            {[
+              { key: "myTasks", label: "My Tasks" },
+              { key: "assignedTasks", label: "Assigned Tasks" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setLogScope(key)}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all duration-300 ease-out ${
+                  logScope === key
+                    ? "bg-primary text-dark shadow-[0_0_14px_rgba(251,146,60,0.4)]"
+                    : "text-muted bg-white/5 hover:text-orange-300 hover:bg-orange-500/10"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto px-3 py-3">
-          {completedLog.length === 0 && (
+          {visibleLog.length === 0 && (
             <p className="text-white/40 italic py-6 text-center text-sm">
-              No completed tasks yet.
+              {logScope === "assignedTasks"
+                ? "No team completions yet."
+                : "No completed tasks yet."}
             </p>
           )}
-          {completedLog.map((t) => {
+          {visibleLog.map((t) => {
             const completed = new Date(t.completedAt);
             return (
               <div
@@ -55,6 +92,11 @@ export default function CompletedLogPanel() {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-white/90 truncate">{t.title}</p>
+                  {canManageTasks && logScope === "assignedTasks" && (
+                    <p className="text-xs text-orange-300/80 truncate">
+                      {t.assignedToName || "Unknown"}
+                    </p>
+                  )}
                   <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5">
                     <Clock size={11} />
                     {completed.toLocaleDateString("en-GB", {

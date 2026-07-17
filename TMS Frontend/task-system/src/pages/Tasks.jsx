@@ -16,7 +16,7 @@ import TaskModal from "../Features/tasks/components/TaskModal";
 import TaskFiltersModal from "../Features/tasks/components/TaskFiltersModal";
 import CompletedLogPanel from "../Features/tasks/components/CompletedLogPanel";
 import Button from "../components/ui/Button";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
 
 const viewOptions = [
@@ -36,6 +36,20 @@ export default function Tasks() {
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
   const toggleCompletedLog = useUIStore((s) => s.toggleCompletedLog);
 
+  // Only relevant to admins/managers, since they're the only ones who can
+  // assign tasks to others — regular users always just see their own
+  // (the backend already scopes their /tasks response to assigned_to = them).
+  const [taskScope, setTaskScope] = useState("myTasks"); // "myTasks" | "assignedTasks"
+  const scopeFilter = (t) =>
+    taskScope === "myTasks"
+      ? String(t.assignedTo) === String(user?.id)
+      : String(t.assignedBy) === String(user?.id);
+
+  const scopedTasks = canManageTasks ? tasks.filter(scopeFilter) : tasks;
+  const scopedAllTasks = canManageTasks
+    ? allTasks.filter(scopeFilter)
+    : allTasks;
+
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
@@ -54,11 +68,32 @@ export default function Tasks() {
           >
             Tasks
             <span className="text-base font-medium text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-full px-3 py-1">
-              {tasks.length}
+              {scopedTasks.length}
             </span>
           </h2>
 
           <div className="flex items-center gap-5">
+            {canManageTasks && (
+              <div className="flex bg-surface rounded-card p-1.5 gap-1">
+                {[
+                  { key: "myTasks", label: "My Tasks" },
+                  { key: "assignedTasks", label: "Assigned Tasks" },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setTaskScope(key)}
+                    className={`px-4 py-2.5 rounded-card text-sm font-medium cursor-pointer transition-all duration-300 ease-out ${
+                      taskScope === key
+                        ? "bg-primary text-dark shadow-[0_0_18px_rgba(251,146,60,0.4)]"
+                        : "text-muted hover:text-orange-300 hover:bg-orange-500/10"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex bg-surface rounded-card p-2 gap-2">
               {viewOptions.map(({ key, label, icon: Icon }) => (
                 <div key={key} className="relative group">
@@ -118,9 +153,9 @@ export default function Tasks() {
             {error}
           </div>
         )}
-        {view === "list" && <TaskListView tasks={tasks} />}
-        {view === "kanban" && <TaskKanbanView tasks={allTasks} />}
-        {view === "calendar" && <TaskCalendarView tasks={tasks} />}
+        {view === "list" && <TaskListView tasks={scopedTasks} />}
+        {view === "kanban" && <TaskKanbanView tasks={scopedAllTasks} />}
+        {view === "calendar" && <TaskCalendarView tasks={scopedTasks} />}
 
         <TaskModal />
         <TaskFiltersModal />

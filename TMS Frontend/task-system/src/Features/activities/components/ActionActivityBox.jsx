@@ -109,7 +109,7 @@ function ActivityRow({ activity, meta, userName }) {
   return (
     <div className="rounded-xl hover:bg-white/[0.04] transition-colors">
       <div
-        className="flex items-start gap-2.5 px-2.5 py-2.5"
+        className="flex items-start gap-3 px-3 py-3"
         role={hasChanges ? "button" : undefined}
         tabIndex={hasChanges ? 0 : undefined}
         aria-expanded={hasChanges ? expanded : undefined}
@@ -127,26 +127,26 @@ function ActivityRow({ activity, meta, userName }) {
         style={hasChanges ? { cursor: "pointer" } : undefined}
       >
         <div
-          className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center ${meta.badge}`}
+          className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${meta.badge}`}
         >
-          <Icon size={13} />
+          <Icon size={15} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-white/90 font-medium">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-white/90 font-medium">
               {userName}
             </span>
             <span
-              className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${meta.badge}`}
+              className={`text-xs px-2 py-0.5 rounded-full leading-none ${meta.badge}`}
             >
               {meta.label}
             </span>
           </div>
-          <p className="text-xs text-white/60 mt-0.5 truncate">
+          <p className="text-sm text-white/60 mt-1 truncate">
             {taskName || activity.message}
           </p>
           <span
-            className="text-[10px] text-white/30 mt-1 block"
+            className="text-xs text-white/35 mt-1.5 block"
             title={
               activity.createdAt
                 ? new Date(activity.createdAt).toLocaleString()
@@ -158,15 +158,13 @@ function ActivityRow({ activity, meta, userName }) {
         </div>
         {hasChanges && (
           <ChevronDown
-            size={14}
+            size={16}
             className={`shrink-0 mt-1.5 text-white/40 transition-transform duration-300 ${
               expanded ? "rotate-180" : ""
             }`}
           />
         )}
-        <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${meta.dot}`}
-        />
+        <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${meta.dot}`} />
       </div>
 
       {hasChanges && (
@@ -176,11 +174,11 @@ function ActivityRow({ activity, meta, userName }) {
           }`}
         >
           <div className="overflow-hidden">
-            <div className="ml-[38px] mr-2 mb-2.5 pl-3 border-l border-white/10 flex flex-col gap-1.5">
+            <div className="ml-[42px] mr-2 mb-3 pl-3 border-l border-white/10 flex flex-col gap-2">
               {changes.map((c, i) => (
                 <div
                   key={i}
-                  className="text-[11px] text-white/60 flex items-baseline gap-1.5 flex-wrap"
+                  className="text-xs text-white/60 flex items-baseline gap-2 flex-wrap"
                 >
                   <span className="text-white/80 font-medium shrink-0">
                     {c.field}:
@@ -205,31 +203,24 @@ export default function ActionActivityBox({ activities, loading }) {
   const actionItems = activities.filter((a) => ACTION_TYPES[a.type]);
 
   return (
-    <div
-      className="activity-noise-card h-full"
-      style={{
-        background:
-          "linear-gradient(155deg, #303034 0%, #232326 45%, #2b2b2f 75%, #1e1e21 100%)",
-      }}
-    >
-      <div className="glass-content p-4 flex flex-col h-full">
-        <div className="flex items-center gap-2 mb-3">
-          <ListChecks size={16} className="text-orange-400" />
-          <h3
-            className="text-sm text-white"
-            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-          >
+    <div className="bronze-panel h-full flex flex-col">
+      <div className="section-glass-header">
+        <div className="flex items-center gap-2.5">
+          <ListChecks size={18} className="text-amber-dim" />
+          <h3 className="section-glass-header__title !text-base">
             Action Activity
           </h3>
         </div>
+      </div>
 
+      <div className="bronze-panel__body flex-1 min-h-0 flex flex-col">
         <div className="activity-scroll flex-1 overflow-y-auto max-h-[880px] flex flex-col gap-1.5 pr-1">
           {loading && actionItems.length === 0 ? (
-            <div className="py-10 text-center text-white/40 text-xs">
+            <div className="py-10 text-center text-silver-muted text-sm">
               Loading activity...
             </div>
           ) : actionItems.length === 0 ? (
-            <div className="py-10 text-center text-white/40 text-xs">
+            <div className="py-10 text-center text-silver-muted text-sm">
               No task actions yet
             </div>
           ) : (
