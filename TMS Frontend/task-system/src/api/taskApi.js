@@ -26,7 +26,10 @@ export const taskApi = {
     const res = await axiosInstance.delete(`/tasks/${id}`);
     return res.data;
   },
-
+  getCompletedLog: async () => {
+    const res = await axiosInstance.get("/tasks/completed-log");
+    return res.data;
+  },
   getCompletionStats: async (range = "7d") => {
     const res = await axiosInstance.get("/tasks/stats/completion", {
       params: { range },

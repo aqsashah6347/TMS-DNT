@@ -1,11 +1,20 @@
-import { Plus, Filter, List, Kanban, Calendar } from "lucide-react";
+import {
+  Plus,
+  Filter,
+  List,
+  Kanban,
+  Calendar,
+  ClipboardCheck,
+} from "lucide-react";
 import { useTaskStore } from "../Features/tasks/taskStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useUIStore } from "../store/useUIStore";
 import TaskListView from "../Features/tasks/components/TaskListView";
 import TaskKanbanView from "../Features/tasks/components/TaskKanbanView";
 import TaskCalendarView from "../Features/tasks/components/TaskCalendarView";
 import TaskModal from "../Features/tasks/components/TaskModal";
 import TaskFiltersModal from "../Features/tasks/components/TaskFiltersModal";
+import CompletedLogPanel from "../Features/tasks/components/CompletedLogPanel";
 import Button from "../components/ui/Button";
 import { useEffect, useRef } from "react";
 import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
@@ -20,9 +29,12 @@ export default function Tasks() {
   const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
     useTaskStore();
   const tasks = getFilteredTasks();
+  // Kanban needs the raw, unfiltered list so its Done column isn't empty.
+  const allTasks = useTaskStore((s) => s.tasks);
   const { fetchTasks, isLoading, error } = useTaskStore();
   const { user } = useAuthStore();
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
+  const toggleCompletedLog = useUIStore((s) => s.toggleCompletedLog);
 
   useEffect(() => {
     fetchTasks();
@@ -37,10 +49,13 @@ export default function Tasks() {
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-6">
           <h2
-            className="text-4xl font-semibold text-white"
+            className="text-4xl font-semibold text-white flex items-center gap-3"
             style={{ fontFamily: "var(--font-display)" }}
           >
             Tasks
+            <span className="text-base font-medium text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-full px-3 py-1">
+              {tasks.length}
+            </span>
           </h2>
 
           <div className="flex items-center gap-5">
@@ -64,6 +79,15 @@ export default function Tasks() {
                 </div>
               ))}
             </div>
+
+            <Button
+              variant="secondary"
+              onClick={toggleCompletedLog}
+              className="text-base px-5 py-3"
+            >
+              <ClipboardCheck size={18} className="inline mr-1.5 -mt-0.5" />{" "}
+              Completed Log
+            </Button>
 
             <Button
               variant="secondary"
@@ -95,11 +119,12 @@ export default function Tasks() {
           </div>
         )}
         {view === "list" && <TaskListView tasks={tasks} />}
-        {view === "kanban" && <TaskKanbanView tasks={tasks} />}
+        {view === "kanban" && <TaskKanbanView tasks={allTasks} />}
         {view === "calendar" && <TaskCalendarView tasks={tasks} />}
 
         <TaskModal />
         <TaskFiltersModal />
+        <CompletedLogPanel />
       </div>
     </div>
   );

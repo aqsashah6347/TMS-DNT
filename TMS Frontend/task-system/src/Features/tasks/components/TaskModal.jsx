@@ -189,6 +189,10 @@ export default function TaskModal() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!(form.title || "").trim()) return;
+   if (!form.assignedTo) {
+     setFormError("Please assign this task to someone before saving.");
+     return;
+   }
 
     setFormError(null);
     setIsSubmitting(true);
@@ -285,13 +289,13 @@ export default function TaskModal() {
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
             />
             <Dropdown
-              label="Assigned To"
+              label="Assigned To *"
               value={form.assignedTo}
               onChange={(v) => setForm({ ...form, assignedTo: v })}
               options={assigneeOptions}
               searchable
               tabs={departmentTabs}
-              placeholder="Unassigned"
+              placeholder="Select an assignee (required)"
             />
           </div>
 
