@@ -99,10 +99,20 @@ async function getAllTasks(req, res, next) {
       query += " AND t.status = @status";
       request.input("status", sql.NVarChar, status);
     }
-    if (assignedTo) {
+
+    // Regular users can ONLY see tasks assigned to them — this overrides/
+    // ignores any assignedTo query param they might send, so it can't be
+    // spoofed by passing someone else's id. Admins/managers keep full
+    // visibility (managers already get their team pre-filtered elsewhere,
+    // e.g. usersApi.getAssignableUsers).
+    if (req.user.role === "user") {
+      query += " AND t.assigned_to = @scopedAssignedTo";
+      request.input("scopedAssignedTo", sql.Int, req.user.id);
+    } else if (assignedTo) {
       query += " AND t.assigned_to = @assignedTo";
       request.input("assignedTo", sql.Int, Number(assignedTo));
     }
+
     if (projectId) {
       query += " AND t.project_id = @projectId";
       request.input("projectId", sql.Int, Number(projectId));
@@ -126,7 +136,52 @@ async function getTaskById(req, res, next) {
     const pool = await poolPromise;
     const task = await fetchTaskWithJoins(pool, req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
+
+    // Regular users can only fetch their own task by id directly — blocks
+    // someone from guessing/typing another user's task URL.
+    if (req.user.role === "user" && task.assignedTo !== req.user.id) {
+      return res
+        .status(403)
+        .json({ message: "You don't have access to this task" });
+    }
+
     res.json(task);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /api/tasks/completed-log — plain completed-tasks log feed for the
+// CompletedLogPanel drawer. Placed above any /:id-style route in
+// taskRoutes.js so "completed-log" doesn't get swallowed as a param.
+async function getCompletedLog(req, res, next) {
+  try {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    let query = `
+      SELECT id, title, completed_at
+      FROM tms_tasks
+      WHERE deleted_at IS NULL AND status = 'done' AND completed_at IS NOT NULL
+    `;
+
+    // Same visibility rule as getAllTasks — regular users only see their
+    // own completed tasks in the log.
+    if (req.user.role === "user") {
+      query += " AND assigned_to = @scopedAssignedTo";
+      request.input("scopedAssignedTo", sql.Int, req.user.id);
+    }
+
+    query += " ORDER BY completed_at DESC";
+
+    const result = await request.query(query);
+    res.json(
+      result.recordset.map((r) => ({
+        id: r.id,
+        title: r.title,
+        completedAt: r.completed_at,
+      })),
+    );
   } catch (err) {
     next(err);
   }
@@ -134,7 +189,7 @@ async function getTaskById(req, res, next) {
 
 async function createTask(req, res, next) {
   try {
-   const {
+    const {
       title,
       description = "",
       priority = "medium",
@@ -148,8 +203,12 @@ async function createTask(req, res, next) {
     } = req.body;
 
     if (!title) return res.status(400).json({ message: "Title is required" });
+    // Mandatory assignee — prevents unassigned tasks from ever reaching
+    // the DB, even via a direct API call bypassing the modal.
+    if (!assignedTo)
+      return res.status(400).json({ message: "Assigned To is required" });
 
-const pool = await poolPromise;
+    const pool = await poolPromise;
     const result = await pool
       .request()
       .input("title", sql.NVarChar, title)
@@ -253,8 +312,13 @@ async function updateTask(req, res, next) {
       }
     }
 
-    if (updates.status === "done" && !updates.completedBy) {
-      updates.completedBy = previousAssignedTo || null;
+    // Only stamp completedBy/completedAt on the FIRST transition into
+    // "done" — guarded by previousStatus !== "done" so re-saving an
+    // already-done task (e.g. editing its description later) doesn't
+    // keep overwriting the original completion timestamp.
+    if (updates.status === "done" && previousStatus !== "done") {
+      updates.completedBy = updates.completedBy || previousAssignedTo || null;
+      updates.completedAt = new Date();
     }
     if (updates.assignedTo !== undefined && req.user.role !== "admin") {
       const canAssign = await hasPermission(
@@ -270,7 +334,7 @@ async function updateTask(req, res, next) {
       }
     }
 
-      const fieldMap = {
+    const fieldMap = {
       title: "title",
       description: "description",
       priority: "priority",
@@ -283,6 +347,7 @@ async function updateTask(req, res, next) {
       zoomLink: "zoom_link",
       githubLink: "github_link",
       completedBy: "completed_by",
+      completedAt: "completed_at",
     };
 
     const request = pool.request().input("id", sql.Int, id);
@@ -295,6 +360,8 @@ async function updateTask(req, res, next) {
         const value = updates[key] === "" ? null : updates[key];
         if (key === "dueDate") {
           request.input(key, sql.Date, value);
+        } else if (key === "completedAt") {
+          request.input(key, sql.DateTime2, value);
         } else {
           request.input(key, value);
         }
@@ -599,6 +666,7 @@ function mapTask(row) {
     githubLink: row.github_link,
     completedBy: row.completed_by,
     completedByName: row.completedByName || null,
+    completedAt: row.completed_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -607,6 +675,7 @@ function mapTask(row) {
 module.exports = {
   getAllTasks,
   getTaskById,
+  getCompletedLog,
   createTask,
   updateTask,
   deleteTask,
