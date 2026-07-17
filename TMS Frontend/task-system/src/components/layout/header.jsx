@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, Bell, X, ListTodo, FolderKanban, Users } from "lucide-react";
+import { Search, Bell, X, ListTodo, FolderKanban, Users, LogOut } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useActivityStore } from "../../Features/activities/activityStore";
 import { useTaskStore } from "../../Features/tasks/taskStore";
@@ -8,7 +8,6 @@ import { useTeamStore } from "../../Features/teams/teamStore";
 import { taskApi } from "../../api/taskApi";
 import { projectApi } from "../../api/projectApi";
 import { teamApi } from "../../api/teamApi";
-import ProfileMenu from "./ProfileMenu";
 import Avatar from "../ui/Avatar";
 import Logo from "./logo";
 import { useNavigate } from "react-router-dom";
@@ -26,7 +25,7 @@ function timeAgo(dateStr) {
 const EMPTY_RESULTS = { tasks: [], projects: [], teams: [] };
 
 export default function Header() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { activities, unreadCount, fetchActivities, markAsRead } =
     useActivityStore();
 
@@ -40,6 +39,7 @@ export default function Header() {
 
   const bellRef = useRef(null);
   const searchRef = useRef(null);
+  const profileRef = useRef(null);
   const navigate = useNavigate();
 
   // The bell + dashboard's InboxPreview both read from this same store, so
@@ -55,6 +55,9 @@ export default function Header() {
       }
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setSearchOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
       }
     }
 
@@ -139,6 +142,12 @@ export default function Header() {
     setSearchOpen(false);
     setQuery("");
     setResults(EMPTY_RESULTS);
+  }
+
+  function handleLogout() {
+    logout();
+    setProfileOpen(false);
+    navigate("/login");
   }
 
   const count = unreadCount;
@@ -319,20 +328,32 @@ export default function Header() {
           </div>
 
           {/* Profile */}
-          <button
-            onClick={() => setProfileOpen(true)}
-            className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors hover:bg-white/10"
-          >
-            <Avatar name={user?.name} color={user?.avatarColor} size={32} />
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors hover:bg-white/10"
+            >
+              <Avatar name={user?.name} color={user?.avatarColor} size={32} />
 
-            <span className="text-sm font-medium text-white">
-              {user?.name || "Guest"}
-            </span>
-          </button>
+              <span className="text-sm font-medium text-white">
+                {user?.name || "Guest"}
+              </span>
+            </button>
+
+            {profileOpen && (
+              <div className="glass-dropdown-menu absolute right-0 top-full z-30 mt-2 w-40 overflow-hidden rounded-2xl py-1">
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-white transition-colors hover:bg-white/10"
+                >
+                  <LogOut size={14} />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
-
-      <ProfileMenu isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );
 }
