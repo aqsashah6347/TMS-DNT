@@ -73,3 +73,23 @@ export function formatPlainDate(dateStr) {
     year: "numeric",
   });
 }
+
+// iOS-notification-style short timestamp ("now" / "5m" / "2h" / "3d") —
+// only used by the message-type Inbox card, which mimics an iOS banner.
+// Separate from formatRelativeTime above so every other Inbox card's
+// timestamp wording is untouched.
+export function formatIOSTime(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+  const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (diffSec < 60) return "now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d`;
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}

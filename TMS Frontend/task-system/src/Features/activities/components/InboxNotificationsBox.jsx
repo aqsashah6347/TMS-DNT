@@ -12,8 +12,9 @@ import {
   Trash2,
   FolderX,
   UsersRound,
+  MessageCircle,
 } from "lucide-react";
-import { formatRelativeTime } from "../../../lib/dateFormat";
+import { formatRelativeTime, formatIOSTime } from "../../../lib/dateFormat";
 
 // Covers every activity type the backend can emit today (see
 // activityService.logActivity call sites in taskController.js,
@@ -61,6 +62,7 @@ const TYPE_META = {
     icon: UsersRound,
     badge: "bg-emerald-500/15 text-emerald-400",
   },
+  message: { icon: MessageCircle, badge: "bg-cyan-500/15 text-cyan-400" },
   info: { icon: Bell, badge: "bg-white/10 text-white/60" },
 };
 
@@ -119,6 +121,54 @@ export default function InboxNotificationsBox({
             </div>
           ) : (
             activities.map((a) => {
+              // Message notifications get their own iOS-banner-styled card
+              // (per the reference screenshot) instead of the generic
+              // icon-badge card every other activity type uses below.
+              if (a.type === "message") {
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => !a.read && onMarkAsRead(a.id)}
+                    className={`w-full text-left rounded-2xl px-3.5 py-3 bg-zinc-200 hover:bg-zinc-100 transition-colors ${
+                      a.read ? "opacity-70" : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                          <MessageCircle
+                            size={11}
+                            className="text-white"
+                            fill="currentColor"
+                          />
+                        </div>
+                        <span className="text-[11px] font-bold text-zinc-900 tracking-wide uppercase">
+                          Messages
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span
+                          className="text-[10px] text-zinc-500"
+                          title={
+                            a.createdAt
+                              ? new Date(a.createdAt).toLocaleString()
+                              : ""
+                          }
+                        >
+                          {formatIOSTime(a.createdAt)}
+                        </span>
+                        {!a.read && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-zinc-800 mt-1 line-clamp-2">
+                      {a.message}
+                    </p>
+                  </button>
+                );
+              }
+
               const meta = TYPE_META[a.type] || TYPE_META.info;
               const Icon = meta.icon;
               return (
