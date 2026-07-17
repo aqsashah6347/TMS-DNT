@@ -41,11 +41,6 @@ const statusBadge = {
   done: "glass-badge--primary",
 };
 
-// Card min-height override — .flip-card/.flip-card-inner ship with a
-// hard-coded 220px min-height in index.css, and .glass sets overflow:
-// hidden, so anything taller than 220px was getting silently sliced off.
-// Set directly as inline style so it wins over the stylesheet rule
-// regardless of source order/specificity.
 const CARD_MIN_HEIGHT = 260;
 
 function hexToRgba(hex, alpha) {
@@ -75,11 +70,25 @@ export default function TaskCard({ task }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const openTaskView = useTaskStore((s) => s.openTaskView);
   const projects = useProjectStore((s) => s.projects);
-  const rawColor = getProjectColor(task.projectId, projects);
-  const accentColor =
-    rawColor && rawColor !== "#ffffff" && rawColor !== "#fff"
-      ? rawColor
-      : priorityColorHex[task.priority];
+
+  // FIX: previously this never looked at task.color at all — a
+  // project-less task always fell back to the flat priority color,
+  // so picking a swatch in the modal visually did nothing. Now:
+  // projectId present -> project's color (project always wins, matches
+  // backend's "projectColor should be preferred" comment). No project
+  // -> the task's own saved color. Only falls back to priority color
+  // if neither exists (e.g. legacy tasks created before this column).
+  const rawProjectColor = getProjectColor(task.projectId, projects);
+  const hasValidProjectColor =
+    rawProjectColor &&
+    rawProjectColor !== "#ffffff" &&
+    rawProjectColor !== "#fff";
+
+  const accentColor = task.projectId
+    ? hasValidProjectColor
+      ? rawProjectColor
+      : priorityColorHex[task.priority]
+    : task.color || priorityColorHex[task.priority];
 
   function handleEditClick(e) {
     e.stopPropagation();
@@ -96,17 +105,27 @@ export default function TaskCard({ task }) {
         {/* ---- FRONT ---- */}
         <div
           className="flip-card-face glass glass-card-hover w-full h-full cursor-pointer !p-0 !rounded-[32px] overflow-hidden"
-          style={{ backgroundColor: "#1e1e20" }} /* Dark grey body background */
+          style={{
+            backgroundColor: "#1e1e20",
+            // Vibrant glassmorphism: colored glow ring around the whole
+            // card body, tinted by the task's own color instead of a
+            // generic dark shadow.
+            boxShadow: `0 20px 50px -12px ${hexToRgba(accentColor, 0.35)}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+            border: `1px solid ${hexToRgba(accentColor, 0.35)}`,
+          }}
         >
           <div className="glass-content flex flex-col h-full">
-            {/* Color-tinted dark-glass header zone (same glass surface,
-                just tinted — not a separate solid color block) */}
+            {/* Header zone — richer, more saturated gradient + stronger
+                glass blur so the accent color actually reads as vibrant
+                instead of a muted wash. */}
             <div
               className="relative px-5 pt-4 pb-7 shrink-0"
               style={{
-                background: `linear-gradient(160deg, ${hexToRgba(accentColor, 0.75)} 0%, ${hexToRgba(accentColor, 0.3)} 100%)`,
-                borderBottom: `2px solid ${hexToRgba(accentColor, 0.9)}`,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -14px 18px -14px rgba(0,0,0,0.45)`,
+                background: `linear-gradient(160deg, ${hexToRgba(accentColor, 0.9)} 0%, ${hexToRgba(accentColor, 0.45)} 100%)`,
+                backdropFilter: "blur(18px) saturate(160%)",
+                WebkitBackdropFilter: "blur(18px) saturate(160%)",
+                borderBottom: `2px solid ${hexToRgba(accentColor, 1)}`,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -14px 18px -14px rgba(0,0,0,0.45), 0 0 24px -6px ${hexToRgba(accentColor, 0.55)}`,
               }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -129,17 +148,16 @@ export default function TaskCard({ task }) {
               </h4>
             </div>
 
-            {/* Avatar — glass circle overlapping the header/body seam */}
+            {/* Avatar */}
             <div className="relative flex justify-center -mt-6 z-10 shrink-0">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold text-white border-2"
                 style={{
-                  background: `linear-gradient(160deg, ${hexToRgba(accentColor, 0.9)}, ${hexToRgba(accentColor, 0.55)})`,
+                  background: `linear-gradient(160deg, ${hexToRgba(accentColor, 1)}, ${hexToRgba(accentColor, 0.65)})`,
                   backdropFilter: "blur(12px)",
                   WebkitBackdropFilter: "blur(12px)",
-                  borderColor: "rgba(255,255,255,0.3)",
-                  boxShadow:
-                    "0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.35)",
+                  borderColor: "rgba(255,255,255,0.4)",
+                  boxShadow: `0 6px 18px ${hexToRgba(accentColor, 0.55)}, inset 0 1px 0 rgba(255,255,255,0.4)`,
                 }}
                 title={task.assignedToName || "Unassigned"}
               >
@@ -176,9 +194,7 @@ export default function TaskCard({ task }) {
                       className="h-full rounded-full transition-all"
                       style={{
                         width: priorityWidth[task.priority],
-                        backgroundImage: colorGradient(
-                          priorityColorHex[task.priority],
-                        ),
+                        backgroundImage: colorGradient(accentColor),
                       }}
                     />
                   </div>
@@ -204,7 +220,11 @@ export default function TaskCard({ task }) {
         {/* ---- BACK ---- */}
         <div
           className="flip-card-face flip-card-face--back glass w-full h-full cursor-pointer flex flex-col gap-3 !p-6 !rounded-[32px]"
-          style={{ backgroundColor: "#1e1e20" }} /* Dark grey back background */
+          style={{
+            backgroundColor: "#1e1e20",
+            border: `1px solid ${hexToRgba(accentColor, 0.35)}`,
+            boxShadow: `0 20px 50px -12px ${hexToRgba(accentColor, 0.3)}`,
+          }}
         >
           <div className="glass-content flex flex-col gap-3 h-full">
             <div className="flex items-center justify-between gap-2">

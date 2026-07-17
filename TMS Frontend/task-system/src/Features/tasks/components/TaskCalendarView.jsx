@@ -121,7 +121,11 @@ export default function TaskCalendarView({ tasks }) {
                       e.stopPropagation();
                       openTaskView(t);
                     }}
-                    className="text-[10px] sm:text-sm font-semibold text-white/90 truncate hover:text-orange-300 transition-colors"
+                    className={`text-[10px] sm:text-sm font-semibold truncate transition-colors ${
+                      t.status === "done"
+                        ? "text-white/30 line-through hover:text-white/50"
+                        : "text-white/90 hover:text-orange-300"
+                    }`}
                     title={t.title}
                   >
                     {t.title}
