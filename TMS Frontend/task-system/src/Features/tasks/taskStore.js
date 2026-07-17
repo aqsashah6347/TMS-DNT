@@ -1,12 +1,16 @@
 import { create } from "zustand";
 import { taskApi } from "../../api/taskApi";
+import { useUIStore } from "../../store/useUIStore";
 
 export const useTaskStore = create((set, get) => ({
   tasks: [],
   isLoading: false,
   error: null,
 
-  view: "kanban",
+  completedLog: [],
+  isCompletedLogLoading: false,
+
+  view: "list",
   filters: { priority: "", assignedTo: "", search: "" },
   isTaskModalOpen: false,
   isFiltersModalOpen: false,
@@ -52,8 +56,6 @@ export const useTaskStore = create((set, get) => ({
       pendingProjectId: null,
     }),
 
-  // Pulls the current filter state and asks the backend to do the
-  // filtering (matches getAllTasks' query params on the backend).
   fetchTasks: async () => {
     const { filters } = get();
     set({ isLoading: true, error: null });
@@ -69,6 +71,17 @@ export const useTaskStore = create((set, get) => ({
         error: err.response?.data?.message || "Couldn't load tasks",
         isLoading: false,
       });
+    }
+  },
+
+  // Plain-text completed log — feeds the CompletedLogPanel drawer.
+  fetchCompletedLog: async () => {
+    set({ isCompletedLogLoading: true });
+    try {
+      const completedLog = await taskApi.getCompletedLog();
+      set({ completedLog, isCompletedLogLoading: false });
+    } catch (err) {
+      set({ isCompletedLogLoading: false });
     }
   },
 
@@ -102,10 +115,20 @@ export const useTaskStore = create((set, get) => ({
       const updated = await taskApi.updateTask(id, patch);
       await get().fetchTasks();
 
-      // Keep the modal showing fresh data if this was the open task.
       if (get().editingTask?.id === id) {
         set({ editingTask: updated });
       }
+
+      // Centralized completion trigger — fires for BOTH the "Mark
+      // Complete" button (TaskModal's completeTask) and dragging a card
+      // into the Done column in Kanban, since both paths funnel through
+      // this single updateTask function with { status: "done" } in the
+      // patch. Refreshes the log panel too, so it's up to date if open.
+      if (patch.status === "done") {
+        useUIStore.getState().fireConfetti();
+        get().fetchCompletedLog();
+      }
+
       return true;
     } catch (err) {
       set({ error: err.response?.data?.message || "Couldn't update task" });
@@ -131,13 +154,14 @@ export const useTaskStore = create((set, get) => ({
     await get().updateTask(id, { pinned: !task.pinned });
   },
 
-  // Used by the "Mark Complete" button regular users get instead of Edit.
   completeTask: async (id) => get().updateTask(id, { status: "done" }),
 
   getTasksByProject: (projectId) =>
     get().tasks.filter((t) => t.projectId === projectId),
 
-  // Filtering now happens server-side in fetchTasks — this just returns
-  // whatever the store currently has (kept so Tasks.jsx doesn't need to change).
-  getFilteredTasks: () => get().tasks,
+  // Excludes completed tasks so they drop off the main List/Calendar
+  // views once marked done — their record lives in completedLog instead.
+  // Kanban still gets the full unfiltered set (see Tasks.jsx) since its
+  // Done column is the intended place to see them mid-board.
+  getFilteredTasks: () => get().tasks.filter((t) => t.status !== "done"),
 }));

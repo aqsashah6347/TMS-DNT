@@ -11,8 +11,11 @@ router.get(
   requirePermission("tasks", "view"),
   taskController.getCompletionStats,
 );
+router.get("/completed-log", taskController.getCompletedLog);
 
 router.get("/", requirePermission("tasks", "view"), taskController.getAllTasks);
+ router.get("/completed-log", taskController.getCompletedLog);
+
 router.get(
   "/:id",
   requirePermission("tasks", "view"),
