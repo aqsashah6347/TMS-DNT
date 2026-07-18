@@ -9,8 +9,11 @@ export default function ActivityLog() {
   const {
     activities,
     loading,
+    actionActivities,
+    actionLoading,
     unreadCount,
     fetchActivities,
+    fetchActionActivities,
     markAsRead,
     markAllAsRead,
     initSocketListeners,
@@ -18,13 +21,14 @@ export default function ActivityLog() {
 
   // Same real-time wiring the old single-list page used: the socket
   // already pushes "new_activity" events scoped to this user's room
-  // (see tms-backend/src/config/socket.js + activityService.js), so all
-  // three boxes below update live without a page refresh — no new
-  // real-time mechanism needed, just reusing this store in three places.
+  // (and, for self-logged actions, the shared "admins" room too — see
+  // tms-backend/src/config/socket.js + activityService.js), so all
+  // three boxes below update live without a page refresh.
   useEffect(() => {
     if (!getSocket()) connectSocket();
     initSocketListeners();
     fetchActivities();
+    fetchActionActivities();
   }, []);
 
   return (
@@ -42,7 +46,10 @@ export default function ActivityLog() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         {/* Left — big box */}
         <div>
-          <ActionActivityBox activities={activities} loading={loading} />
+          <ActionActivityBox
+            activities={actionActivities}
+            loading={actionLoading}
+          />
         </div>
 
         {/* Right — stacked boxes */}

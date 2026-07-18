@@ -1,6 +1,24 @@
 const { sql, poolPromise } = require("../config/db");
 const { getIO } = require("../config/socket");
 
+// The "self-logged action" types shown in Box 1 (Action Activity) on the
+// Activity page — as opposed to things that happen *to* a user
+// (task_assigned, deadline_missed, project_assigned), which stay out of
+// this box. Exported so activityController can reuse the same list when
+// building the admin "see everyone's actions" query.
+const ACTION_TYPES = [
+  "task_created",
+  "project_created",
+  "team_created",
+  "task_edited",
+  "due_date_updated",
+  "assignment_changed",
+  "status_changed",
+  "task_completed",
+  "task_deleted",
+  "project_deleted",
+];
+
 async function logActivity({
   userId,
   type,
@@ -36,13 +54,29 @@ async function logActivity({
         VALUES (@userId, @type, @title, @message, @taskId, @projectId, @changes)
       `);
 
-    const activity = mapActivity(result.recordset[0]);
+    const row = result.recordset[0];
+
+    // Look up the actor's name so the real-time push carries it too —
+    // an admin's Action Activity box needs to label whose action this
+    // was without waiting on a second round trip.
+    const nameResult = await pool
+      .request()
+      .input("userId", sql.Int, userId)
+      .query("SELECT name FROM tms_users WHERE id = @userId");
+    row.actor_name = nameResult.recordset[0]?.name || null;
+
+    const activity = mapActivity(row);
 
     // getIO() throws if socket.io hasn't been initialized yet (only happens
     // if this ever gets called from a standalone script) — never let that
     // take down the DB write that already succeeded.
     try {
-      getIO().to(`user_${userId}`).emit("new_activity", activity);
+      const rooms = [`user_${userId}`];
+      // Admins also sit in a shared "admins" room (see config/socket.js)
+      // so any self-logged action — from anyone — reaches their Action
+      // Activity box live, not just their own.
+      if (ACTION_TYPES.includes(type)) rooms.push("admins");
+      getIO().to(rooms).emit("new_activity", activity);
     } catch (socketErr) {
       console.error("Couldn't push activity over socket:", socketErr.message);
     }
@@ -67,6 +101,8 @@ function mapActivity(row) {
     read: row.is_read,
     createdAt: row.created_at,
     changes: parseChanges(row.changes),
+    userId: row.user_id,
+    userName: row.actor_name || null,
   };
 }
 
@@ -83,4 +119,4 @@ function parseChanges(raw) {
   }
 }
 
-module.exports = { logActivity, mapActivity };
+module.exports = { logActivity, mapActivity, ACTION_TYPES };
