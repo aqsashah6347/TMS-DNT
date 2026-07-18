@@ -27,18 +27,24 @@ async function getConversation(userId, otherUserId) {
     .request()
     .input("userId", sql.Int, userId)
     .input("otherUserId", sql.Int, otherUserId).query(`
-      SELECT id, sender_id, receiver_id, message, is_read, created_at,
-             attachment_url, attachment_name, attachment_type, attachment_size
-      FROM tms_chat_messages
-      WHERE (sender_id = @userId AND receiver_id = @otherUserId)
-         OR (sender_id = @otherUserId AND receiver_id = @userId)
-      ORDER BY created_at ASC
+      SELECT m.id, m.sender_id, m.receiver_id, m.message, m.is_read, m.created_at,
+             m.attachment_url, m.attachment_name, m.attachment_type, m.attachment_size
+      FROM tms_chat_messages m
+      LEFT JOIN tms_chat_conversation_state cs
+        ON cs.user_id = @userId AND cs.other_user_id = @otherUserId
+      WHERE ((m.sender_id = @userId AND m.receiver_id = @otherUserId)
+         OR (m.sender_id = @otherUserId AND m.receiver_id = @userId))
+        AND m.created_at > ISNULL(cs.cleared_at, '1900-01-01')
+      ORDER BY m.created_at ASC
     `);
   return result.recordset;
 }
 
 // One row per other user, with their most recent message + how many
-// of their messages to me are still unread.
+// of their messages to me are still unread. A chat this user "deleted"
+// (cleared_at) drops out entirely once there's no message left after that
+// point; the `archived` flag is left for the caller/client to filter on so
+// archived chats can still be shown in an "Archived" view.
 async function getConversations(userId) {
   const pool = await poolPromise;
   const result = await pool.request().input("userId", sql.Int, userId).query(`
@@ -50,14 +56,19 @@ async function getConversations(userId) {
       lm.attachment_name AS lastAttachmentName,
       lm.created_at AS lastMessageAt,
       lm.sender_id AS lastMessageSenderId,
+      ISNULL(cs.is_archived, 0) AS archived,
       (SELECT COUNT(*) FROM tms_chat_messages
-        WHERE sender_id = u.id AND receiver_id = @userId AND is_read = 0) AS unreadCount
+        WHERE sender_id = u.id AND receiver_id = @userId AND is_read = 0
+          AND created_at > ISNULL(cs.cleared_at, '1900-01-01')) AS unreadCount
     FROM tms_users u
+    LEFT JOIN tms_chat_conversation_state cs
+      ON cs.user_id = @userId AND cs.other_user_id = u.id
     CROSS APPLY (
       SELECT TOP 1 message, created_at, sender_id, attachment_name
       FROM tms_chat_messages
-      WHERE (sender_id = u.id AND receiver_id = @userId)
-         OR (sender_id = @userId AND receiver_id = u.id)
+      WHERE ((sender_id = u.id AND receiver_id = @userId)
+         OR (sender_id = @userId AND receiver_id = u.id))
+        AND created_at > ISNULL(cs.cleared_at, '1900-01-01')
       ORDER BY created_at DESC
     ) lm
     WHERE u.id != @userId
@@ -78,4 +89,50 @@ async function markAsRead(userId, otherUserId) {
     `);
 }
 
-module.exports = { saveMessage, getConversation, getConversations, markAsRead };
+// Archive/unarchive a chat — only affects the requesting user's own view.
+async function setArchived(userId, otherUserId, archived) {
+  const pool = await poolPromise;
+  await pool
+    .request()
+    .input("userId", sql.Int, userId)
+    .input("otherUserId", sql.Int, otherUserId)
+    .input("archived", sql.Bit, archived ? 1 : 0).query(`
+      MERGE tms_chat_conversation_state AS target
+      USING (SELECT @userId AS user_id, @otherUserId AS other_user_id) AS src
+        ON target.user_id = src.user_id AND target.other_user_id = src.other_user_id
+      WHEN MATCHED THEN
+        UPDATE SET is_archived = @archived
+      WHEN NOT MATCHED THEN
+        INSERT (user_id, other_user_id, is_archived)
+        VALUES (@userId, @otherUserId, @archived);
+    `);
+}
+
+// "Delete chat" — clears the conversation from this user's view going
+// forward. Doesn't touch the other person's copy or the stored messages;
+// a new message afterwards makes the chat reappear.
+async function clearConversation(userId, otherUserId) {
+  const pool = await poolPromise;
+  await pool
+    .request()
+    .input("userId", sql.Int, userId)
+    .input("otherUserId", sql.Int, otherUserId).query(`
+      MERGE tms_chat_conversation_state AS target
+      USING (SELECT @userId AS user_id, @otherUserId AS other_user_id) AS src
+        ON target.user_id = src.user_id AND target.other_user_id = src.other_user_id
+      WHEN MATCHED THEN
+        UPDATE SET cleared_at = SYSUTCDATETIME()
+      WHEN NOT MATCHED THEN
+        INSERT (user_id, other_user_id, cleared_at)
+        VALUES (@userId, @otherUserId, SYSUTCDATETIME());
+    `);
+}
+
+module.exports = {
+  saveMessage,
+  getConversation,
+  getConversations,
+  markAsRead,
+  setArchived,
+  clearConversation,
+};

@@ -1,6 +1,7 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
 const chatService = require("../services/chatService");
+const teamChatService = require("../services/teamChatService");
 
 let io;
 // userId -> Set of socket ids (a user can have multiple tabs/devices open)
@@ -25,7 +26,7 @@ function initSocket(httpServer) {
     }
   });
 
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     const userId = socket.user.id;
 
     if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
@@ -34,6 +35,24 @@ function initSocket(httpServer) {
     // Personal room — lets us push to "user 7" without tracking which
     // specific socket/tab/device they're currently on.
     socket.join(`user_${userId}`);
+      // Admins also get a shared room so logActivity can push everyone's
+    // self-logged actions to their Action Activity box in real time.
+    if (socket.user.role === "admin") {
+      socket.join("admins");
+    }
+
+    // Join a room per team the user is allowed to group-chat in, so
+    // send_team_message can just broadcast to `team_${teamId}` without
+    // re-checking membership on every single message.
+    try {
+      const teamIds = await teamChatService.getAccessibleTeamIds(
+        userId,
+        socket.user.role,
+      );
+      teamIds.forEach((teamId) => socket.join(`team_${teamId}`));
+    } catch (err) {
+      console.error("Failed to join team chat rooms:", err.message);
+    }
 
     io.emit("user_online", { userId });
     socket.emit("online_users", Array.from(onlineUsers.keys()));
@@ -77,6 +96,59 @@ function initSocket(httpServer) {
         io.to(`user_${senderId}`).emit("messages_read", { readBy: userId });
       } catch (err) {
         console.error("mark_read failed:", err.message);
+      }
+    });
+
+    // ---------- Team (group) chat ----------
+    socket.on(
+      "send_team_message",
+      async ({ teamId, message, attachment }, callback) => {
+        try {
+          const trimmed = (message || "").trim();
+          if (!teamId || (!trimmed && !attachment)) return;
+
+          const allowed = await teamChatService.canAccessTeam(
+            userId,
+            socket.user.role,
+            teamId,
+          );
+          if (!allowed) {
+            if (typeof callback === "function")
+              callback({ status: "error", error: "Not allowed in this team" });
+            return;
+          }
+
+          const saved = await teamChatService.saveTeamMessage(
+            teamId,
+            userId,
+            trimmed || null,
+            attachment,
+          );
+
+          io.to(`team_${teamId}`).emit("receive_team_message", saved);
+
+          if (typeof callback === "function")
+            callback({ status: "ok", message: saved });
+        } catch (err) {
+          if (typeof callback === "function")
+            callback({ status: "error", error: err.message });
+        }
+      },
+    );
+
+    socket.on("team_typing", ({ teamId }) => {
+      socket.to(`team_${teamId}`).emit("team_typing", { teamId, userId });
+    });
+
+    socket.on("team_stop_typing", ({ teamId }) => {
+      socket.to(`team_${teamId}`).emit("team_stop_typing", { teamId, userId });
+    });
+
+    socket.on("team_mark_read", async ({ teamId }) => {
+      try {
+        await teamChatService.markTeamAsRead(teamId, userId);
+      } catch (err) {
+        console.error("team_mark_read failed:", err.message);
       }
     });
 
