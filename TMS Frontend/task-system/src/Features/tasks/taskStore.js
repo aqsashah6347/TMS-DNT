@@ -4,6 +4,9 @@ import { useUIStore } from "../../store/useUIStore";
 
 export const useTaskStore = create((set, get) => ({
   tasks: [],
+  page: 1,
+  pageSize: 25,
+  total: 0,
   isLoading: false,
   error: null,
 
@@ -56,16 +59,20 @@ export const useTaskStore = create((set, get) => ({
       pendingProjectId: null,
     }),
 
-  fetchTasks: async () => {
-    const { filters } = get();
+ fetchTasks: async (page = 1) => {
+    const { filters, pageSize } = get();
     set({ isLoading: true, error: null });
     try {
-      const tasks = await taskApi.getAllTasks({
-        priority: filters.priority || undefined,
-        assignedTo: filters.assignedTo || undefined,
-        search: filters.search || undefined,
-      });
-      set({ tasks, isLoading: false });
+      const { tasks, total } = await taskApi.getAllTasks(
+        {
+          priority: filters.priority || undefined,
+          assignedTo: filters.assignedTo || undefined,
+          search: filters.search || undefined,
+        },
+        page,
+        pageSize
+      );
+      set({ tasks, total, page, isLoading: false });
     } catch (err) {
       set({
         error: err.response?.data?.message || "Couldn't load tasks",
@@ -100,7 +107,33 @@ export const useTaskStore = create((set, get) => ({
       return false;
     }
   },
+loadMoreTasks: async () => {
+    const { page, pageSize, total, tasks, isLoading } = get();
+    if (isLoading || tasks.length >= total) return; // nothing more to load
 
+    set({ isLoading: true });
+    try {
+      const { filters } = get();
+      const nextPage = page + 1;
+      const { tasks: nextTasks, total: newTotal } = await taskApi.getAllTasks(
+        {
+          priority: filters.priority || undefined,
+          assignedTo: filters.assignedTo || undefined,
+          search: filters.search || undefined,
+        },
+        nextPage,
+        pageSize
+      );
+      set({
+        tasks: [...tasks, ...nextTasks],
+        page: nextPage,
+        total: newTotal,
+        isLoading: false,
+      });
+    } catch (err) {
+      set({ isLoading: false });
+    }
+  },
   updateTask: async (id, updates) => {
     set({ error: null });
     try {

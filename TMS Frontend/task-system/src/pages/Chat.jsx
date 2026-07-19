@@ -10,8 +10,6 @@ import {
   Archive,
   ArchiveRestore,
   Trash2,
-  Phone,
-  Video,
 } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../Features/chat/chatStore";
@@ -700,9 +698,6 @@ export default function Chat() {
                   draft={draft}
                   onDraftChange={handleTyping}
                   onSend={handleSendTeam}
-                  onFileSelect={setPendingFile}
-                  pendingFile={pendingFile}
-                  onClearFile={() => setPendingFile(null)}
                 />
               </>
             ) : !activeUser ? (
@@ -733,19 +728,6 @@ export default function Chat() {
                   </div>
 
                   <div className="ml-auto flex items-center gap-1">
-                    <button
-                      title="Call (not available)"
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
-                    >
-                      <Phone size={18} />
-                    </button>
-                    <button
-                      title="Video call (not available)"
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
-                    >
-                      <Video size={18} />
-                    </button>
-
                     <div className="relative" ref={headerMenuRef}>
                       <button
                         onClick={() => setHeaderMenuOpen((p) => !p)}
@@ -808,9 +790,6 @@ export default function Chat() {
                   draft={draft}
                   onDraftChange={handleTyping}
                   onSend={handleSend}
-                  onFileSelect={setPendingFile}
-                  pendingFile={pendingFile}
-                  onClearFile={() => setPendingFile(null)}
                 />
               </>
             )}

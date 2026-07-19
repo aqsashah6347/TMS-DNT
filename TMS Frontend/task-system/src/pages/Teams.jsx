@@ -71,7 +71,7 @@ export default function Teams() {
                   {filteredTeams.length !== 1 ? "s" : ""}
                 </span>
                 <span className="text-base font-medium text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-full px-3 py-1">
-                  {allTasks.length} task{allTasks.length !== 1 ? "s" : ""}
+                 {(allTasks?.length ?? 0)} task{(allTasks?.length ?? 0) !== 1 ? "s" : ""}
                 </span>
               </>
             )}
