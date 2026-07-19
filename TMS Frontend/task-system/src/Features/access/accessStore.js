@@ -17,7 +17,27 @@ export const useAccessStore = create((set, get) => ({
   // name, role }. userId is null when this employee has no tms_users login
   // account yet.
   selectedEmployee: null,
-  selectEmployee: (employee) => set({ selectedEmployee: employee }),
+
+  // Draft edit state for the panel currently open. Checkbox toggles and
+  // role picks only touch these — nothing hits the network — until
+  // "Save changes" is clicked. Kept in the store (not component state)
+  // so saving can also clear selectedEmployee to close the panel.
+  draftOverrides: null, // { module: [actions] } | null
+  draftRole: null, // string | null — only set once changed from the committed role
+  isSaving: false,
+  lastSaveSummary: null, // { userName, changes: [string, ...] } shown after a save
+
+  selectEmployee: (employee) => {
+    const perm = employee?.userId
+      ? get().permissions.find((p) => p.userId === employee.userId)
+      : null;
+    set({
+      selectedEmployee: employee,
+      draftOverrides: perm ? JSON.parse(JSON.stringify(perm.overrides)) : null,
+      draftRole: null,
+      lastSaveSummary: null,
+    });
+  },
 
   isAssigning: false,
 
@@ -66,17 +86,14 @@ export const useAccessStore = create((set, get) => ({
         role,
       });
 
-      set({
-        selectedEmployee: {
-          userId: user.id,
-          employeeCode: employee.employeeCode,
-          name: user.name,
-          role: user.role,
-        },
-        isAssigning: false,
-      });
-
       await get().fetchAll();
+      get().selectEmployee({
+        userId: user.id,
+        employeeCode: employee.employeeCode,
+        name: user.name,
+        role: user.role,
+      });
+      set({ isAssigning: false });
       return true;
     } catch (err) {
       set({
@@ -87,57 +104,74 @@ export const useAccessStore = create((set, get) => ({
     }
   },
 
-  toggleAction: async (userId, module, action) => {
-    const previous = get().permissions;
-    set({
-      permissions: previous.map((p) => {
-        if (p.userId !== userId) return p;
-        const current = p.overrides[module] || [];
-        const updated = current.includes(action)
-          ? current.filter((a) => a !== action)
-          : [...current, action];
-        return { ...p, overrides: { ...p.overrides, [module]: updated } };
-      }),
-    });
+  // ---- Staged edits (local only — no network call) ----
 
+  stageToggleAction: (module, action) => {
+    set((state) => {
+      if (!state.draftOverrides) return {};
+      const current = state.draftOverrides[module] || [];
+      const updated = current.includes(action)
+        ? current.filter((a) => a !== action)
+        : [...current, action];
+      return {
+        draftOverrides: { ...state.draftOverrides, [module]: updated },
+      };
+    });
+  },
+
+  stageRolePreset: (role) => set({ draftRole: role }),
+
+  // Reverts every staged edit back to what's currently saved.
+  discardChanges: () => {
+    const { selectedEmployee, permissions } = get();
+    const perm = selectedEmployee?.userId
+      ? permissions.find((p) => p.userId === selectedEmployee.userId)
+      : null;
+    set({
+      draftOverrides: perm ? JSON.parse(JSON.stringify(perm.overrides)) : null,
+      draftRole: null,
+    });
+  },
+
+  // Sends the role change (if any) and every module's full action list in
+  // one request, then closes the panel and leaves a summary of what
+  // changed for the empty-state view to show.
+  saveChanges: async () => {
+    const { selectedEmployee, permissions, draftOverrides, draftRole } = get();
+    const userId = selectedEmployee?.userId;
+    if (!userId) return false;
+    const perm = permissions.find((p) => p.userId === userId);
+    if (!perm) return false;
+
+    set({ isSaving: true, error: null });
     try {
-      const { actions } = await accessApi.toggleAction(userId, module, action);
-      set((state) => ({
-        permissions: state.permissions.map((p) =>
-          p.userId === userId
-            ? { ...p, overrides: { ...p.overrides, [module]: actions } }
-            : p,
-        ),
-      }));
+      const { changes } = await accessApi.batchUpdate(userId, {
+        role: draftRole && draftRole !== perm.role ? draftRole : undefined,
+        overrides: draftOverrides,
+      });
+
+      await get().fetchAll();
       get().refreshAuditLog();
+
+      set({
+        isSaving: false,
+        selectedEmployee: null, // closes the panel back to the empty state
+        draftOverrides: null,
+        draftRole: null,
+        lastSaveSummary: {
+          userName: perm.userName,
+          changes: changes?.length ? changes : ["No changes were made"],
+        },
+      });
+      return true;
     } catch (err) {
       set({
-        permissions: previous,
-        error: err.response?.data?.message || "Couldn't update permission",
+        isSaving: false,
+        error: err.response?.data?.message || "Couldn't save changes",
       });
+      return false;
     }
   },
 
-  setRolePreset: async (userId, role) => {
-    const previous = get().permissions;
-    set({
-      permissions: previous.map((p) =>
-        p.userId === userId ? { ...p, role } : p,
-      ),
-    });
-
-    try {
-      await accessApi.setRole(userId, role);
-      get().refreshAuditLog();
-      const selected = get().selectedEmployee;
-      if (selected?.userId === userId) {
-        set({ selectedEmployee: { ...selected, role } });
-      }
-    } catch (err) {
-      set({
-        permissions: previous,
-        error: err.response?.data?.message || "Couldn't update role",
-      });
-    }
-  },
+  clearSaveSummary: () => set({ lastSaveSummary: null }),
 }));

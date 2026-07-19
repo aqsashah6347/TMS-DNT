@@ -10,6 +10,34 @@ export const useProjectStore = create((set, get) => ({
   editingProject: null,
   modalMode: "view",
 
+  // Client-side search + filters over the already-fetched `projects` list —
+  // mirrors teamStore's approach, and the header's global search which
+  // already filters projects this same way.
+  filters: { search: "", status: "", teamId: "" },
+  isFiltersModalOpen: false,
+
+  setFilters: (patch) =>
+    set((state) => ({ filters: { ...state.filters, ...patch } })),
+  clearFilters: () => set({ filters: { search: "", status: "", teamId: "" } }),
+
+  openFiltersModal: () => set({ isFiltersModalOpen: true }),
+  closeFiltersModal: () => set({ isFiltersModalOpen: false }),
+
+  getFilteredProjects: () => {
+    const { projects, filters } = get();
+    const q = filters.search.trim().toLowerCase();
+    return projects.filter((p) => {
+      const matchesSearch =
+        !q ||
+        p.name?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q);
+      const matchesStatus = !filters.status || p.status === filters.status;
+      const matchesTeam =
+        !filters.teamId || String(p.teamId) === String(filters.teamId);
+      return matchesSearch && matchesStatus && matchesTeam;
+    });
+  },
+
   openCreateModal: () =>
     set({ isModalOpen: true, editingProject: {}, modalMode: "edit" }),
   openEditModal: (project) =>

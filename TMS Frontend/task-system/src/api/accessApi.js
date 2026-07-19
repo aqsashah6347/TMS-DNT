@@ -33,4 +33,12 @@ export const accessApi = {
     });
     return res.data;
   },
+
+  // PUT /api/permissions/:userId/batch  body: { role?, overrides?: { module: [actions] } }
+  // Saves the role preset (if changed) and every module's action list in
+  // one request. -> { userId, userName, role, changes: [string, ...] }
+  batchUpdate: async (userId, payload) => {
+    const res = await axiosInstance.put(`/permissions/${userId}/batch`, payload);
+    return res.data;
+  },
 };

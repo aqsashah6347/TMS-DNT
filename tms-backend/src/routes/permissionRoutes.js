@@ -11,5 +11,6 @@ router.get("/", permissionController.getAllPermissions);
 router.get("/audit-log", permissionController.getAuditLog);
 router.put("/:userId", permissionController.togglePermission);
 router.put("/:userId/role", permissionController.setRole);
+router.put("/:userId/batch", permissionController.batchUpdate);
 
 module.exports = router;
