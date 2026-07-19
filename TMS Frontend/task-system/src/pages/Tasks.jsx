@@ -26,12 +26,12 @@ const viewOptions = [
 ];
 
 export default function Tasks() {
-  const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
+const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
     useTaskStore();
   const tasks = getFilteredTasks();
   // Kanban needs the raw, unfiltered list so its Done column isn't empty.
   const allTasks = useTaskStore((s) => s.tasks);
-  const { fetchTasks, isLoading, error } = useTaskStore();
+  const { fetchTasks, isLoading, error, total, loadMoreTasks } = useTaskStore();
   const { user } = useAuthStore();
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
   const toggleCompletedLog = useUIStore((s) => s.toggleCompletedLog);
@@ -153,9 +153,22 @@ export default function Tasks() {
             {error}
           </div>
         )}
-        {view === "list" && <TaskListView tasks={scopedTasks} />}
+      {view === "list" && <TaskListView tasks={scopedTasks} />}
         {view === "kanban" && <TaskKanbanView tasks={scopedAllTasks} />}
         {view === "calendar" && <TaskCalendarView tasks={scopedTasks} />}
+
+        {view === "list" && allTasks.length < total && (
+          <div className="flex justify-center mt-6">
+            <Button
+              variant="secondary"
+              onClick={loadMoreTasks}
+              disabled={isLoading}
+              className="text-base px-5 py-3"
+            >
+              {isLoading ? "Loading..." : `Load more (${allTasks.length} of ${total})`}
+            </Button>
+          </div>
+        )}
 
         <TaskModal />
         <TaskFiltersModal />

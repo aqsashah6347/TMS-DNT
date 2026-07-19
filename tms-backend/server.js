@@ -32,7 +32,7 @@ fs.mkdirSync(path.join(__dirname, "uploads", "chat"), { recursive: true });
 
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use("/api/upload", uploadRoutes);
+
 
 app.use(express.json());
 app.use("/api/permissions", permissionRoutes);

@@ -88,8 +88,8 @@ async function getOverdueMetrics() {
 
 async function getProductivityByUser(limit = 8) {
   const pool = await poolPromise;
-  const result = await pool.request().input("limit", sql.Int, limit).query(`
-    SELECT TOP (@limit) u.name AS user, COUNT(t.id) AS tasks
+const result = await pool.request().input("limit", sql.Int, limit).query(`
+    SELECT TOP (@limit) u.name AS [user], COUNT(t.id) AS tasks
     FROM tms_tasks t
     JOIN tms_users u ON u.id = t.completed_by
     WHERE t.status = 'done' AND t.deleted_at IS NULL

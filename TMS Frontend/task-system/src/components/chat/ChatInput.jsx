@@ -1,18 +1,10 @@
 import { useRef, useState } from "react";
-import { Send, Paperclip, Smile, X } from "lucide-react";
+import { Send, Smile } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 
-export default function ChatInput({
-  draft,
-  onDraftChange,
-  onSend,
-  onFileSelect,
-  pendingFile,
-  onClearFile,
-}) {
+export default function ChatInput({ draft, onDraftChange, onSend }) {
   const [emojiOpen, setEmojiOpen] = useState(false);
   const inputRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const insertEmoji = (emojiData) => {
     const input = inputRef.current;
@@ -25,8 +17,6 @@ export default function ChatInput({
     const next = draft.slice(0, start) + emojiData.emoji + draft.slice(end);
     onDraftChange(next);
 
-    // Put the cursor right after the inserted emoji and keep focus on the
-    // input, instead of losing it to the picker.
     requestAnimationFrame(() => {
       input.focus();
       const pos = start + emojiData.emoji.length;
@@ -34,42 +24,9 @@ export default function ChatInput({
     });
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) onFileSelect(file);
-    e.target.value = ""; // lets picking the same file twice still fire onChange
-  };
-
   return (
     <div className="border-t border-white/10 bg-[#1c1c1c]">
-      {pendingFile && (
-        <div className="flex items-center gap-2 px-5 pt-3">
-          <span className="text-sm text-white/70 bg-[#2a2a2a] rounded-lg px-3 py-1.5 flex items-center gap-2">
-            {pendingFile.name}
-            <button
-              onClick={onClearFile}
-              className="text-white/40 hover:text-white"
-            >
-              <X size={13} />
-            </button>
-          </span>
-        </div>
-      )}
-
       <div className="flex items-center gap-2 px-5 py-3.5 relative">
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors"
-        >
-          <Paperclip size={18} />
-        </button>
-
         <div className="relative">
           <button
             onClick={() => setEmojiOpen((prev) => !prev)}

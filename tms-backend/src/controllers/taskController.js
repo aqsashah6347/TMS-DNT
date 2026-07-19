@@ -83,49 +83,67 @@ async function recalcProjectProgress(pool, projectId) {
 }
 
 // GET /api/tasks?priority=&assignedTo=&search=&status=&projectId=
+// src/controllers/taskController.js — replace getAllTasks
 async function getAllTasks(req, res, next) {
   try {
     const { priority, assignedTo, search, status, projectId } = req.query;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(100, Number(req.query.pageSize) || 25);
+    const offset = (page - 1) * pageSize;
+
     const pool = await poolPromise;
     const request = pool.request();
 
-    let query = `${JOIN_QUERY} WHERE t.deleted_at IS NULL`;
+    let whereClause = "t.deleted_at IS NULL";
 
     if (priority) {
-      query += " AND t.priority = @priority";
+      whereClause += " AND t.priority = @priority";
       request.input("priority", sql.NVarChar, priority);
     }
     if (status) {
-      query += " AND t.status = @status";
+      whereClause += " AND t.status = @status";
       request.input("status", sql.NVarChar, status);
     }
-
-    // Regular users can ONLY see tasks assigned to them — this overrides/
-    // ignores any assignedTo query param they might send, so it can't be
-    // spoofed by passing someone else's id. Admins/managers keep full
-    // visibility (managers already get their team pre-filtered elsewhere,
-    // e.g. usersApi.getAssignableUsers).
     if (req.user.role === "user") {
-      query += " AND t.assigned_to = @scopedAssignedTo";
+      whereClause += " AND t.assigned_to = @scopedAssignedTo";
       request.input("scopedAssignedTo", sql.Int, req.user.id);
     } else if (assignedTo) {
-      query += " AND t.assigned_to = @assignedTo";
+      whereClause += " AND t.assigned_to = @assignedTo";
       request.input("assignedTo", sql.Int, Number(assignedTo));
     }
-
     if (projectId) {
-      query += " AND t.project_id = @projectId";
+      whereClause += " AND t.project_id = @projectId";
       request.input("projectId", sql.Int, Number(projectId));
     }
     if (search) {
-      query += " AND t.title LIKE @search";
+      whereClause += " AND t.title LIKE @search";
       request.input("search", sql.NVarChar, `%${search}%`);
     }
 
-    query += " ORDER BY t.pinned DESC, t.due_date ASC";
+    request.input("offset", sql.Int, offset);
+    request.input("pageSize", sql.Int, pageSize);
 
-    const result = await request.query(query);
-    res.json(result.recordset.map(mapTask));
+    const dataQuery = `
+      ${JOIN_QUERY} WHERE ${whereClause}
+      ORDER BY t.pinned DESC, t.due_date ASC
+      OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
+    `;
+    const countQuery = `SELECT COUNT(*) AS total FROM tms_tasks t WHERE ${whereClause}`;
+
+    const [dataResult, countResult] = await Promise.all([
+      request.query(dataQuery),
+      pool.request()
+        .input("priority", sql.NVarChar, priority || null)
+        // NOTE: mirror the same .input() calls used above for count's request
+        .query(countQuery),
+    ]);
+
+    res.json({
+      tasks: dataResult.recordset.map(mapTask),
+      page,
+      pageSize,
+      total: countResult.recordset[0].total,
+    });
   } catch (err) {
     next(err);
   }
