@@ -291,22 +291,16 @@ export default function ProjectModal() {
         />
       ) : (
         <div className="flex flex-col gap-5">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: editingProject.color }}
-              />
-              <span className="text-sm text-muted">
-                {editingProject.teamName}
-              </span>
-            </div>
-            <Button
-              variant="primary"
-              onClick={() => useProjectStore.setState({ modalMode: "edit" })}
-            >
-              <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
-            </Button>
+          {/* Read-only info — no Edit button up here anymore, it now
+              lives at the bottom of the modal instead. */}
+          <div className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: editingProject.color }}
+            />
+            <span className="text-sm text-muted">
+              {editingProject.teamName}
+            </span>
           </div>
 
           {editingProject.description && (
@@ -379,6 +373,17 @@ export default function ProjectModal() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Edit button now lives at the bottom of the modal, matching
+              the footer position used by the edit form's action buttons. */}
+          <div className="flex justify-end pt-2 border-t border-bg">
+            <Button
+              variant="primary"
+              onClick={() => useProjectStore.setState({ modalMode: "edit" })}
+            >
+              <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit Project
+            </Button>
           </div>
         </div>
       )}
