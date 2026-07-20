@@ -17,6 +17,7 @@ export const useTeamStore = create((set, get) => ({
 
   isModalOpen: false,
   editingTeam: null,
+  modalMode: "view",
 
   // Client-side search + filters over the already-fetched `teams` list —
   // same pattern the header's global search already uses for teams/projects
@@ -48,9 +49,16 @@ export const useTeamStore = create((set, get) => ({
     });
   },
 
-  openCreateModal: () => set({ isModalOpen: true, editingTeam: null }),
-  openEditModal: (team) => set({ isModalOpen: true, editingTeam: team }),
-  closeModal: () => set({ isModalOpen: false, editingTeam: null }),
+  openCreateModal: () =>
+    set({ isModalOpen: true, editingTeam: null, modalMode: "edit" }),
+  openEditModal: (team) =>
+    set({ isModalOpen: true, editingTeam: team, modalMode: "edit" }),
+  // NEW — mirrors projectStore's openProjectView: opens the modal in a
+  // read-only view instead of straight into the edit form.
+  openTeamView: (team) =>
+    set({ isModalOpen: true, editingTeam: team, modalMode: "view" }),
+  closeModal: () =>
+    set({ isModalOpen: false, editingTeam: null, modalMode: "view" }),
 
   // Call this from Teams.jsx on mount for admin/manager roles.
   fetchTeams: async () => {

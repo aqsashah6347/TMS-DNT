@@ -22,7 +22,7 @@ export default function Teams() {
     error,
     fetchTeams,
     openCreateModal,
-    openEditModal,
+    openTeamView,
     filters,
     setFilters,
     openFiltersModal,
@@ -149,7 +149,7 @@ export default function Teams() {
                   <TeamCard
                     key={team.id}
                     team={team}
-                    onClick={isAdmin ? openEditModal : undefined}
+                    onClick={isAdmin ? openTeamView : undefined}
                   />
                 ))}
               </div>
