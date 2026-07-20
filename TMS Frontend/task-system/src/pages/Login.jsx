@@ -41,11 +41,46 @@ export default function Login() {
       {/* Vanta.NET animated background (full page) */}
       <div ref={vantaRef} className="absolute inset-0 w-full h-full z-0" />
 
-      {/* Card, centered directly on the Vanta background — no glass strip */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center">
-        <LoginTiltCard className="login-form-card relative z-[3] w-[420px] max-w-[90%] flex flex-col items-center gap-8 p-10">
+      {/* Hidden SVG filter driving the liquid-glass distortion */}
+      <svg style={{ display: "none" }}>
+        <filter
+          id="login-glass-distort"
+          x="0%"
+          y="0%"
+          width="100%"
+          height="100%"
+        >
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.008 0.008"
+            numOctaves="2"
+            seed="92"
+            result="noise"
+          />
+          <feGaussianBlur in="noise" stdDeviation="0.02" result="blur" />
+          <feDisplacementMap
+            in="SourceGraphic"
+            in2="blur"
+            scale="77"
+            xChannelSelector="R"
+            yChannelSelector="G"
+          />
+        </filter>
+      </svg>
+
+      {/* Vertical glass panel, pinned to the center of the page */}
+      <div className="login-glass-wrapper absolute left-1/2 -translate-x-1/2 top-6 bottom-6 z-10 w-1/3 min-w-[360px] flex items-center justify-center">
+        <div className="login-glass-tint" />
+        <div className="login-glass-shine" />
+
+        {/* Card holding the form */}
+        <LoginTiltCard className="relative z-[3] w-[420px] max-w-[85%] flex flex-col items-center gap-8 p-10">
           <div className="flex flex-col items-center gap-3">
-            <img src="/dreamsLogo.png" alt="DreamsLogo" className="w-44 h-auto" />
+            <img
+              src="/dreamsLogo.png"
+              alt="DreamsLogo"
+              className="w-44 h-auto"
+            />
             <h2
               className="tms-login-heading text-2xl mt-2"
               style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
@@ -62,9 +97,7 @@ export default function Login() {
 
       {/* Motivational quote — bottom right */}
       <div className="absolute bottom-8 right-8 w-96 z-10 text-right">
-        <p className="text-lg leading-8 text-white/85 italic">
-          "{quote.text}"
-        </p>
+        <p className="text-lg leading-8 text-white/85 italic">"{quote.text}"</p>
         {quote.author && (
           <p className="text-base text-orange-400 mt-2 font-semibold">
             — {quote.author}
