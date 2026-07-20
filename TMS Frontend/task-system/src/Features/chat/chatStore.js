@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { chatApi } from "../../api/chatApi";
 import { getSocket } from "../../lib/socket";
 import { useAuthStore } from "../../store/useAuthStore";
+import { notifyIncomingMessage } from "../../lib/notify";
 
 export const useChatStore = create((set, get) => ({
   conversations: [],
@@ -167,7 +168,8 @@ export const useChatStore = create((set, get) => ({
           conversations: state.conversations.filter((c) => c.userId !== userId),
           messagesByUser: nextMessages,
           pinnedUserIds: nextPinned,
-          activeUserId: state.activeUserId === userId ? null : state.activeUserId,
+          activeUserId:
+            state.activeUserId === userId ? null : state.activeUserId,
         };
       });
       return true;
@@ -219,8 +221,7 @@ export const useChatStore = create((set, get) => ({
         }));
       } catch (err) {
         set({
-          error:
-            err.response?.data?.message || "Failed to load team messages",
+          error: err.response?.data?.message || "Failed to load team messages",
         });
       }
     }
@@ -295,6 +296,23 @@ export const useChatStore = create((set, get) => ({
         };
       });
 
+      // Only alert on messages someone else actually sent me — not the
+      // "sync my other tabs" copy of my own outgoing messages.
+      if (msg.sender_id !== myId) {
+        const sender = get().conversations.find(
+          (c) => c.userId === otherUserId,
+        );
+        notifyIncomingMessage({
+          title: sender?.userName || "New message",
+          body:
+            msg.message ||
+            (msg.attachment_name
+              ? `Sent a file: ${msg.attachment_name}`
+              : "Sent an attachment"),
+          onClick: () => get().openConversation(otherUserId),
+        });
+      }
+
       // If this message just arrived in the conversation I'm currently
       // viewing, tell the server it's read immediately — otherwise it
       // sits unread until I click away and back.
@@ -366,6 +384,19 @@ export const useChatStore = create((set, get) => ({
           },
         };
       });
+
+      if (msg.sender_id !== myId) {
+        const team = get().teams.find((t) => t.id === teamId);
+        notifyIncomingMessage({
+          title: team?.name ? `${team.name} (team chat)` : "New team message",
+          body:
+            msg.message ||
+            (msg.attachment_name
+              ? `Sent a file: ${msg.attachment_name}`
+              : "Sent an attachment"),
+          onClick: () => get().openTeamConversation(teamId),
+        });
+      }
 
       // If I'm currently looking at this team's chat and someone else
       // sent it, mark it read right away instead of waiting for the
