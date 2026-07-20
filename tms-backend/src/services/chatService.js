@@ -1,7 +1,7 @@
 const { sql, poolPromise } = require("../config/db");
 
 async function saveMessage(senderId, receiverId, message, attachment = null) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const result = await pool
     .request()
     .input("senderId", sql.Int, senderId)
@@ -22,7 +22,7 @@ async function saveMessage(senderId, receiverId, message, attachment = null) {
 }
 
 async function getConversation(userId, otherUserId) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const result = await pool
     .request()
     .input("userId", sql.Int, userId)
@@ -46,7 +46,7 @@ async function getConversation(userId, otherUserId) {
 // point; the `archived` flag is left for the caller/client to filter on so
 // archived chats can still be shown in an "Archived" view.
 async function getConversations(userId) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const result = await pool.request().input("userId", sql.Int, userId).query(`
     SELECT
       u.id AS userId,
@@ -78,7 +78,7 @@ async function getConversations(userId) {
 }
 
 async function markAsRead(userId, otherUserId) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   await pool
     .request()
     .input("userId", sql.Int, userId)
@@ -91,7 +91,7 @@ async function markAsRead(userId, otherUserId) {
 
 // Archive/unarchive a chat — only affects the requesting user's own view.
 async function setArchived(userId, otherUserId, archived) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   await pool
     .request()
     .input("userId", sql.Int, userId)
@@ -112,7 +112,7 @@ async function setArchived(userId, otherUserId, archived) {
 // forward. Doesn't touch the other person's copy or the stored messages;
 // a new message afterwards makes the chat reappear.
 async function clearConversation(userId, otherUserId) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   await pool
     .request()
     .input("userId", sql.Int, userId)

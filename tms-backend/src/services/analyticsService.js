@@ -3,11 +3,12 @@ const { sql, poolPromise } = require("../config/db");
 // Weekly on-time completion rate: of the tasks that were DUE in a given
 // week, what % were marked done by the end of that week.
 async function getCompletionRate(weeks = 6) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const since = new Date();
   since.setDate(since.getDate() - weeks * 7);
 
-  const result = await pool.request().input("since", sql.DateTime2, since).query(`
+  const result = await pool.request().input("since", sql.DateTime2, since)
+    .query(`
     SELECT id, status, due_date, updated_at
     FROM tms_tasks
     WHERE deleted_at IS NULL AND due_date >= @since
@@ -24,7 +25,10 @@ async function getCompletionRate(weeks = 6) {
     weekEnd.setDate(weekEnd.getDate() + 7);
 
     const dueThisWeek = tasks.filter(
-      (t) => t.due_date && new Date(t.due_date) >= weekStart && new Date(t.due_date) < weekEnd,
+      (t) =>
+        t.due_date &&
+        new Date(t.due_date) >= weekStart &&
+        new Date(t.due_date) < weekEnd,
     );
     const completedOnTime = dueThisWeek.filter(
       (t) => t.status === "done" && new Date(t.updated_at) <= weekEnd,
@@ -42,7 +46,7 @@ async function getCompletionRate(weeks = 6) {
 }
 
 async function getOverdueMetrics() {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const result = await pool.request().query(`
     SELECT id, due_date
     FROM tms_tasks
@@ -57,7 +61,9 @@ async function getOverdueMetrics() {
 
   const avgDaysLate = totalOverdue
     ? overdue.reduce((sum, t) => {
-        const days = Math.floor((Date.now() - new Date(t.due_date).getTime()) / 86400000);
+        const days = Math.floor(
+          (Date.now() - new Date(t.due_date).getTime()) / 86400000,
+        );
         return sum + days;
       }, 0) / totalOverdue
     : 0;
@@ -65,19 +71,24 @@ async function getOverdueMetrics() {
   // Trend: tasks that fell due (and are still overdue) in the last 7 days
   // vs the 7 days before that, so the % reflects a real week-over-week shift.
   const now = new Date();
-  const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
-  const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 14);
+  const weekAgo = new Date(now);
+  weekAgo.setDate(now.getDate() - 7);
+  const twoWeeksAgo = new Date(now);
+  twoWeeksAgo.setDate(now.getDate() - 14);
 
   const thisWeek = overdue.filter(
     (t) => new Date(t.due_date) >= weekAgo && new Date(t.due_date) < now,
   ).length;
   const lastWeek = overdue.filter(
-    (t) => new Date(t.due_date) >= twoWeeksAgo && new Date(t.due_date) < weekAgo,
+    (t) =>
+      new Date(t.due_date) >= twoWeeksAgo && new Date(t.due_date) < weekAgo,
   ).length;
 
   const changeFromLastWeek = lastWeek
     ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100)
-    : thisWeek > 0 ? 100 : 0;
+    : thisWeek > 0
+      ? 100
+      : 0;
 
   return {
     totalOverdue,
@@ -87,8 +98,8 @@ async function getOverdueMetrics() {
 }
 
 async function getProductivityByUser(limit = 8) {
-  const pool = await poolPromise;
-const result = await pool.request().input("limit", sql.Int, limit).query(`
+  const pool = await getPool();
+  const result = await pool.request().input("limit", sql.Int, limit).query(`
     SELECT TOP (@limit) u.name AS [user], COUNT(t.id) AS tasks
     FROM tms_tasks t
     JOIN tms_users u ON u.id = t.completed_by
@@ -100,7 +111,7 @@ const result = await pool.request().input("limit", sql.Int, limit).query(`
 }
 
 async function getWorkloadDistribution() {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const result = await pool.request().query(`
     SELECT
       ISNULL(tm.name, 'Unassigned') AS name,

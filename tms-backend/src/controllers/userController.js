@@ -13,7 +13,7 @@ async function register(req, res, next) {
         .json({ message: "Name, email and password are required" });
     }
 
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     const existing = await pool
       .request()
@@ -66,7 +66,7 @@ async function createFromRoster(req, res, next) {
       return res.status(400).json({ message: `Unknown role: ${role}` });
     }
 
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     const existing = await pool
       .request()
@@ -131,7 +131,7 @@ async function createFromRoster(req, res, next) {
 // GET /api/users — used by Admin page and by dropdowns (assignee pickers etc).
 async function getAllUsers(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().query(`
         SELECT id, name, email, role, status, enroll_no, avatar_color AS avatarColor
         FROM tms_users ORDER BY name ASC
@@ -158,7 +158,7 @@ async function updateMyAvatarColor(req, res, next) {
         .json({ message: "color must be a hex string like #f97316" });
     }
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("id", sql.Int, req.user.id)
@@ -181,7 +181,7 @@ async function updateMyAvatarColor(req, res, next) {
 async function updateUser(req, res, next) {
   try {
     const { name, role, status, enroll_no } = req.body;
-    const pool = await poolPromise;
+    const pool = await getPool();
     const request = pool.request().input("id", sql.Int, req.params.id);
     const setClauses = [];
 
@@ -221,7 +221,7 @@ async function updateUser(req, res, next) {
 
 async function deleteUser(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("id", sql.Int, req.params.id)
@@ -240,7 +240,7 @@ async function deleteUser(req, res, next) {
 // the team they manage.
 async function getAssignableUsers(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     if (req.user.role === "admin") {
       const result = await pool.request().query(`
@@ -263,9 +263,8 @@ async function getAssignableUsers(req, res, next) {
     const team = teamResult.recordset[0];
     if (!team) return res.json([]);
 
-    const membersResult = await pool
-      .request()
-      .input("teamId", sql.Int, team.id).query(`
+    const membersResult = await pool.request().input("teamId", sql.Int, team.id)
+      .query(`
         SELECT id, name, email, role, avatar_color AS avatarColor, team_id AS teamId
         FROM tms_users
         WHERE team_id = @teamId AND status = 'active'

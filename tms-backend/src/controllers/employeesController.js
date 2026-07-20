@@ -14,7 +14,7 @@ const { fetchAllEmployees } = require("../services/zkEmployeeService");
 // to block project/team creation entirely.
 async function getDirectory(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const usersResult = await pool
       .request()
       .query(
