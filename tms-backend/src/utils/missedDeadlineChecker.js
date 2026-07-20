@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 const { logActivity } = require("../services/activityService");
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly is plenty for a due-date check

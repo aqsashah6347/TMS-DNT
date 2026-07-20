@@ -1,11 +1,6 @@
 // tms-backend/src/services/teamChatService.js
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 
-// Visibility rule for team chat:
-//   - admin   -> every team
-//   - manager -> every team they manage, plus their own team if they
-//                also happen to be a member of one
-//   - user    -> only their own team
 function accessFilterSql(role) {
   if (role === "admin") return "1 = 1";
   if (role === "manager")
@@ -28,8 +23,6 @@ async function canAccessTeam(userId, role, teamId) {
   return ids.includes(Number(teamId));
 }
 
-// One row per team the user can see, with the last message preview and
-// how many messages since their last visit weren't sent by them.
 async function getTeamsForChat(userId, role) {
   const pool = await getPool();
   const result = await pool.request().input("userId", sql.Int, userId).query(`

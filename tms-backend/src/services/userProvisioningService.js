@@ -1,14 +1,8 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 const { fetchAllEmployees } = require("./zkEmployeeService");
 
-// Same creation shape as authController's login-time auto-create and
-// userController's createFromRoster: a random unused password hash
-// (real login always goes through the HRM API instead), an auto
-// @dnt.local email, and enroll_no linking this row back to the ZK
-// employeeCode so authController finds it on first login instead of
-// creating a duplicate.
 async function provisionUser(pool, employee) {
   const randomHash = await bcrypt.hash(
     crypto.randomBytes(20).toString("hex"),
@@ -29,11 +23,6 @@ async function provisionUser(pool, employee) {
   return inserted.recordset[0];
 }
 
-// Runs on a schedule so every active employee in the HRM system has login
-// credentials from day one — no more waiting for their first login, or an
-// admin manually running "from-roster" for them, before they show up
-// anywhere that reads from tms_users (Chat's employee dropdown, task/
-// project assignee pickers, etc).
 async function syncAllEmployeesToUsers() {
   try {
     const pool = await getPool();

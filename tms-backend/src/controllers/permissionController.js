@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 const { MODULES, ACTIONS, ROLE_PRESETS } = require("../middleware/permissions");
 
 function capitalize(word) {

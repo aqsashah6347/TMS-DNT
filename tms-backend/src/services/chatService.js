@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 
 async function saveMessage(senderId, receiverId, message, attachment = null) {
   const pool = await getPool();
@@ -40,11 +40,6 @@ async function getConversation(userId, otherUserId) {
   return result.recordset;
 }
 
-// One row per other user, with their most recent message + how many
-// of their messages to me are still unread. A chat this user "deleted"
-// (cleared_at) drops out entirely once there's no message left after that
-// point; the `archived` flag is left for the caller/client to filter on so
-// archived chats can still be shown in an "Archived" view.
 async function getConversations(userId) {
   const pool = await getPool();
   const result = await pool.request().input("userId", sql.Int, userId).query(`
@@ -89,7 +84,6 @@ async function markAsRead(userId, otherUserId) {
     `);
 }
 
-// Archive/unarchive a chat — only affects the requesting user's own view.
 async function setArchived(userId, otherUserId, archived) {
   const pool = await getPool();
   await pool
@@ -108,9 +102,6 @@ async function setArchived(userId, otherUserId, archived) {
     `);
 }
 
-// "Delete chat" — clears the conversation from this user's view going
-// forward. Doesn't touch the other person's copy or the stored messages;
-// a new message afterwards makes the chat reappear.
 async function clearConversation(userId, otherUserId) {
   const pool = await getPool();
   await pool
