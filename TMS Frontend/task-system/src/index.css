@@ -1026,6 +1026,7 @@
 /* Horizontal glass strip */
 .login-glass-wrapper {
   overflow: hidden;
+     border-radius: 1.75rem;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.35), 0 0 20px rgba(0, 0, 0, 0.15);
 }
 
@@ -1036,8 +1037,8 @@
   z-index: 0;
   overflow: hidden;
   isolation: isolate;
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   filter: url(#login-glass-distort);
 }
 
@@ -1837,3 +1838,50 @@
     height: 24px;
   }
 }
+.tms-loader {
+	--color: #f97316;
+	--size-dot: 10px;
+	--travel: 26px;
+ 
+	display: inline-block;
+	position: relative;
+	width: calc(var(--travel) * 2 + var(--size-dot));
+	height: var(--size-dot);
+}
+ 
+.tms-loader::before,
+.tms-loader::after {
+	content: '';
+	box-sizing: border-box;
+	position: absolute;
+	top: 0;
+	width: var(--size-dot);
+	height: var(--size-dot);
+	background-color: var(--color);
+	border-radius: 50%;
+	opacity: 0;
+	animation: tms-loader-dots 0.8s cubic-bezier(0.2, 0.32, 0, 0.87) infinite;
+}
+ 
+.tms-loader::after {
+	animation-delay: 0.3s;
+}
+ 
+@keyframes tms-loader-dots {
+	0%, 80%, 100% {
+		opacity: 0;
+	}
+ 
+	33% {
+		opacity: 1;
+	}
+ 
+	0%, 100% {
+		transform: translateX(0);
+	}
+ 
+	90% {
+		transform: translateX(var(--travel));
+	}
+}
+ 
