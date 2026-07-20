@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   UserPlus,
   Search,
@@ -42,6 +43,11 @@ const ROLE_FILTERS = [
   { key: "manager", label: "Managers" },
   { key: "user", label: "Users" },
 ];
+
+// Stable fallback so "no one is typing in this team" doesn't hand a
+// brand-new Set() to useMemo's deps every render — that made the
+// teamTypingNames memo pointless (it recomputed on every render).
+const EMPTY_TYPING_SET = new Set();
 
 function Avatar({ name, size = 32, online }) {
   return (
@@ -104,10 +110,13 @@ export default function Chat() {
     sendTeamMessage,
   } = useChatStore();
 
+  // Lets other pages (e.g. the Profile page's "View archived" button)
+  // jump straight into the Archived filter via navigate("/chat", { state: { filter: "archived" } }).
+  const location = useLocation();
   const [tab, setTab] = useState("chats");
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [chatFilter, setChatFilter] = useState("all");
+  const [chatFilter, setChatFilter] = useState(location.state?.filter || "all");
   const [teamFilter, setTeamFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
 
@@ -142,14 +151,29 @@ export default function Chat() {
       fetchTeams();
     }, 15000);
     return () => clearInterval(interval);
-  }, []);
+    // fetchConversations/fetchAvailableEmployees/fetchTeams/initSocketListeners
+    // come from the zustand store and keep a stable reference for the life
+    // of the store, so it's safe to list them without turning this into a
+    // repeating effect.
+  }, [
+    fetchAvailableEmployees,
+    fetchConversations,
+    fetchTeams,
+    initSocketListeners,
+  ]);
+
+  // Pulled out of the effect below so the dependency array only holds
+  // plain variables — a computed member expression there can't be
+  // statically checked by the linter.
+  const activeMessages = messagesByUser[activeUserId] || [];
+  const activeTeamMessages = teamMessagesByTeam[activeTeamId] || [];
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messagesByUser[activeUserId], teamMessagesByTeam[activeTeamId]]);
+  }, [activeMessages, activeTeamMessages]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -181,16 +205,13 @@ export default function Chat() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [headerMenuOpen]);
 
-  useEffect(() => {
-    setHeaderMenuOpen(false);
-  }, [activeUserId]);
-
-  // Reset the filter + search whenever the tab changes so "Unread" from
-  // Chats doesn't silently carry over and confuse the Team Chat list.
-  useEffect(() => {
+  // Tab switch also resets the filter + search so "Unread" from Chats
+  // doesn't silently carry over and confuse the Team Chat list.
+  const handleTabChange = (nextTab) => {
+    setTab(nextTab);
     setSearch("");
     setFilterOpen(false);
-  }, [tab]);
+  };
 
   const otherUsers = allUsers.filter((u) => u.id !== currentUser?.id);
   const conversationMap = new Map(conversations.map((c) => [c.userId, c]));
@@ -233,14 +254,12 @@ export default function Chat() {
     .filter((t) => (teamFilter === "unread" ? t.unreadCount > 0 : true));
 
   const activeUser = otherUsers.find((u) => u.id === activeUserId);
-  const activeMessages = messagesByUser[activeUserId] || [];
   const lastMineId = [...activeMessages]
     .reverse()
     .find((m) => m.sender_id === currentUser?.id)?.id;
 
   const activeTeam = teams.find((t) => t.id === activeTeamId);
-  const activeTeamMessages = teamMessagesByTeam[activeTeamId] || [];
-  const teamTypingUsers = teamTypingByTeam[activeTeamId] || new Set();
+  const teamTypingUsers = teamTypingByTeam[activeTeamId] || EMPTY_TYPING_SET;
   const teamTypingNames = useMemo(() => {
     if (!activeTeam) return [];
     return activeTeam.members
@@ -317,14 +336,18 @@ export default function Chat() {
   };
 
   const handlePickEmployee = (employee) => {
+    setHeaderMenuOpen(false);
     startConversation(employee.id);
     setDropdownOpen(false);
     setEmployeeSearch("");
   };
 
   const handleStartFromDirectory = (employee) => {
+    setHeaderMenuOpen(false);
     startConversation(employee.id);
     setTab("chats");
+    setSearch("");
+    setFilterOpen(false);
     setDraft("");
     setPendingFile(null);
   };
@@ -352,7 +375,7 @@ export default function Chat() {
               {TABS.map((t) => (
                 <button
                   key={t.key}
-                  onClick={() => setTab(t.key)}
+                  onClick={() => handleTabChange(t.key)}
                   className={`flex-1 text-sm font-medium rounded-lg px-2 py-2 transition-colors ${
                     tab === t.key
                       ? "bg-orange-500 text-white"
@@ -369,76 +392,79 @@ export default function Chat() {
               className="relative px-3 pt-3 pb-2 border-b border-white/10 flex items-center gap-2"
               ref={filterRef}
             >
-                <div className="flex-1 flex items-center gap-2 rounded-xl px-3 py-2.5 bg-[#2a2a2a]">
-                  <Search size={15} className="text-white/30 shrink-0" />
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder={
-                      tab === "chats"
-                        ? "Search chats..."
-                        : tab === "team"
-                          ? "Search teams..."
-                          : "Search people..."
-                    }
-                    className="flex-1 bg-transparent text-[15px] text-white placeholder-white/30 outline-none min-w-0"
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch("")}
-                      className="text-white/30 hover:text-white shrink-0"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => setFilterOpen((p) => !p)}
-                  className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center transition-colors ${
-                    filterOpen ||
-                    chatFilter !== "all" ||
-                    teamFilter !== "all" ||
-                    roleFilter !== "all"
-                      ? "bg-orange-500/20 text-orange-400"
-                      : "bg-white/5 text-white/50 hover:text-white"
-                  }`}
-                >
-                  <SlidersHorizontal size={15} />
-                </button>
-
-                {filterOpen && (
-                  <div className="absolute right-3 top-[calc(100%-4px)] z-30 w-44 rounded-2xl border border-white/10 bg-zinc-900/95 backdrop-blur-xl shadow-2xl overflow-hidden p-1.5">
-                    {(tab === "chats" ? CHAT_FILTERS : tab === "team" ? TEAM_FILTERS : ROLE_FILTERS).map(
-                      (f) => {
-                        const active =
-                          tab === "chats"
-                            ? chatFilter === f.key
-                            : tab === "team"
-                              ? teamFilter === f.key
-                              : roleFilter === f.key;
-                        return (
-                          <button
-                            key={f.key}
-                            onClick={() => {
-                              if (tab === "chats") setChatFilter(f.key);
-                              else if (tab === "team") setTeamFilter(f.key);
-                              else setRoleFilter(f.key);
-                              setFilterOpen(false);
-                            }}
-                            className={`w-full text-left text-sm rounded-xl px-3 py-2 transition-colors ${
-                              active
-                                ? "bg-orange-500/15 text-orange-400"
-                                : "text-white/70 hover:bg-white/5 hover:text-white"
-                            }`}
-                          >
-                            {f.label}
-                          </button>
-                        );
-                      },
-                    )}
-                  </div>
+              <div className="flex-1 flex items-center gap-2 rounded-xl px-3 py-2.5 bg-[#2a2a2a]">
+                <Search size={15} className="text-white/30 shrink-0" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={
+                    tab === "chats"
+                      ? "Search chats..."
+                      : tab === "team"
+                        ? "Search teams..."
+                        : "Search people..."
+                  }
+                  className="flex-1 bg-transparent text-[15px] text-white placeholder-white/30 outline-none min-w-0"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="text-white/30 hover:text-white shrink-0"
+                  >
+                    <X size={14} />
+                  </button>
                 )}
+              </div>
+
+              <button
+                onClick={() => setFilterOpen((p) => !p)}
+                className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center transition-colors ${
+                  filterOpen ||
+                  chatFilter !== "all" ||
+                  teamFilter !== "all" ||
+                  roleFilter !== "all"
+                    ? "bg-orange-500/20 text-orange-400"
+                    : "bg-white/5 text-white/50 hover:text-white"
+                }`}
+              >
+                <SlidersHorizontal size={15} />
+              </button>
+
+              {filterOpen && (
+                <div className="absolute right-3 top-[calc(100%-4px)] z-30 w-44 rounded-2xl border border-white/10 bg-zinc-900/95 backdrop-blur-xl shadow-2xl overflow-hidden p-1.5">
+                  {(tab === "chats"
+                    ? CHAT_FILTERS
+                    : tab === "team"
+                      ? TEAM_FILTERS
+                      : ROLE_FILTERS
+                  ).map((f) => {
+                    const active =
+                      tab === "chats"
+                        ? chatFilter === f.key
+                        : tab === "team"
+                          ? teamFilter === f.key
+                          : roleFilter === f.key;
+                    return (
+                      <button
+                        key={f.key}
+                        onClick={() => {
+                          if (tab === "chats") setChatFilter(f.key);
+                          else if (tab === "team") setTeamFilter(f.key);
+                          else setRoleFilter(f.key);
+                          setFilterOpen(false);
+                        }}
+                        className={`w-full text-left text-sm rounded-xl px-3 py-2 transition-colors ${
+                          active
+                            ? "bg-orange-500/15 text-orange-400"
+                            : "text-white/70 hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Chats tab: New chat launcher */}
@@ -514,7 +540,10 @@ export default function Chat() {
                     return (
                       <button
                         key={u.id}
-                        onClick={() => openConversation(u.id)}
+                        onClick={() => {
+                          setHeaderMenuOpen(false);
+                          openConversation(u.id);
+                        }}
                         className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
                           activeUserId === u.id
                             ? "bg-orange-500 text-white"
@@ -529,11 +558,14 @@ export default function Chat() {
                             </span>
                             {convo?.unreadCount > 0 && (
                               <span className="shrink-0 text-[11px] font-semibold bg-red-500 text-white rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5 shadow-[0_0_10px_rgba(239,68,68,0.6)]">
-                                {convo.unreadCount > 9 ? "9+" : convo.unreadCount}
+                                {convo.unreadCount > 9
+                                  ? "9+"
+                                  : convo.unreadCount}
                               </span>
                             )}
                           </div>
-                          {(convo?.lastMessage || convo?.lastAttachmentName) && (
+                          {(convo?.lastMessage ||
+                            convo?.lastAttachmentName) && (
                             <p
                               className={`text-sm truncate ${
                                 activeUserId === u.id
@@ -562,7 +594,10 @@ export default function Chat() {
                   visibleTeams.map((t) => (
                     <button
                       key={t.id}
-                      onClick={() => openTeamConversation(t.id)}
+                      onClick={() => {
+                        setHeaderMenuOpen(false);
+                        openTeamConversation(t.id);
+                      }}
                       className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
                         activeTeamId === t.id
                           ? "bg-orange-500 text-white"
@@ -751,7 +786,9 @@ export default function Chat() {
                             ) : (
                               <Archive size={16} />
                             )}
-                            {activeConvo?.archived ? "Unarchive chat" : "Archive chat"}
+                            {activeConvo?.archived
+                              ? "Unarchive chat"
+                              : "Archive chat"}
                           </button>
                           <button
                             onClick={handleDeleteChat}
@@ -781,9 +818,7 @@ export default function Chat() {
                 </div>
 
                 {error && (
-                  <div className="px-5 pt-2 text-sm text-red-400">
-                    {error}
-                  </div>
+                  <div className="px-5 pt-2 text-sm text-red-400">{error}</div>
                 )}
 
                 <ChatInput

@@ -12,9 +12,22 @@
 
 const BASE_TITLE = document.title;
 const FAVICON_HREF = "/favicon.svg";
+const PREF_KEY = "tms_notifications_enabled";
 
 let unreadCount = 0;
 let badgeIconPromise = null;
+
+// Persisted per-browser (there's no backend column for this yet) —
+// lets a user turn the tab bubble + desktop popups off entirely from
+// the Settings tab. Defaults to on.
+export function getNotificationsEnabled() {
+  return localStorage.getItem(PREF_KEY) !== "off";
+}
+
+export function setNotificationsEnabled(enabled) {
+  localStorage.setItem(PREF_KEY, enabled ? "on" : "off");
+  if (!enabled) clearUnread();
+}
 
 function getFaviconLink() {
   let link = document.querySelector("link[rel='icon']");
@@ -98,11 +111,13 @@ export function requestNotificationPermission() {
 }
 
 // Call this whenever a message/team message arrives over the socket.
+// - Skips everything if the user has turned notifications off.
 // - Always bumps the tab title/favicon bubble if the tab isn't the
 //   one the user is actively looking at.
 // - Also fires a desktop notification in that case, so it reaches the
 //   user even if they're in another app entirely.
 export function notifyIncomingMessage({ title, body, onClick }) {
+  if (!getNotificationsEnabled()) return;
   if (tabIsActive()) return;
 
   bumpUnread();
