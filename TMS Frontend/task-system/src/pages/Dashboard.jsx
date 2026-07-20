@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import PriorityTaskList from "../features/dashboard/components/PriorityTaskList";
-import InboxPreview from "../features/dashboard/components/InboxPreview";
+import ChatNotifications from "../Features/dashboard/components/ChatNotifications";
+import TaskAssignments from "../Features/dashboard/components/TaskAssignments";
 import OverdueTasks from "../features/dashboard/components/OverdueTasks";
 import CalendarPreview from "../features/dashboard/components/CalendarPreview";
 //import DateTimeBox from "../features/dashboard/components/DateTimeBox";
@@ -30,6 +31,8 @@ export default function Dashboard() {
   const completed = tasks.filter((t) => t.status === "done").length;
   const total = tasks.length || 1;
   const pct = Math.round((completed / total) * 100);
+
+  const activeTasksCount = tasks.filter((t) => t.status !== "done").length;
 
   const activeProjectsCount = projects.filter(
     (p) => p.status === "active",
@@ -73,21 +76,12 @@ export default function Dashboard() {
 
                 {/* Gap and margin optimized */}
                 <div className="grid grid-cols-3 gap-3 mb-4">
+                  <StatBox label="Active Tasks" value={activeTasksCount} />
                   <StatBox
-                    label="Tasks completed"
-                    value={completed}
-                    color="#2e261f"
-                  />
-                  <StatBox
-                    label="Active projects"
+                    label="Active Projects"
                     value={activeProjectsCount}
-                    color="#2e261f"
                   />
-                  <StatBox
-                    label="Overdue tasks"
-                    value={overdueCount}
-                    color="#2e261f"
-                  />
+                  <StatBox label="Overdue Tasks" value={overdueCount} />
                 </div>
               </div>
 
@@ -178,29 +172,61 @@ export default function Dashboard() {
             <h3 className="text-sm font-semibold text-white">Activity</h3>
             <button
               className="view-all-link"
-              onClick={() => navigate("/activity")} 
+              onClick={() => navigate("/activity")}
             >
               View all
             </button>
           </div>
-          <InboxPreview />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <h4 className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1.5">
+                Messages
+              </h4>
+              <ChatNotifications />
+            </div>
+            <div className="border-l border-white/10 pl-3">
+              <h4 className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1.5">
+                Task Assignments
+              </h4>
+              <TaskAssignments />
+            </div>
+          </div>
         </Card>
       </div>
     </div>
   );
 }
 
-function StatBox({ label, value, accent, color }) {
-  const valueColor = accent === "danger" ? "text-red-400" : "text-white";
+// Red-warning treatment kicks in whenever the metric isn't zero — Active
+// Tasks / Active Projects / Overdue Tasks all use this, so anything that
+// needs attention visually stands out instead of blending into the
+// neutral glass tiles.
+function StatBox({ label, value }) {
+  const isAlert = value !== 0;
+
+  if (isAlert) {
+    return (
+      <div className="rounded-2xl p-3 bg-red-500/10 border border-red-500/30">
+        <p
+          className="text-xl font-semibold text-red-400"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {value}
+        </p>
+        <p className="text-[10px] mt-0.5 leading-tight font-bold text-red-300/90">
+          {label}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="glass rounded-2xl p-3">
       <div className="glass-content">
         <p
-          className={`text-xl font-semibold ${color ? "" : valueColor}`}
-          style={{
-            fontFamily: "var(--font-display)",
-            ...(color ? { color } : {}),
-          }}
+          className="text-xl font-semibold text-white"
+          style={{ fontFamily: "var(--font-display)" }}
         >
           {value}
         </p>

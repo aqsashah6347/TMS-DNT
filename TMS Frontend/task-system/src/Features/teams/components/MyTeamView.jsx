@@ -3,24 +3,21 @@ import { useEffect } from "react";
 import { Crown, Users, Flag, Calendar, User } from "lucide-react";
 import { useTeamStore } from "../teamStore";
 
-const projectStatusBadge = {
-  planning: "glass-badge--violet",
-  active: "glass-badge--amber",
-  completed: "glass-badge--primary",
+const statusPillClass = {
+  planning: "status-pill--planning",
+  active: "status-pill--active",
+  completed: "status-pill--completed",
+  backlog: "status-pill--backlog",
+  "in progress": "status-pill--in-progress",
+  review: "status-pill--review",
+  done: "status-pill--done",
 };
 
-const priorityBadge = {
-  critical: "glass-badge--danger",
-  high: "glass-badge--amber",
-  medium: "glass-badge--violet",
-  low: "glass-badge--primary",
-};
-
-const statusLabel = {
-  backlog: "text-white/60",
-  "in progress": "text-violet-300",
-  review: "text-amber-300",
-  done: "text-emerald-300",
+const priorityTagClass = {
+  critical: "priority-tag--critical",
+  high: "priority-tag--high",
+  medium: "priority-tag--medium",
+  low: "priority-tag--low",
 };
 
 export default function MyTeamView() {
@@ -70,59 +67,55 @@ export default function MyTeamView() {
   const doneTasks = myTeamTasks.filter((t) => t.status === "done").length;
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Team info + leadership */}
-      <div className="glass glass-card">
-        <div className="glass-content flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-xl font-semibold text-white">
-                {myTeam.name}
-              </h3>
-              {myTeam.description && (
-                <p className="text-sm text-white/50 mt-1">
-                  {myTeam.description}
-                </p>
-              )}
-            </div>
-            <span className="glass-badge glass-badge--primary shrink-0">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-5 items-start">
+      {/* LEFT COLUMN — 1/3 width: department metadata + members */}
+      <div className="flex flex-col gap-5 lg:sticky lg:top-6">
+        {/* Department / manager panel */}
+        <div className="bronze-panel">
+          <div className="section-glass-header">
+            <h3 className="section-glass-header__title truncate">
+              {myTeam.name}
+            </h3>
+            <span className="status-pill status-pill--active shrink-0">
               {myTeam.members.length} member
               {myTeam.members.length === 1 ? "" : "s"}
             </span>
           </div>
-
-          <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2.5 w-fit">
-            <Crown size={15} className="text-amber-300" />
-            <span className="text-xs text-white/40">Team Manager</span>
-            <span className="text-sm text-white font-medium">
-              {myTeam.managerName || "Not assigned"}
-            </span>
+          <div className="bronze-panel__body">
+            {myTeam.description && (
+              <p className="text-sm text-silver-muted leading-relaxed">
+                {myTeam.description}
+              </p>
+            )}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 w-fit mt-4">
+              <Crown size={16} className="text-amber-dim" />
+              <span className="text-xs uppercase tracking-wide text-silver-muted">
+                Team Manager
+              </span>
+              <span className="text-sm text-white font-semibold">
+                {myTeam.managerName || "Not assigned"}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Members */}
-      <div className="glass glass-card">
-        <div className="glass-content">
-          <h4 className="glass-card__title !text-sm text-white mb-3">
-            Members
-          </h4>
-          <div className="flex flex-wrap gap-2">
+        {/* Members panel */}
+        <div className="bronze-panel">
+          <div className="section-glass-header">
+            <h4 className="section-glass-header__title">Members</h4>
+          </div>
+          <div className="bronze-panel__body flex flex-col gap-2.5">
             {myTeam.memberDetails.map((m) => (
               <div
                 key={m.id}
-                className="flex items-center gap-2 bg-white/5 rounded-full pl-1 pr-3 py-1"
+                className="flex items-center gap-3 bg-white/5 border border-white/5 rounded-xl px-3 py-2.5"
               >
-                <Avatar
-                  name={m.name}
-                  color={m.avatarColor}
-                  size={24}
-                  className="text-[10px]"
-                />
-                <span className="text-xs text-white">{m.name}</span>
-                <span className="text-xs text-white">{m.name}</span>
+                <Avatar name={m.name} color={m.avatarColor} size={34} />
+                <span className="text-sm text-white font-medium truncate flex-1">
+                  {m.name}
+                </span>
                 {m.id === myTeam.managerId && (
-                  <Crown size={11} className="text-amber-300" />
+                  <Crown size={14} className="text-amber-dim shrink-0" />
                 )}
               </div>
             ))}
@@ -130,20 +123,18 @@ export default function MyTeamView() {
         </div>
       </div>
 
-      {/* Projects & tasks dashboard */}
-      <div className="glass glass-card">
-        <div className="glass-content">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="glass-card__title !text-sm text-white !mb-0">
-              Projects &amp; Tasks
-            </h4>
-            <span className="text-xs text-white/40">
-              {doneTasks}/{myTeamTasks.length} tasks done
-            </span>
-          </div>
+      {/* RIGHT COLUMN — 2/3 width: Projects & Tasks */}
+      <div className="bronze-panel">
+        <div className="section-glass-header">
+          <h4 className="section-glass-header__title">Projects &amp; Tasks</h4>
+          <span className="text-xs text-silver-muted font-medium shrink-0">
+            {doneTasks}/{myTeamTasks.length} tasks done
+          </span>
+        </div>
 
+        <div className="bronze-panel__body">
           {myTeamProjects.length === 0 ? (
-            <p className="text-xs text-white/40 text-center py-8">
+            <p className="text-xs text-silver-muted text-center py-8">
               This team has no projects yet.
             </p>
           ) : (
@@ -158,26 +149,26 @@ export default function MyTeamView() {
                     className="rounded-xl border border-white/10 overflow-hidden"
                   >
                     <div
-                      className="flex items-center justify-between px-4 py-3 border-l-4"
-                      style={{ borderLeftColor: project.color || "#f97316" }}
+                      className="flex items-center justify-between px-4 py-3 border-l-4 bg-white/[0.03]"
+                      style={{ borderLeftColor: project.color || "#c8823f" }}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-medium text-white truncate">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-base font-semibold text-white truncate">
                           {project.name}
                         </span>
                         <span
-                          className={`glass-badge ${projectStatusBadge[project.status]}`}
+                          className={`status-pill ${statusPillClass[project.status] || "status-pill--planning"}`}
                         >
                           {project.status}
                         </span>
                       </div>
-                      <span className="text-xs text-white/40 shrink-0">
+                      <span className="text-xs text-amber-dim shrink-0 font-medium">
                         {project.progress}% complete
                       </span>
                     </div>
 
                     {tasks.length === 0 ? (
-                      <p className="text-xs text-white/40 text-center py-4 border-t border-white/5">
+                      <p className="text-xs text-silver-muted text-center py-4 border-t border-white/5">
                         No tasks in this project yet.
                       </p>
                     ) : (
@@ -185,26 +176,23 @@ export default function MyTeamView() {
                         {tasks.map((task) => (
                           <div
                             key={task.id}
-                            className="flex items-center justify-between gap-3 px-4 py-2.5"
+                            className="flex items-center justify-between gap-3 px-4 py-3"
                           >
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm text-white truncate">
+                              <p className="text-base text-white truncate mb-1">
                                 {task.title}
                               </p>
                               <span
-                                className={`status-badge capitalize ${statusLabel[task.status]}`}
+                                className={`status-pill ${statusPillClass[task.status] || "status-pill--backlog"}`}
                               >
                                 {task.status}
                               </span>
                             </div>
-                            <div className="flex items-center gap-3 shrink-0 text-white/60">
+                            <div className="flex items-center gap-3 shrink-0 text-silver-muted">
                               <span
-                                className={`glass-badge ${priorityBadge[task.priority]}`}
+                                className={`priority-tag ${priorityTagClass[task.priority] || "priority-tag--medium"}`}
                               >
-                                <Flag
-                                  size={10}
-                                  className="inline mr-1 -mt-0.5"
-                                />
+                                <Flag size={10} className="inline -mt-0.5" />
                                 {task.priority}
                               </span>
                               {task.dueDate && (

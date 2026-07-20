@@ -36,7 +36,7 @@ async function provisionUser(pool, employee) {
 // project assignee pickers, etc).
 async function syncAllEmployeesToUsers() {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const employees = await fetchAllEmployees();
 
     const existing = await pool

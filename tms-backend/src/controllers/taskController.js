@@ -83,49 +83,68 @@ async function recalcProjectProgress(pool, projectId) {
 }
 
 // GET /api/tasks?priority=&assignedTo=&search=&status=&projectId=
+// src/controllers/taskController.js — replace getAllTasks
 async function getAllTasks(req, res, next) {
   try {
     const { priority, assignedTo, search, status, projectId } = req.query;
-    const pool = await poolPromise;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(100, Number(req.query.pageSize) || 25);
+    const offset = (page - 1) * pageSize;
+
+    const pool = await getPool();
     const request = pool.request();
 
-    let query = `${JOIN_QUERY} WHERE t.deleted_at IS NULL`;
+    let whereClause = "t.deleted_at IS NULL";
 
     if (priority) {
-      query += " AND t.priority = @priority";
+      whereClause += " AND t.priority = @priority";
       request.input("priority", sql.NVarChar, priority);
     }
     if (status) {
-      query += " AND t.status = @status";
+      whereClause += " AND t.status = @status";
       request.input("status", sql.NVarChar, status);
     }
-
-    // Regular users can ONLY see tasks assigned to them — this overrides/
-    // ignores any assignedTo query param they might send, so it can't be
-    // spoofed by passing someone else's id. Admins/managers keep full
-    // visibility (managers already get their team pre-filtered elsewhere,
-    // e.g. usersApi.getAssignableUsers).
     if (req.user.role === "user") {
-      query += " AND t.assigned_to = @scopedAssignedTo";
+      whereClause += " AND t.assigned_to = @scopedAssignedTo";
       request.input("scopedAssignedTo", sql.Int, req.user.id);
     } else if (assignedTo) {
-      query += " AND t.assigned_to = @assignedTo";
+      whereClause += " AND t.assigned_to = @assignedTo";
       request.input("assignedTo", sql.Int, Number(assignedTo));
     }
-
     if (projectId) {
-      query += " AND t.project_id = @projectId";
+      whereClause += " AND t.project_id = @projectId";
       request.input("projectId", sql.Int, Number(projectId));
     }
     if (search) {
-      query += " AND t.title LIKE @search";
+      whereClause += " AND t.title LIKE @search";
       request.input("search", sql.NVarChar, `%${search}%`);
     }
 
-    query += " ORDER BY t.pinned DESC, t.due_date ASC";
+    request.input("offset", sql.Int, offset);
+    request.input("pageSize", sql.Int, pageSize);
 
-    const result = await request.query(query);
-    res.json(result.recordset.map(mapTask));
+    const dataQuery = `
+      ${JOIN_QUERY} WHERE ${whereClause}
+      ORDER BY t.pinned DESC, t.due_date ASC
+      OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
+    `;
+    const countQuery = `SELECT COUNT(*) AS total FROM tms_tasks t WHERE ${whereClause}`;
+
+    const [dataResult, countResult] = await Promise.all([
+      request.query(dataQuery),
+      pool
+        .request()
+        .input("priority", sql.NVarChar, priority || null)
+        // NOTE: mirror the same .input() calls used above for count's request
+        .query(countQuery),
+    ]);
+
+    res.json({
+      tasks: dataResult.recordset.map(mapTask),
+      page,
+      pageSize,
+      total: countResult.recordset[0].total,
+    });
   } catch (err) {
     next(err);
   }
@@ -133,7 +152,7 @@ async function getAllTasks(req, res, next) {
 
 async function getTaskById(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const task = await fetchTaskWithJoins(pool, req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
@@ -156,23 +175,26 @@ async function getTaskById(req, res, next) {
 // taskRoutes.js so "completed-log" doesn't get swallowed as a param.
 async function getCompletedLog(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const request = pool.request();
 
     let query = `
-      SELECT id, title, completed_at
-      FROM tms_tasks
-      WHERE deleted_at IS NULL AND status = 'done' AND completed_at IS NOT NULL
-    `;
+  SELECT t.id, t.title, t.completed_at, t.assigned_to, t.assigned_by,
+         u1.name AS assignedToName, u2.name AS assignedByName
+  FROM tms_tasks t
+  LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
+  LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
+  WHERE t.deleted_at IS NULL AND t.status = 'done' AND t.completed_at IS NOT NULL
+`;
 
     // Same visibility rule as getAllTasks — regular users only see their
     // own completed tasks in the log.
     if (req.user.role === "user") {
-      query += " AND assigned_to = @scopedAssignedTo";
+      query += " AND t.assigned_to = @scopedAssignedTo";
       request.input("scopedAssignedTo", sql.Int, req.user.id);
     }
 
-    query += " ORDER BY completed_at DESC";
+    query += " ORDER BY t.completed_at DESC";
 
     const result = await request.query(query);
     res.json(
@@ -180,6 +202,10 @@ async function getCompletedLog(req, res, next) {
         id: r.id,
         title: r.title,
         completedAt: r.completed_at,
+        assignedTo: r.assigned_to,
+        assignedBy: r.assigned_by,
+        assignedToName: r.assignedToName,
+        assignedByName: r.assignedByName,
       })),
     );
   } catch (err) {
@@ -208,7 +234,7 @@ async function createTask(req, res, next) {
     if (!assignedTo)
       return res.status(400).json({ message: "Assigned To is required" });
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("title", sql.NVarChar, title)
@@ -273,7 +299,7 @@ async function updateTask(req, res, next) {
   try {
     const id = req.params.id;
     const updates = req.body;
-    const pool = await poolPromise;
+    const pool = await getPool();
     // Grab the current project/status/assignee before we change anything —
     // needed to (a) recalc progress for old + new project, (b) detect a
     // done-transition for the task_completed activity, and (c) detect a
@@ -569,7 +595,7 @@ async function updateTask(req, res, next) {
 
 async function deleteTask(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     // tms_notifications.task_id has a FK to tms_tasks(id) with no cascade
     // action, so a hard delete would otherwise throw FK_notifications_task.
@@ -618,7 +644,7 @@ async function getCompletionStats(req, res, next) {
     const range = req.query.range || "7d";
     const days = parseInt(range) || 7;
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().input("days", sql.Int, days).query(`
         SELECT
           CAST(updated_at AS DATE) AS date,

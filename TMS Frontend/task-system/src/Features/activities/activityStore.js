@@ -5,6 +5,14 @@ import { getSocket } from "../../lib/socket";
 export const useActivityStore = create((set, get) => ({
   activities: [],
   loading: false,
+
+  // Separate feed for Box 1 (Action Activity) — for an admin this holds
+  // every user's self-logged actions, not just their own, so it's kept
+  // apart from `activities` (which stays "my personal notifications
+  // only," used for the Inbox box and unread badge).
+  actionActivities: [],
+  actionLoading: false,
+
   socketBound: false,
   unreadCount: 0,
 
@@ -19,6 +27,16 @@ export const useActivityStore = create((set, get) => ({
       });
     } catch {
       set({ loading: false });
+    }
+  },
+
+  fetchActionActivities: async () => {
+    set({ actionLoading: true });
+    try {
+      const actionActivities = await activityApi.getActions();
+      set({ actionActivities, actionLoading: false });
+    } catch {
+      set({ actionLoading: false });
     }
   },
 
@@ -66,6 +84,14 @@ export const useActivityStore = create((set, get) => ({
       set((state) => ({
         activities: [activity, ...state.activities],
         unreadCount: state.unreadCount + 1,
+      }));
+      // Same event also feeds Box 1. For a regular user this is always
+      // their own action; for an admin it may be anyone's — the backend
+      // only pushes into the shared "admins" room for self-logged
+      // action types, so this array never picks up task_assigned /
+      // deadline_missed noise meant for the Inbox box.
+      set((state) => ({
+        actionActivities: [activity, ...state.actionActivities],
       }));
     });
 

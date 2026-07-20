@@ -18,6 +18,36 @@ export const useTeamStore = create((set, get) => ({
   isModalOpen: false,
   editingTeam: null,
 
+  // Client-side search + filters over the already-fetched `teams` list —
+  // same pattern the header's global search already uses for teams/projects
+  // (see components/layout/header.jsx), since getAllTeams has no server-side
+  // filtering.
+  filters: { search: "", managerId: "" },
+  isFiltersModalOpen: false,
+
+  setFilters: (patch) =>
+    set((state) => ({ filters: { ...state.filters, ...patch } })),
+  clearFilters: () => set({ filters: { search: "", managerId: "" } }),
+
+  openFiltersModal: () => set({ isFiltersModalOpen: true }),
+  closeFiltersModal: () => set({ isFiltersModalOpen: false }),
+
+  getFilteredTeams: () => {
+    const { teams, filters } = get();
+    const q = filters.search.trim().toLowerCase();
+    return teams.filter((t) => {
+      const matchesSearch =
+        !q ||
+        t.name?.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q) ||
+        t.managerName?.toLowerCase().includes(q);
+      const matchesManager =
+        !filters.managerId ||
+        String(t.managerId) === String(filters.managerId);
+      return matchesSearch && matchesManager;
+    });
+  },
+
   openCreateModal: () => set({ isModalOpen: true, editingTeam: null }),
   openEditModal: (team) => set({ isModalOpen: true, editingTeam: team }),
   closeModal: () => set({ isModalOpen: false, editingTeam: null }),

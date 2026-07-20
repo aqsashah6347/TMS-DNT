@@ -32,13 +32,12 @@ const adminItems = [
 ];
 
 export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
-  const linkClass = ({ isActive }) =>
-    `flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all ${
-      isActive
-        ? "bg-orange-500/15 text-orange-400 shadow-[0_0_0_1px_rgba(249,115,22,0.35),0_0_20px_-4px_rgba(249,115,22,0.45)]"
-        : "text-white/60 hover:bg-white/10 hover:text-white hover:shadow-[0_0_12px_rgba(249,115,22,0.15)]"
-    }`;
-
+const linkClass = ({ isActive }) =>
+  `relative flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+    isActive
+      ? "bg-amber-500/10 text-amber-200"
+      : "text-white/55 hover:bg-white/5 hover:text-white"
+  }`;
   return (
     <aside
       className={`hash-nav fixed left-5 top-20 bottom-5 z-20 overflow-visible flex flex-col transition-all duration-500 ease-out ${
@@ -72,11 +71,20 @@ export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
           {navItems.map(({ to, label, icon: Icon }) => (
             <div key={to} className="relative group w-full">
               <NavLink to={to} className={linkClass}>
-                <Icon
-                  size={18}
-                  className="shrink-0 transition-all duration-200 group-hover:scale-110"
-                />
-                {expanded && <span className="truncate">{label}</span>}
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-amber-400 transition-opacity duration-200 ${
+                        isActive ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    <Icon
+                      size={18}
+                      className="shrink-0 transition-all duration-200 group-hover:scale-110"
+                    />
+                    {expanded && <span className="truncate">{label}</span>}
+                  </>
+                )}
               </NavLink>
 
               {!expanded && (
