@@ -14,7 +14,7 @@ export default function Login() {
 
   useEffect(() => {
     if (!vantaEffect.current && vantaRef.current && window.VANTA) {
-      vantaEffect.current = window.VANTA.NET({
+      vantaEffect.current = window.VANTA.GLOBE({
         el: vantaRef.current,
         mouseControls: true,
         touchControls: true,
@@ -37,7 +37,7 @@ export default function Login() {
 
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden">
-      {/* Vanta.NET animated background (full page) */}
+      {/* Vanta.GLOBE animated background (full page) */}
       <div ref={vantaRef} className="absolute inset-0 w-full h-full z-0" />
 
       {/* Hidden SVG filter driving the liquid-glass distortion */}
@@ -68,7 +68,7 @@ export default function Login() {
       </svg>
 
       {/* Vertical glass panel, pinned to the left third of the page */}
-      <div className="login-glass-wrapper absolute left-1/2 -translate-x-1/2 top-6 bottom-6 z-10 w-1/3 min-w-[360px] flex items-center justify-center">
+      <div className="login-glass-wrapper absolute left-0 top-6 bottom-6 z-10 w-1/3 min-w-[360px] flex items-center justify-center">
         <div className="login-glass-tint" />
         <div className="login-glass-shine" />
 
