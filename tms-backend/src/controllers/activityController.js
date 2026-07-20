@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 const { mapActivity, ACTION_TYPES } = require("../services/activityService");
 
 // GET /api/activities

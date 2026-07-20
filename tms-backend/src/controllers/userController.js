@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 
 // Used both by /auth/register (first-time setup) and by admins adding
 // new users from the Admin page.

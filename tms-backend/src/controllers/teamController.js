@@ -1,5 +1,5 @@
 // tms-backend/src/controllers/teamController.js
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 const { logActivity } = require("../services/activityService");
 
 function formatDate(value) {

@@ -1,4 +1,4 @@
-const { poolPromise } = require("../config/db");
+const { getPool } = require("../config/db");
 const attendanceService = require("../services/attendanceService");
 const { fetchAllEmployees } = require("../services/zkEmployeeService");
 
@@ -65,7 +65,7 @@ async function getRoster(req, res, next) {
     const [employees, logRanges, pool] = await Promise.all([
       fetchAllEmployees(),
       attendanceService.getFirstAndLastLogPerEmployeeForDate(dateStr),
-      poolPromise,
+      getPool(),
     ]);
 
     const logByCode = new Map(logRanges.map((l) => [l.enrollNo, l]));
