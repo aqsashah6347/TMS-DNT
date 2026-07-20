@@ -74,49 +74,38 @@ export default function InboxNotificationsBox({
   onMarkAllAsRead,
 }) {
   return (
-    <div
-      className="activity-noise-card h-full"
-      style={{
-        background:
-          "linear-gradient(155deg, #303034 0%, #232326 45%, #2b2b2f 75%, #1e1e21 100%)",
-      }}
-    >
-      <div className="glass-content p-4 flex flex-col h-full">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Bell size={16} className="text-orange-400" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-[3px] rounded-full bg-orange-500 text-white text-[9px] leading-[14px] text-center font-semibold">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </div>
-            <h3
-              className="text-sm text-white"
-              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-            >
-              Inbox
-            </h3>
+    <div className="bronze-panel h-full flex flex-col">
+      <div className="section-glass-header">
+        <div className="flex items-center gap-2.5">
+          <div className="relative">
+            <Bell size={18} className="text-amber-dim" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-[4px] rounded-full bg-amber-500 text-[#1a1210] text-[10px] leading-[16px] text-center font-semibold">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={onMarkAllAsRead}
-              className="text-[11px] text-white/50 hover:text-white transition-colors"
-            >
-              Mark all as read
-            </button>
-          )}
+          <h3 className="section-glass-header__title !text-base">Inbox</h3>
         </div>
+        {unreadCount > 0 && (
+          <button
+            onClick={onMarkAllAsRead}
+            className="text-xs text-silver-muted hover:text-white transition-colors"
+          >
+            Mark all as read
+          </button>
+        )}
+      </div>
 
+      <div className="bronze-panel__body flex-1 min-h-0 flex flex-col">
         <div className="activity-scroll flex-1 overflow-y-auto max-h-[420px] flex flex-col gap-1 pr-1">
           {loading && activities.length === 0 ? (
-            <div className="py-10 text-center text-white/40 text-xs">
+            <div className="py-10 text-center text-silver-muted text-sm">
               Loading notifications...
             </div>
           ) : activities.length === 0 ? (
-            <div className="py-10 flex flex-col items-center gap-2 text-white/40 text-xs">
-              <Bell size={22} className="text-white/20" />
+            <div className="py-10 flex flex-col items-center gap-2 text-silver-muted text-sm">
+              <Bell size={24} className="text-white/20" />
               You're all caught up
             </div>
           ) : (
@@ -175,32 +164,36 @@ export default function InboxNotificationsBox({
                 <button
                   key={a.id}
                   onClick={() => !a.read && onMarkAsRead(a.id)}
-                  className={`w-full flex items-start gap-2.5 rounded-xl px-2.5 py-2.5 text-left transition-colors ${
+                  className={`w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
                     a.read
                       ? "hover:bg-white/5 opacity-70"
                       : "bg-white/[0.04] hover:bg-white/[0.07]"
                   }`}
                 >
                   <div
-                    className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center ${meta.badge}`}
+                    className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${meta.badge}`}
                   >
-                    <Icon size={13} />
+                    <Icon size={15} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-white font-medium truncate">
+                      <span className="text-sm text-white font-medium truncate">
                         {a.title || "Notification"}
                       </span>
                       {!a.read && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                       )}
                     </div>
-                    <p className="text-[11px] text-white/50 mt-0.5 line-clamp-2">
+                    <p className="text-sm text-silver-muted mt-1 line-clamp-2">
                       {a.message}
                     </p>
                     <span
-                      className="text-[10px] text-white/30 mt-1 block"
-                      title={a.createdAt ? new Date(a.createdAt).toLocaleString() : ""}
+                      className="text-xs text-white/35 mt-1.5 block"
+                      title={
+                        a.createdAt
+                          ? new Date(a.createdAt).toLocaleString()
+                          : ""
+                      }
                     >
                       {formatRelativeTime(a.createdAt)}
                     </span>

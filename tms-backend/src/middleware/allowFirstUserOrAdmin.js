@@ -7,7 +7,7 @@ const jwt = require("jsonwebtoken");
 // Everything else gets 403'd before it ever reaches userController.register.
 async function allowFirstUserOrAdmin(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const countResult = await pool
       .request()
       .query("SELECT COUNT(*) AS count FROM tms_users");
@@ -23,12 +23,9 @@ async function allowFirstUserOrAdmin(req, res, next) {
     // Not the first user anymore — require a valid admin token.
     const header = req.headers.authorization;
     if (!header || !header.startsWith("Bearer ")) {
-      return res
-        .status(403)
-        .json({
-          message:
-            "Registration is admin-only. Log in as an admin to add users.",
-        });
+      return res.status(403).json({
+        message: "Registration is admin-only. Log in as an admin to add users.",
+      });
     }
 
     const token = header.split(" ")[1];
@@ -43,11 +40,9 @@ async function allowFirstUserOrAdmin(req, res, next) {
     req.user = decoded;
     next();
   } catch (err) {
-    return res
-      .status(403)
-      .json({
-        message: "Registration is admin-only. Log in as an admin to add users.",
-      });
+    return res.status(403).json({
+      message: "Registration is admin-only. Log in as an admin to add users.",
+    });
   }
 }
 

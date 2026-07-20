@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { connectSocket, disconnectSocket } from "../lib/socket";
 
 export const useAuthStore = create(
   persist(
@@ -12,11 +13,13 @@ export const useAuthStore = create(
       login: (userData, token) => {
         if (token) localStorage.setItem("tms_token", token);
         set({ user: userData, isAuthenticated: true });
+        connectSocket();
       },
 
       logout: () => {
         localStorage.removeItem("tms_token");
         set({ user: null, isAuthenticated: false });
+        disconnectSocket();
       },
     }),
     {

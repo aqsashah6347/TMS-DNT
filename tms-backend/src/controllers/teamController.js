@@ -9,7 +9,7 @@ function formatDate(value) {
 
 async function getAllTeams(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().query(`
       SELECT t.*, m.name AS managerName, m.id AS managerId, cu.name AS createdByName
       FROM tms_teams t
@@ -29,7 +29,7 @@ async function getAllTeams(req, res, next) {
 
 async function getMyTeam(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     const userResult = await pool
       .request()
@@ -75,7 +75,7 @@ async function createTeam(req, res, next) {
     if (!name)
       return res.status(400).json({ message: "Team name is required" });
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("name", sql.NVarChar, name)
@@ -109,7 +109,7 @@ async function createTeam(req, res, next) {
 async function updateTeam(req, res, next) {
   try {
     const { name, description, managerId, members, color } = req.body;
-    const pool = await poolPromise;
+    const pool = await getPool();
     const request = pool.request().input("id", sql.Int, req.params.id);
     const setClauses = [];
 
@@ -167,7 +167,7 @@ async function updateTeam(req, res, next) {
 
 async function deleteTeam(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const id = req.params.id;
 
     await pool

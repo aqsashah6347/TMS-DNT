@@ -173,7 +173,106 @@
     --dur-mid: 360ms;
     --dur-slow: 600ms;
   }
+/* ============================================================
+   Dark-Bronze/Gray Refactor — MyTeamView
+   Self-contained additions. Does not modify existing .glass-*
+   or .status-badge rules used elsewhere in the app.
+   ============================================================ */
 
+/* Translucent glass backdrop specifically for section headings */
+.section-glass-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(20, 20, 20, 0.45);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+}
+
+.section-glass-header__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  color: #f3ede4;
+  letter-spacing: -0.01em;
+}
+
+/* Muted secondary text — visible against dark bronze/gray, not pure gray */
+.text-silver-muted { color: #b9b2a8; }
+.text-amber-dim { color: #c9ac7c; }
+
+/* Bronze/gray card shell for the left-column panels */
+/* NEW — dark gray base box, built on your existing --color-glass-dark-md */
+.bronze-panel {
+  border-radius: var(--radius-xl);
+  background: var(--color-glass-dark-md); /* rgba(0,0,0,0.28) — same dark glass tone as .glass-dark */
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.bronze-panel__body {
+  padding: 16px 18px 18px;
+}
+
+/* Unified STATUS pill — solid, high-contrast (project status + task status) */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 7px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.status-pill--planning { background: rgba(255, 255, 255, 0.08); color: #d7d0c7; border: 1px solid rgba(255,255,255,0.1); }
+.status-pill--active,
+.status-pill--in-progress { background: #c8823f; color: #1a1210; }
+.status-pill--completed,
+.status-pill--done { background: #7fae8f; color: #10201a; }
+.status-pill--review { background: rgba(255, 210, 127, 0.2); color: #ffd27f; border: 1px solid rgba(255, 210, 127, 0.35); }
+.status-pill--backlog { background: rgba(255, 255, 255, 0.06); color: #a39a8e; border: 1px solid rgba(255,255,255,0.08); }
+
+/* Subtle-tint PRIORITY tag — visually distinct from status pills */
+.priority-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  background: transparent;
+}
+.priority-tag--critical { color: #f4a68f; border: 1px solid rgba(244, 166, 143, 0.4); }
+.priority-tag--high     { color: #e8b978; border: 1px solid rgba(232, 185, 120, 0.4); }
+.priority-tag--medium   { color: #cbb896; border: 1px solid rgba(203, 184, 150, 0.4); }
+.priority-tag--low      { color: #9fb8ad; border: 1px solid rgba(159, 184, 173, 0.4); }
+
+/* Gradient-backed initials avatar */
+.avatar-gradient {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
   /* Solid Navigation Headers */
   .hash-bar {
     background:
@@ -880,7 +979,7 @@
     filter: drop-shadow(0 0 25px #a1a1aa);
   }
 
-  .login-pill-input {
+ .login-pill-input {
     width: 100%;
     padding: 12px 22px;
     background: rgba(255, 255, 255, 0.06);
@@ -889,9 +988,9 @@
     font-size: 1rem;
     color: #fff;
     outline: none;
+    text-align: center;
     transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
   }
-
   .login-pill-input::placeholder {
     color: rgba(255, 255, 255, 0.5);
   }
@@ -924,7 +1023,79 @@
     outline: 2px solid #fb923c;
     outline-offset: 2px;
   }
+/* Horizontal glass strip */
+.login-glass-wrapper {
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.35), 0 0 20px rgba(0, 0, 0, 0.15);
+}
 
+.login-glass-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  isolation: isolate;
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  filter: url(#login-glass-distort);
+}
+
+.login-glass-tint {
+  z-index: 1;
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 20, 20, 0.2);
+  pointer-events: none;
+}
+
+.login-glass-shine {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.3),
+    inset -1px -1px 1px 1px rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+/* Grey blurred card sitting inside the glass strip, holding the inputs */
+.login-form-card {
+  border-radius: 1.5rem;
+  background: linear-gradient(
+    160deg,
+    rgba(90, 90, 96, 0.26) 0%,
+    rgba(60, 60, 65, 0.22) 55%,
+    rgba(40, 40, 44, 0.28) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(255, 142, 63, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.tms-login-heading {
+  color: rgba(255, 159, 74, 0.92);
+  text-shadow:
+    0 2px 2px rgba(0, 0, 0, 0.55),
+    0 -1px 0px rgba(255, 255, 255, 0.12);
+  letter-spacing: 0.02em;
+}
+/* Grey blurred card sitting inside the glass strip, holding the inputs */
+.login-form-card {
+  border-radius: 1.5rem;
+  background: rgba(80, 80, 85, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
   /* Widgets & Calendar Overrides */
   .tms-calendar {
     width: 100%;
@@ -943,20 +1114,22 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 40px rgba(0, 0, 0, 0.35);
   }
 
-  .calendar-top {
+ .calendar-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 6px 10px;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(194, 65, 12, 0.55) 0%, rgba(234, 88, 12, 0.45) 40%, rgba(251, 146, 60, 0.35) 100%);
+    background: #ea7c3c;
     backdrop-filter: var(--blur-md);
     -webkit-backdrop-filter: var(--blur-md);
-    border-bottom: 1px solid var(--color-glass-border);
-    box-shadow: var(--reflection-inner);
+    border-bottom: 1px solid var(--color-glass-border-bright);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -16px 18px -8px rgba(0, 0, 0, 0.25),
+      0 4px 20px rgba(251, 146, 60, 0.35);
   }
-
   .calendar-date {
     color: #ffffff;
     margin: 0;
@@ -1644,4 +1817,61 @@
     width: 24px;
     height: 24px;
   }
+}
+/* === Login Card 3D Tilt Effect === */
+.login-tilt-perspective {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.login-tilt-card {
+  position: relative;
+  transform-style: flat; /* was preserve-3d — caused the wobble/distortion */
+  backface-visibility: hidden;
+  will-change: transform;
+  transition: transform 0.25s ease-out, box-shadow 0.4s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+
+.login-tilt-card:hover {
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(251, 146, 60, 0.15);
+}
+
+/* Decorative glow — must never intercept clicks */
+.login-tilt-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none; /* fixes unclickable inputs */
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(251, 146, 60, 0.18),
+    transparent 55%
+  );
+  z-index: 0;
+}
+.login-tilt-card:hover .login-tilt-glow {
+  opacity: 1;
+}
+
+.login-tilt-card > *:not(.login-tilt-glow) {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto; /* explicit — form content always interactive */
+}
+
+.login-tilt-card input:focus {
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.25);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-tilt-card { transition: none; }
 }

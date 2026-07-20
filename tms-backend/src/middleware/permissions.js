@@ -36,7 +36,7 @@ const ROLE_PRESETS = {
 async function getEffectiveActions(userId, role, module) {
   if (role === "admin") return [...ACTIONS];
 
-  const pool = await poolPromise;
+  const pool = await getPool();
   const result = await pool
     .request()
     .input("userId", sql.Int, userId)

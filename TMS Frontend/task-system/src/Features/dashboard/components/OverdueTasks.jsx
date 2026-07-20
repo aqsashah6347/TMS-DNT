@@ -18,7 +18,7 @@ export default function OverdueTasks() {
   if (overdueTasks.length === 0)
     return (
       <p className="text-sm text-white/40">
-        Nothing overdue — you're on track 🎉
+        Nothing overdue — you're on track!
       </p>
     );
 

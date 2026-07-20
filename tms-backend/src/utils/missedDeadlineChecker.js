@@ -5,7 +5,7 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly is plenty for a due-date che
 
 async function checkMissedDeadlines() {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().query(`
       SELECT t.id, t.title, t.assigned_to, t.due_date
       FROM tms_tasks t

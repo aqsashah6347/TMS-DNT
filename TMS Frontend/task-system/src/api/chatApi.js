@@ -26,9 +26,36 @@ export const chatApi = {
   uploadFile: async (file) => {
     const formData = new FormData();
     formData.append("file", file);
+    // axiosInstance defaults Content-Type to application/json for every
+    // request — explicitly clearing it here lets the browser set
+    // multipart/form-data with the correct boundary itself. Without this
+    // the request body never parses on the server and multer sees no file.
     const res = await axiosInstance.post("/upload/chat", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": undefined },
     });
     return res.data; // { url, name, type, size }
+  },
+
+  archiveConversation: async (userId, archived) => {
+    const res = await axiosInstance.patch(`/chat/${userId}/archive`, {
+      archived,
+    });
+    return res.data;
+  },
+
+  deleteConversation: async (userId) => {
+    const res = await axiosInstance.delete(`/chat/${userId}`);
+    return res.data;
+  },
+
+  // ---------- Team (group) chat ----------
+  getTeams: async () => {
+    const res = await axiosInstance.get("/chat/teams");
+    return res.data;
+  },
+
+  getTeamMessages: async (teamId) => {
+    const res = await axiosInstance.get(`/chat/teams/${teamId}/messages`);
+    return res.data;
   },
 };
