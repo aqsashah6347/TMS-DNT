@@ -1061,53 +1061,60 @@
 }
 
 /* Grey blurred card sitting inside the glass strip, holding the inputs */
-/* Transparent glassmorphism login card — Dreams Network orange theme */
 .login-form-card {
   border-radius: 1.5rem;
-  position: relative;
   background: linear-gradient(
-    135deg,
-    rgba(255, 140, 0, 0.1) 0%,
-    rgba(255, 255, 255, 0.05) 45%,
-    rgba(20, 20, 20, 0.25) 100%
+    160deg,
+    rgba(90, 90, 96, 0.26) 0%,
+    rgba(60, 60, 65, 0.22) 55%,
+    rgba(40, 40, 44, 0.28) 100%
   );
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.28),
-    0 0 36px rgba(251, 146, 60, 0.16),
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(255, 142, 63, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
-  overflow: hidden;
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  position: relative;
 }
 
-/* Soft top-edge reflection sheen, like light catching glass */
-.login-form-card::after {
-  content: "";
+.login-form-card::before {
+  content: '';
   position: absolute;
   inset: 0;
-  border-radius: inherit;
+  border-radius: 1.5rem;
+  padding: 1px;
   background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    rgba(255, 255, 255, 0) 40%
+    135deg,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 142, 63, 0.15) 40%,
+    rgba(255, 255, 255, 0.05) 100%
   );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
   pointer-events: none;
-  z-index: 0;
 }
-
-.login-form-card > * {
-  position: relative;
-  z-index: 1;
-}
-
 .tms-login-heading {
   color: rgba(255, 159, 74, 0.92);
   text-shadow:
     0 2px 2px rgba(0, 0, 0, 0.55),
     0 -1px 0px rgba(255, 255, 255, 0.12);
   letter-spacing: 0.02em;
+}
+/* Grey blurred card sitting inside the glass strip, holding the inputs */
+.login-form-card {
+  border-radius: 1.5rem;
+  background: rgba(80, 80, 85, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
   /* Widgets & Calendar Overrides */
   .tms-calendar {
@@ -1831,65 +1838,6 @@
     height: 24px;
   }
 }
-<<<<<<< HEAD
-/* === Login Card 3D Tilt Effect === */
-.login-tilt-perspective {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-
-.login-tilt-card {
-  position: relative;
-  transform-style: flat; /* was preserve-3d — caused the wobble/distortion */
-  backface-visibility: hidden;
-  will-change: transform;
-  transition: transform 0.25s ease-out, box-shadow 0.4s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  pointer-events: auto;
-}
-
-.login-tilt-card:hover {
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.45),
-    0 0 40px rgba(251, 146, 60, 0.15);
-}
-
-/* Decorative glow — must never intercept clicks */
-.login-tilt-glow {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none; /* fixes unclickable inputs */
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  background: radial-gradient(
-    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    rgba(251, 146, 60, 0.18),
-    transparent 55%
-  );
-  z-index: 0;
-}
-.login-tilt-card:hover .login-tilt-glow {
-  opacity: 1;
-}
-
-.login-tilt-card > *:not(.login-tilt-glow) {
-  position: relative;
-  z-index: 1;
-  pointer-events: auto; /* explicit — form content always interactive */
-}
-
-.login-tilt-card input:focus {
-  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.25);
-  transition: box-shadow 0.25s ease, border-color 0.25s ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .login-tilt-card { transition: none; }
-}
-=======
 .tms-loader {
 	--color: #f97316;
 	--size-dot: 10px;
@@ -1936,5 +1884,3 @@
 		transform: translateX(var(--travel));
 	}
 }
- 
->>>>>>> 4a0af67341032e7595a80d63e814b7a25dc140bb

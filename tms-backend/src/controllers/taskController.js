@@ -92,36 +92,43 @@ async function getAllTasks(req, res, next) {
     const offset = (page - 1) * pageSize;
 
     const pool = await getPool();
-    const request = pool.request();
+    const dataRequest = pool.request();
+    const countRequest = pool.request();
 
     let whereClause = "t.deleted_at IS NULL";
 
     if (priority) {
       whereClause += " AND t.priority = @priority";
-      request.input("priority", sql.NVarChar, priority);
+      dataRequest.input("priority", sql.NVarChar, priority);
+      countRequest.input("priority", sql.NVarChar, priority);
     }
     if (status) {
       whereClause += " AND t.status = @status";
-      request.input("status", sql.NVarChar, status);
+      dataRequest.input("status", sql.NVarChar, status);
+      countRequest.input("status", sql.NVarChar, status);
     }
     if (req.user.role === "user") {
       whereClause += " AND t.assigned_to = @scopedAssignedTo";
-      request.input("scopedAssignedTo", sql.Int, req.user.id);
+      dataRequest.input("scopedAssignedTo", sql.Int, req.user.id);
+      countRequest.input("scopedAssignedTo", sql.Int, req.user.id);
     } else if (assignedTo) {
       whereClause += " AND t.assigned_to = @assignedTo";
-      request.input("assignedTo", sql.Int, Number(assignedTo));
+      dataRequest.input("assignedTo", sql.Int, Number(assignedTo));
+      countRequest.input("assignedTo", sql.Int, Number(assignedTo));
     }
     if (projectId) {
       whereClause += " AND t.project_id = @projectId";
-      request.input("projectId", sql.Int, Number(projectId));
+      dataRequest.input("projectId", sql.Int, Number(projectId));
+      countRequest.input("projectId", sql.Int, Number(projectId));
     }
     if (search) {
       whereClause += " AND t.title LIKE @search";
-      request.input("search", sql.NVarChar, `%${search}%`);
+      dataRequest.input("search", sql.NVarChar, `%${search}%`);
+      countRequest.input("search", sql.NVarChar, `%${search}%`);
     }
 
-    request.input("offset", sql.Int, offset);
-    request.input("pageSize", sql.Int, pageSize);
+    dataRequest.input("offset", sql.Int, offset);
+    dataRequest.input("pageSize", sql.Int, pageSize);
 
     const dataQuery = `
       ${JOIN_QUERY} WHERE ${whereClause}
@@ -131,12 +138,8 @@ async function getAllTasks(req, res, next) {
     const countQuery = `SELECT COUNT(*) AS total FROM tms_tasks t WHERE ${whereClause}`;
 
     const [dataResult, countResult] = await Promise.all([
-      request.query(dataQuery),
-      pool
-        .request()
-        .input("priority", sql.NVarChar, priority || null)
-        // NOTE: mirror the same .input() calls used above for count's request
-        .query(countQuery),
+      dataRequest.query(dataQuery),
+      countRequest.query(countQuery),
     ]);
 
     res.json({

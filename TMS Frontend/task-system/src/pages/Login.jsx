@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getRandomQuote } from "quote-lib";
-import LoginForm from "../Features/auth/LoginForm";
-import LoginTiltCard from "../Features/auth/LoginTiltCard";
+import LoginForm from "../features/auth/LoginForm";
 
 export default function Login() {
   const [quote, setQuote] = useState({ text: "", author: "" });
@@ -68,13 +67,13 @@ export default function Login() {
         </filter>
       </svg>
 
-      {/* Vertical glass panel, pinned to the center of the page */}
+      {/* Vertical glass panel, pinned to the left third of the page */}
       <div className="login-glass-wrapper absolute left-1/2 -translate-x-1/2 top-6 bottom-6 z-10 w-1/3 min-w-[360px] flex items-center justify-center">
         <div className="login-glass-tint" />
         <div className="login-glass-shine" />
 
-        {/* Card holding the form */}
-        <LoginTiltCard className="relative z-[3] w-[420px] max-w-[85%] flex flex-col items-center gap-8 p-10">
+        {/* Grey blurred card holding the form, centered in the panel */}
+        <div className="relative z-[3] w-[420px] max-w-[85%] flex flex-col items-center gap-8 p-10">
           <div className="flex flex-col items-center gap-3">
             <img
               src="/dreamsLogo.png"
@@ -92,10 +91,10 @@ export default function Login() {
           <div className="w-full">
             <LoginForm />
           </div>
-        </LoginTiltCard>
+        </div>
       </div>
 
-      {/* Motivational quote — bottom right */}
+      {/* Motivational quote — bottom right, outside the strip */}
       <div className="absolute bottom-8 right-8 w-96 z-10 text-right">
         <p className="text-lg leading-8 text-white/85 italic">"{quote.text}"</p>
         {quote.author && (
