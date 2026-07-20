@@ -3,7 +3,7 @@ const { logActivity } = require("../services/activityService");
 
 async function getAllProjects(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().query(`
       SELECT p.*, t.name AS teamName, cu.name AS createdByName
       FROM tms_projects p
@@ -46,7 +46,7 @@ async function notifyTeamAssigned(
 
 async function getProjectById(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().input("id", sql.Int, req.params.id)
       .query(`
         SELECT p.*, t.name AS teamName, cu.name AS createdByName
@@ -78,7 +78,7 @@ async function createProject(req, res, next) {
     if (!name)
       return res.status(400).json({ message: "Project name is required" });
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("name", sql.NVarChar, name)
@@ -136,7 +136,7 @@ async function updateProject(req, res, next) {
     const { name, description, teamId, status, progress, color, members } =
       req.body;
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const before = await pool
       .request()
       .input("id", sql.Int, id)
@@ -229,18 +229,18 @@ async function updateProject(req, res, next) {
 
 async function deleteProject(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const id = req.params.id;
-await pool.request().input("projectId", sql.Int, id).query(`
+    await pool.request().input("projectId", sql.Int, id).query(`
   UPDATE tms_notifications SET task_id = NULL
   WHERE task_id IN (SELECT id FROM tms_tasks WHERE project_id = @projectId)
 `);
-await pool
-  .request()
-  .input("projectId", sql.Int, id)
-  .query(
-    "UPDATE tms_notifications SET project_id = NULL WHERE project_id = @projectId",
-  );
+    await pool
+      .request()
+      .input("projectId", sql.Int, id)
+      .query(
+        "UPDATE tms_notifications SET project_id = NULL WHERE project_id = @projectId",
+      );
     await pool
       .request()
       .input("projectId", sql.Int, id)
@@ -249,7 +249,9 @@ await pool
     const result = await pool
       .request()
       .input("id", sql.Int, id)
-      .query("DELETE FROM tms_projects OUTPUT DELETED.id, DELETED.name WHERE id = @id");
+      .query(
+        "DELETE FROM tms_projects OUTPUT DELETED.id, DELETED.name WHERE id = @id",
+      );
 
     if (result.recordset.length === 0)
       return res.status(404).json({ message: "Project not found" });

@@ -91,7 +91,7 @@ async function getAllTasks(req, res, next) {
     const pageSize = Math.min(100, Number(req.query.pageSize) || 25);
     const offset = (page - 1) * pageSize;
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const request = pool.request();
 
     let whereClause = "t.deleted_at IS NULL";
@@ -132,7 +132,8 @@ async function getAllTasks(req, res, next) {
 
     const [dataResult, countResult] = await Promise.all([
       request.query(dataQuery),
-      pool.request()
+      pool
+        .request()
         .input("priority", sql.NVarChar, priority || null)
         // NOTE: mirror the same .input() calls used above for count's request
         .query(countQuery),
@@ -151,7 +152,7 @@ async function getAllTasks(req, res, next) {
 
 async function getTaskById(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const task = await fetchTaskWithJoins(pool, req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
@@ -174,10 +175,10 @@ async function getTaskById(req, res, next) {
 // taskRoutes.js so "completed-log" doesn't get swallowed as a param.
 async function getCompletedLog(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const request = pool.request();
 
-let query = `
+    let query = `
   SELECT t.id, t.title, t.completed_at, t.assigned_to, t.assigned_by,
          u1.name AS assignedToName, u2.name AS assignedByName
   FROM tms_tasks t
@@ -186,27 +187,27 @@ let query = `
   WHERE t.deleted_at IS NULL AND t.status = 'done' AND t.completed_at IS NOT NULL
 `;
 
-// Same visibility rule as getAllTasks — regular users only see their
-// own completed tasks in the log.
-if (req.user.role === "user") {
-  query += " AND t.assigned_to = @scopedAssignedTo";
-  request.input("scopedAssignedTo", sql.Int, req.user.id);
-}
+    // Same visibility rule as getAllTasks — regular users only see their
+    // own completed tasks in the log.
+    if (req.user.role === "user") {
+      query += " AND t.assigned_to = @scopedAssignedTo";
+      request.input("scopedAssignedTo", sql.Int, req.user.id);
+    }
 
-query += " ORDER BY t.completed_at DESC";
+    query += " ORDER BY t.completed_at DESC";
 
-const result = await request.query(query);
-res.json(
-  result.recordset.map((r) => ({
-    id: r.id,
-    title: r.title,
-    completedAt: r.completed_at,
-    assignedTo: r.assigned_to,
-    assignedBy: r.assigned_by,
-    assignedToName: r.assignedToName,
-    assignedByName: r.assignedByName,
-  })),
-);
+    const result = await request.query(query);
+    res.json(
+      result.recordset.map((r) => ({
+        id: r.id,
+        title: r.title,
+        completedAt: r.completed_at,
+        assignedTo: r.assigned_to,
+        assignedBy: r.assigned_by,
+        assignedToName: r.assignedToName,
+        assignedByName: r.assignedByName,
+      })),
+    );
   } catch (err) {
     next(err);
   }
@@ -233,7 +234,7 @@ async function createTask(req, res, next) {
     if (!assignedTo)
       return res.status(400).json({ message: "Assigned To is required" });
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("title", sql.NVarChar, title)
@@ -298,7 +299,7 @@ async function updateTask(req, res, next) {
   try {
     const id = req.params.id;
     const updates = req.body;
-    const pool = await poolPromise;
+    const pool = await getPool();
     // Grab the current project/status/assignee before we change anything —
     // needed to (a) recalc progress for old + new project, (b) detect a
     // done-transition for the task_completed activity, and (c) detect a
@@ -594,7 +595,7 @@ async function updateTask(req, res, next) {
 
 async function deleteTask(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     // tms_notifications.task_id has a FK to tms_tasks(id) with no cascade
     // action, so a hard delete would otherwise throw FK_notifications_task.
@@ -643,7 +644,7 @@ async function getCompletionStats(req, res, next) {
     const range = req.query.range || "7d";
     const days = parseInt(range) || 7;
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().input("days", sql.Int, days).query(`
         SELECT
           CAST(updated_at AS DATE) AS date,

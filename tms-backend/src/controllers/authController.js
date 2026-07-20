@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 const { authenticateEmployee } = require("../services/zkEmployeeService");
 
 // Turn a JS ms duration string like "10m" into minutes for DATEADD.
@@ -45,7 +45,7 @@ async function login(req, res, next) {
         .json({ message: "Employee ID and password are required" });
     }
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     let user;
 
     if (identifier.includes("@")) {
@@ -172,7 +172,7 @@ async function verifyOtp(req, res, next) {
         .json({ message: "tempToken and otp are required" });
     }
 
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("tempToken", sql.NVarChar, tempToken).query(`
@@ -224,7 +224,7 @@ async function logout(req, res) {
 
 async function getCurrentUser(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("id", sql.Int, req.user.id)

@@ -4,7 +4,7 @@ const { mapActivity, ACTION_TYPES } = require("../services/activityService");
 // GET /api/activities
 async function getAllActivities(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().input("userId", sql.Int, req.user.id)
       .query(`
         SELECT * FROM tms_notifications
@@ -24,7 +24,7 @@ async function getAllActivities(req, res, next) {
 // their own — same rows they always saw here.
 async function getActionActivities(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const isAdmin = req.user.role === "admin";
     const request = pool.request();
 
@@ -55,7 +55,7 @@ async function getActionActivities(req, res, next) {
 // PUT /api/activities/:id/read
 async function markAsRead(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("id", sql.Int, req.params.id)
@@ -76,7 +76,7 @@ async function markAsRead(req, res, next) {
 // PUT /api/activities/read-all
 async function markAllAsRead(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     await pool
       .request()
       .input("userId", sql.Int, req.user.id)

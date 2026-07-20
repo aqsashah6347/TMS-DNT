@@ -14,7 +14,7 @@ function accessFilterSql(role) {
 }
 
 async function getAccessibleTeamIds(userId, role) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const result = await pool
     .request()
     .input("userId", sql.Int, userId)
@@ -31,10 +31,8 @@ async function canAccessTeam(userId, role, teamId) {
 // One row per team the user can see, with the last message preview and
 // how many messages since their last visit weren't sent by them.
 async function getTeamsForChat(userId, role) {
-  const pool = await poolPromise;
-  const result = await pool
-    .request()
-    .input("userId", sql.Int, userId).query(`
+  const pool = await getPool();
+  const result = await pool.request().input("userId", sql.Int, userId).query(`
       SELECT
         t.id, t.name, t.color, t.manager_id AS managerId,
         (SELECT COUNT(*) FROM tms_users WHERE team_id = t.id) AS memberCount,
@@ -103,7 +101,7 @@ async function getTeamsForChat(userId, role) {
 }
 
 async function getTeamMessages(teamId) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const result = await pool.request().input("teamId", sql.Int, teamId).query(`
     SELECT
       m.id, m.team_id, m.sender_id, m.message, m.created_at,
@@ -118,7 +116,7 @@ async function getTeamMessages(teamId) {
 }
 
 async function saveTeamMessage(teamId, senderId, message, attachment = null) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   const inserted = await pool
     .request()
     .input("teamId", sql.Int, teamId)
@@ -148,7 +146,7 @@ async function saveTeamMessage(teamId, senderId, message, attachment = null) {
 }
 
 async function markTeamAsRead(teamId, userId) {
-  const pool = await poolPromise;
+  const pool = await getPool();
   await pool
     .request()
     .input("teamId", sql.Int, teamId)

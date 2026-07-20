@@ -20,11 +20,15 @@ function describeModuleChange(module, added, removed) {
   const sentences = [];
   if (added.length) {
     const verb = added.length > 1 ? "have" : "has";
-    sentences.push(`${formatActionList(added)} access ${verb} been granted on ${label}`);
+    sentences.push(
+      `${formatActionList(added)} access ${verb} been granted on ${label}`,
+    );
   }
   if (removed.length) {
     const verb = removed.length > 1 ? "have" : "has";
-    sentences.push(`${formatActionList(removed)} access ${verb} been revoked from ${label}`);
+    sentences.push(
+      `${formatActionList(removed)} access ${verb} been revoked from ${label}`,
+    );
   }
   return sentences.join("; ");
 }
@@ -36,7 +40,7 @@ function describeModuleChange(module, added, removed) {
 //   [{ userId, userName, role, overrides: { module: [actions] } }, ...]
 async function getAllPermissions(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     const usersResult = await pool
       .request()
@@ -100,7 +104,7 @@ async function togglePermission(req, res, next) {
       return res.status(400).json({ message: `Unknown action: ${action}` });
     }
 
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     const userResult = await pool
       .request()
@@ -174,7 +178,7 @@ async function setRole(req, res, next) {
       return res.status(400).json({ message: `Unknown role: ${role}` });
     }
 
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     const result = await pool
       .request()
@@ -212,7 +216,7 @@ async function batchUpdate(req, res, next) {
     const targetUserId = Number(req.params.userId);
     const { role, overrides } = req.body || {};
 
-    const pool = await poolPromise;
+    const pool = await getPool();
 
     const userResult = await pool
       .request()
@@ -236,16 +240,18 @@ async function batchUpdate(req, res, next) {
         .input("id", sql.Int, targetUserId)
         .input("role", sql.NVarChar, role)
         .query("UPDATE tms_users SET role = @role WHERE id = @id");
-      changes.push(`Role changed from ${capitalize(targetUser.role)} to ${capitalize(role)}`);
+      changes.push(
+        `Role changed from ${capitalize(targetUser.role)} to ${capitalize(role)}`,
+      );
       finalRole = role;
     }
 
     if (overrides && typeof overrides === "object") {
       for (const [module, rawActions] of Object.entries(overrides)) {
         if (!MODULES.includes(module)) continue;
-        const cleanActions = (Array.isArray(rawActions) ? rawActions : []).filter(
-          (a) => ACTIONS.includes(a),
-        );
+        const cleanActions = (
+          Array.isArray(rawActions) ? rawActions : []
+        ).filter((a) => ACTIONS.includes(a));
 
         const existingResult = await pool
           .request()
@@ -313,7 +319,7 @@ async function batchUpdate(req, res, next) {
 // GET /api/permissions/audit-log
 async function getAuditLog(req, res, next) {
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool.request().query(`
       SELECT TOP 300 a.id, a.action, a.created_at, u.name AS actorName
       FROM tms_audit_log a

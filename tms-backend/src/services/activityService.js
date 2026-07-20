@@ -35,7 +35,7 @@ async function logActivity({
   if (!userId) return null;
 
   try {
-    const pool = await poolPromise;
+    const pool = await getPool();
     const result = await pool
       .request()
       .input("userId", sql.Int, userId)
