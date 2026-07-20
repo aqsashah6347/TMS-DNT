@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require("../config/db");
+const { sql, poolPromise, getPool } = require("../config/db");
 
 // Must match the frontend's accessStore.js exactly — these are the
 // module/action names shown (and toggled) on the Access page.

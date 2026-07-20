@@ -17,6 +17,7 @@ function colorGradient(hex) {
 
 export default function ProjectCard({ project }) {
   const openProjectView = useProjectStore((s) => s.openProjectView);
+  const openEditModal = useProjectStore((s) => s.openEditModal);
   const openCreateModalForProject = useTaskStore(
     (s) => s.openCreateModalForProject,
   );
@@ -32,7 +33,8 @@ export default function ProjectCard({ project }) {
 
   function handleEditClick(e) {
     e.stopPropagation();
-    openProjectView(project);
+    // Pencil icon = direct shortcut straight into edit mode.
+    openEditModal(project);
   }
 
   function handleAddTaskClick(e) {
