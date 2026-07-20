@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
+import Loader from "../components/ui/Loader";
 
 const Login = lazy(() => import("../pages/Login"));
 const Dashboard = lazy(() => import("../pages/Dashboard"));
@@ -17,8 +18,8 @@ const Employees = lazy(() => import("../pages/Employees"));
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-full text-muted text-sm">
-      Loading...
+    <div className="flex items-center justify-center h-full">
+      <Loader label="Loading..." />
     </div>
   );
 }

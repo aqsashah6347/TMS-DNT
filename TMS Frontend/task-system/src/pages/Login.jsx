@@ -67,21 +67,25 @@ export default function Login() {
         </filter>
       </svg>
 
-      {/* Horizontal glass strip, centered vertically across the full width */}
-      <div className="login-glass-wrapper absolute left-0 right-0 top-1/2 -translate-y-1/2 z-10 w-full h-[440px] max-h-[80vh] flex items-center justify-center">
+      {/* Vertical glass panel, pinned to the left third of the page */}
+      <div className="login-glass-wrapper absolute left-1/2 -translate-x-1/2 top-6 bottom-6 z-10 w-1/3 min-w-[360px] flex items-center justify-center">
         <div className="login-glass-tint" />
         <div className="login-glass-shine" />
 
-        {/* Grey blurred card holding the form, centered in the strip */}
-        <div className="login-form-card relative z-[3] w-[420px] max-w-[90%] flex flex-col items-center gap-8 p-10">
+        {/* Grey blurred card holding the form, centered in the panel */}
+        <div className="relative z-[3] w-[420px] max-w-[85%] flex flex-col items-center gap-8 p-10">
           <div className="flex flex-col items-center gap-3">
-            <img src="/dreamsLogo.png" alt="DreamsLogo" className="w-44 h-auto" />
-          <h2
-  className="tms-login-heading text-2xl mt-2"
-  style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
->
-  TMS Login
-</h2>
+            <img
+              src="/dreamsLogo.png"
+              alt="DreamsLogo"
+              className="w-44 h-auto"
+            />
+            <h2
+              className="tms-login-heading text-2xl mt-2"
+              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+            >
+              TMS Login
+            </h2>
           </div>
 
           <div className="w-full">
@@ -92,9 +96,7 @@ export default function Login() {
 
       {/* Motivational quote — bottom right, outside the strip */}
       <div className="absolute bottom-8 right-8 w-96 z-10 text-right">
-        <p className="text-lg leading-8 text-white/85 italic">
-          "{quote.text}"
-        </p>
+        <p className="text-lg leading-8 text-white/85 italic">"{quote.text}"</p>
         {quote.author && (
           <p className="text-base text-orange-400 mt-2 font-semibold">
             — {quote.author}
