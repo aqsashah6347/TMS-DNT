@@ -9,6 +9,10 @@ import ConfettiOverlay from "./Features/tasks/components/ConfettiOverlay";
 import { connectSocket, getSocket } from "./lib/socket";
 import { useChatStore } from "./Features/chat/chatStore";
 import { useActivityStore } from "./Features/activities/activityStore";
+import {
+  requestNotificationPermission,
+  initBadgeClearOnFocus,
+} from "./lib/notify";
 
 export default function App() {
   const { user } = useAuthStore();
@@ -26,7 +30,12 @@ export default function App() {
     if (!getSocket()) connectSocket();
     useChatStore.getState().initSocketListeners();
     useActivityStore.getState().initSocketListeners();
+    requestNotificationPermission();
   }, [user]);
+
+  // App-wide, independent of login state: clears the tab title/favicon
+  // bubble as soon as the user actually looks back at this tab.
+  useEffect(() => initBadgeClearOnFocus(), []);
 
   if (isLoginPage) {
     return (

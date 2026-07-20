@@ -7,11 +7,11 @@ import {
   Bell, // was: Inbox
   MessageCircle,
   BarChart3,
-  ShieldCheck,
   KeyRound,
   IdCard,
   Settings,
   ChevronRight,
+  TrendingUp,
 } from "lucide-react";
 import Logo from "./Logo";
 
@@ -26,18 +26,18 @@ const navItems = [
 ];
 
 const adminItems = [
-  { to: "/admin", label: "Admin", icon: ShieldCheck },
+  { to: "/performance", label: "Performance", icon: TrendingUp },
   { to: "/access", label: "Manage Access", icon: KeyRound },
   { to: "/employees", label: "Employees", icon: IdCard },
 ];
 
 export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
-const linkClass = ({ isActive }) =>
-  `relative flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-    isActive
-      ? "bg-amber-500/10 text-amber-200"
-      : "text-white/55 hover:bg-white/5 hover:text-white"
-  }`;
+  const linkClass = ({ isActive }) =>
+    `relative flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+      isActive
+        ? "bg-amber-500/10 text-amber-200"
+        : "text-white/55 hover:bg-white/5 hover:text-white"
+    }`;
   return (
     <aside
       className={`hash-nav fixed left-5 top-20 bottom-5 z-20 overflow-visible flex flex-col transition-all duration-500 ease-out ${

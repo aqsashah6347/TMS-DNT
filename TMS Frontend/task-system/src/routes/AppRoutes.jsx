@@ -9,8 +9,8 @@ const Projects = lazy(() => import("../pages/Projects"));
 const Teams = lazy(() => import("../pages/Teams"));
 const ActivityLog = lazy(() => import("../pages/ActivityLog"));
 const Analytics = lazy(() => import("../pages/Analytics"));
-const Admin = lazy(() => import("../pages/Admin"));
-const Chat = lazy(() => import("../pages/Chat"));   
+const Performance = lazy(() => import("../pages/Performance"));
+const Chat = lazy(() => import("../pages/Chat"));
 const Access = lazy(() => import("../pages/Access"));
 const Settings = lazy(() => import("../pages/Settings"));
 const Employees = lazy(() => import("../pages/Employees"));
@@ -95,10 +95,10 @@ export default function AppRoutes() {
           }
         />
         <Route
-          path="/admin"
+          path="/performance"
           element={
             <ProtectedRoute adminOnly>
-              <Admin />
+              <Performance />
             </ProtectedRoute>
           }
         />
