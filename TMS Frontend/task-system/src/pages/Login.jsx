@@ -1,149 +1,91 @@
-import { useEffect, useRef, useState } from "react";
-import { getRandomQuote } from "quote-lib";
 import LoginForm from "../Features/auth/LoginForm";
-import ElectricBorder from "../components/ui/ElectricBorder";
-import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
+import tms from "../assets/tms.png";
 
 export default function Login() {
-  const [quote, setQuote] = useState({ text: "", author: "" });
-  const vantaRef = useRef(null);
-  const vantaEffect = useRef(null);
-
-  // 3D Tilt Motion Values
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  // Smooth Springs for natural 3D rotation
-  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [15, -15]), {
-    stiffness: 300,
-    damping: 30,
-  });
-  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-15, 15]), {
-    stiffness: 300,
-    damping: 30,
-  });
-
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-
-    x.set(xPct);
-    y.set(yPct);
-  };
-
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  useEffect(() => {
-    const q = getRandomQuote();
-    setQuote({ text: q.text, author: q.author });
-  }, []);
-
-  useEffect(() => {
-    if (!vantaEffect.current && vantaRef.current && window.VANTA) {
-      vantaEffect.current = window.VANTA.GLOBE({
-        el: vantaRef.current,
-        mouseControls: true,
-        touchControls: true,
-        gyroControls: false,
-        minHeight: 200.0,
-        minWidth: 200.0,
-        scale: 1.0,
-        scaleMobile: 1.0,
-        color: 0xff8e3f,
-        backgroundColor: 0x1c1e20,
-      });
-    }
-    return () => {
-      if (vantaEffect.current) {
-        vantaEffect.current.destroy();
-        vantaEffect.current = null;
-      }
-    };
-  }, []);
-
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden">
-      {/* Vanta.GLOBE animated background */}
-      <div ref={vantaRef} className="absolute inset-0 w-full h-full z-0" />
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden flex items-center justify-center bg-[#0d0c10] text-white">
+      
+      {/* Dynamic Background Glows */}
+      <div className="absolute -top-20 -left-20 w-[600px] h-[600px] bg-gradient-to-br from-[#e57d25]/25 via-[#8a3e14]/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[500px] h-[500px] bg-[#d96a21]/15 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px)`, backgroundSize: '24px 24px' }} />
 
-      {/* Dreams Logo — Top Left Corner */}
-      <div className="absolute top-4 left-4 z-20">
-        <img
-          src="/dreamsLogo.png"
-          alt="Dreams Logo"
-          className="w-56 h-auto drop-shadow-md"
-        />
-      </div>
+      {/* Snake Animation Styles */}
+      <style>{`
+        @keyframes snakeMove {
+          0% {
+            stroke-dashoffset: 0;
+          }
+          100% {
+            stroke-dashoffset: -100;
+          }
+        }
+        .snake-line {
+          stroke-dasharray: 35 65;
+          animation: snakeMove 8s linear infinite;
+          will-change: stroke-dashoffset;
+        }
+      `}</style>
 
-      {/* Login Form Container with 3D Tilt Wrapper */}
-      <div className="absolute left-0 inset-y-0 z-10 w-[38%] min-w-[440px] flex items-center justify-center [perspective:1000px]">
-        <motion.div
-          className="translate-y-2 cursor-pointer"
-          style={{
-            rotateX,
-            rotateY,
-            transformStyle: "preserve-3d",
-          }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      {/* Main Container - Exact Combined Bounding Box */}
+      <div className="relative w-[676px] h-[450px] flex items-center">
+        
+        {/* Left Side: Form Card */}
+        <div className="absolute left-0 top-[45px] w-[580px] h-[360px] rounded-[32px] bg-[#e57d25]/05 backdrop-blur-md border border-[#e57d25]/25 pt-8 pb-8 pl-12 pr-44 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(229,125,37,0.15)] flex flex-col justify-center items-start z-10">
+          
+          <h2 className="text-2xl font-bold text-white text-left mb-6 tracking-wide w-full max-w-[280px]">
+            TMS Login
+          </h2>
+
+          {/* Login Form */}
+          <LoginForm />
+        </div>
+
+        {/* Right Side: Floating Image Card */}
+        <div className="absolute right-0 top-0 w-[330px] h-[450px] rounded-[38px] overflow-hidden bg-[#0d0c10] shadow-[0_25px_60px_rgba(0,0,0,0.9)] z-20 border border-[#e57d25]/30 flex items-center justify-center flex-shrink-0">
+          <img
+            src={tms}
+            alt="tms-pic"
+            className="w-full h-full object-contain scale-110 rounded-[30px]"
+          />
+          <div className="absolute bottom-0 inset-x-0 h-20 bg-gradient-to-t from-[#e57d25]/20 to-transparent blur-md pointer-events-none" />
+        </div>
+
+        {/* Outer Snake Path Line SVG */}
+        <svg
+          className="absolute inset-0 w-[676px] h-[450px] pointer-events-none z-30 overflow-visible"
+          viewBox="0 0 676 450"
         >
-          {/* ⚡ Electric Border Wrapped Box ⚡ */}
-          <ElectricBorder
-            color="#ff8e3f"
-            speed={1.4}
-            chaos={0.25}
-            borderRadius={20}
-            style={{
-              padding: "2rem 2rem",
-              background: "transparent",
-              backdropFilter: "blur(4px)",
-              WebkitBackdropFilter: "blur(4px)",
-              filter:
-                "drop-shadow(0 0 15px rgba(255, 142, 63, 0.6)) drop-shadow(0 0 30px rgba(255, 142, 63, 0.3))",
-            }}
-          >
-            {/* Perfectly Centered Container */}
-            <div
-              className="w-[320px] flex flex-col items-center justify-center gap-5 mx-auto"
-              style={{ transform: "translateZ(30px)" }} /* Content pop-out 3D effect */
-            >
-              {/* Title */}
-              <h2
-                className="tms-login-heading text-xl md:text-2xl text-center w-full leading-tight"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-              >
-                Task Management System Login
-              </h2>
+          <path
+            pathLength="100"
+            d="
+              M 32 45 
+              L 346 45 
+              L 346 38 
+              A 38 38 0 0 1 384 0 
+              L 638 0 
+              A 38 38 0 0 1 676 38 
+              L 676 412 
+              A 38 38 0 0 1 638 450 
+              L 384 450 
+              A 38 38 0 0 1 346 412 
+              L 346 405 
+              L 32 405 
+              A 32 32 0 0 1 0 373 
+              L 0 77 
+              A 32 32 0 0 1 32 45 
+              Z
+            "
+            fill="none"
+            stroke="#e57d25"
+            strokeWidth="3"
+            strokeLinecap="round"
+            className="snake-line filter drop-shadow-[0_0_8px_#e57d25]"
+          />
+        </svg>
 
-              {/* Form */}
-              <div className="w-full">
-                <LoginForm />
-              </div>
-            </div>
-          </ElectricBorder>
-        </motion.div>
       </div>
 
-      {/* Motivational quote — Bottom Right */}
-      <div className="absolute bottom-8 right-8 w-96 z-10 text-right">
-        <p className="text-lg leading-8 text-white/85 italic">"{quote.text}"</p>
-        {quote.author && (
-          <p className="text-base text-orange-400 mt-2 font-semibold">
-            — {quote.author}
-          </p>
-        )}
-      </div>
     </div>
   );
 }
