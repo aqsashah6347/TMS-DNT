@@ -1,11 +1,46 @@
 import { useEffect, useRef, useState } from "react";
 import { getRandomQuote } from "quote-lib";
-import LoginForm from "../features/auth/LoginForm";
+import LoginForm from "../Features/auth/LoginForm";
+import ElectricBorder from "../components/ui/ElectricBorder";
+import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 
 export default function Login() {
   const [quote, setQuote] = useState({ text: "", author: "" });
   const vantaRef = useRef(null);
   const vantaEffect = useRef(null);
+
+  // 3D Tilt Motion Values
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  // Smooth Springs for natural 3D rotation
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [15, -15]), {
+    stiffness: 300,
+    damping: 30,
+  });
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-15, 15]), {
+    stiffness: 300,
+    damping: 30,
+  });
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const xPct = mouseX / width - 0.5;
+    const yPct = mouseY / height - 0.5;
+
+    x.set(xPct);
+    y.set(yPct);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
 
   useEffect(() => {
     const q = getRandomQuote();
@@ -37,64 +72,70 @@ export default function Login() {
 
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden">
-      {/* Vanta.GLOBE animated background (full page) */}
+      {/* Vanta.GLOBE animated background */}
       <div ref={vantaRef} className="absolute inset-0 w-full h-full z-0" />
 
-      {/* Hidden SVG filter driving the liquid-glass distortion */}
-      <svg style={{ display: "none" }}>
-        <filter
-          id="login-glass-distort"
-          x="0%"
-          y="0%"
-          width="100%"
-          height="100%"
-        >
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.008 0.008"
-            numOctaves="2"
-            seed="92"
-            result="noise"
-          />
-          <feGaussianBlur in="noise" stdDeviation="0.02" result="blur" />
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="blur"
-            scale="77"
-            xChannelSelector="R"
-            yChannelSelector="G"
-          />
-        </filter>
-      </svg>
-
-      {/* Vertical glass panel, pinned to the left third of the page */}
-      <div className="login-glass-wrapper absolute left-0 top-6 bottom-6 z-10 w-1/3 min-w-[360px] flex items-center justify-center">
-        <div className="login-glass-tint" />
-        <div className="login-glass-shine" />
-
-        {/* Grey blurred card holding the form, centered in the panel */}
-        <div className="relative z-[3] w-[420px] max-w-[85%] flex flex-col items-center gap-8 p-10">
-          <div className="flex flex-col items-center gap-3">
-            <img
-              src="/dreamsLogo.png"
-              alt="DreamsLogo"
-              className="w-44 h-auto"
-            />
-            <h2
-              className="tms-login-heading text-2xl mt-2"
-              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-            >
-              TMS Login
-            </h2>
-          </div>
-
-          <div className="w-full">
-            <LoginForm />
-          </div>
-        </div>
+      {/* Dreams Logo — Top Left Corner */}
+      <div className="absolute top-4 left-4 z-20">
+        <img
+          src="/dreamsLogo.png"
+          alt="Dreams Logo"
+          className="w-56 h-auto drop-shadow-md"
+        />
       </div>
 
-      {/* Motivational quote — bottom right, outside the strip */}
+      {/* Login Form Container with 3D Tilt Wrapper */}
+      <div className="absolute left-0 inset-y-0 z-10 w-[38%] min-w-[440px] flex items-center justify-center [perspective:1000px]">
+        <motion.div
+          className="translate-y-2 cursor-pointer"
+          style={{
+            rotateX,
+            rotateY,
+            transformStyle: "preserve-3d",
+          }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
+          {/* ⚡ Electric Border Wrapped Box ⚡ */}
+          <ElectricBorder
+            color="#ff8e3f"
+            speed={1.4}
+            chaos={0.25}
+            borderRadius={20}
+            style={{
+              padding: "2rem 2rem",
+              background: "transparent",
+              backdropFilter: "blur(4px)",
+              WebkitBackdropFilter: "blur(4px)",
+              filter:
+                "drop-shadow(0 0 15px rgba(255, 142, 63, 0.6)) drop-shadow(0 0 30px rgba(255, 142, 63, 0.3))",
+            }}
+          >
+            {/* Perfectly Centered Container */}
+            <div
+              className="w-[320px] flex flex-col items-center justify-center gap-5 mx-auto"
+              style={{ transform: "translateZ(30px)" }} /* Content pop-out 3D effect */
+            >
+              {/* Title */}
+              <h2
+                className="tms-login-heading text-xl md:text-2xl text-center w-full leading-tight"
+                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+              >
+                Task Management System Login
+              </h2>
+
+              {/* Form */}
+              <div className="w-full">
+                <LoginForm />
+              </div>
+            </div>
+          </ElectricBorder>
+        </motion.div>
+      </div>
+
+      {/* Motivational quote — Bottom Right */}
       <div className="absolute bottom-8 right-8 w-96 z-10 text-right">
         <p className="text-lg leading-8 text-white/85 italic">"{quote.text}"</p>
         {quote.author && (
