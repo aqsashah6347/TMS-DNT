@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require("../config/db");
+const { sql, getPool } = require("../config/db");
 
 // Weekly on-time completion rate: of the tasks that were DUE in a given
 // week, what % were marked done by the end of that week.

@@ -5,7 +5,7 @@ import Header from "./components/layout/Header";
 import Scene from "./components/layout/Scene";
 import AppRoutes from "./routes/AppRoutes";
 import { useAuthStore } from "./store/useAuthStore";
-import ConfettiOverlay from "./Features/tasks/components/ConfettiOverlay";
+//import ConfettiOverlay from "./Features/tasks/components/ConfettiOverlay";
 import { connectSocket, getSocket } from "./lib/socket";
 import { useChatStore } from "./Features/chat/chatStore";
 import { useActivityStore } from "./Features/activities/activityStore";
@@ -13,6 +13,7 @@ import {
   requestNotificationPermission,
   initBadgeClearOnFocus,
 } from "./lib/notify";
+import TaskCompleteLottie from "./Features/tasks/components/TaskCompleteLottie";
 
 export default function App() {
   const { user } = useAuthStore();
@@ -49,7 +50,7 @@ export default function App() {
   return (
     <div className="relative min-h-screen">
       <Scene />
-      <ConfettiOverlay />
+      <TaskCompleteLottie />
       <Sidebar
         isAdmin={user?.role === "admin"}
         expanded={sidebarExpanded}

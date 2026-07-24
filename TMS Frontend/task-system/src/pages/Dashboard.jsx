@@ -76,12 +76,21 @@ export default function Dashboard() {
 
                 {/* Gap and margin optimized */}
                 <div className="grid grid-cols-3 gap-3 mb-4">
-                  <StatBox label="Active Tasks" value={activeTasksCount} />
+                  <StatBox
+                    label="Active Tasks"
+                    value={activeTasksCount}
+                    variant="green"
+                  />
                   <StatBox
                     label="Active Projects"
                     value={activeProjectsCount}
+                    variant="white"
                   />
-                  <StatBox label="Overdue Tasks" value={overdueCount} />
+                  <StatBox
+                    label="Overdue Tasks"
+                    value={overdueCount}
+                    variant="overdue"
+                  />
                 </div>
               </div>
 
@@ -198,14 +207,17 @@ export default function Dashboard() {
   );
 }
 
-// Red-warning treatment kicks in whenever the metric isn't zero — Active
-// Tasks / Active Projects / Overdue Tasks all use this, so anything that
-// needs attention visually stands out instead of blending into the
-// neutral glass tiles.
-function StatBox({ label, value }) {
-  const isAlert = value !== 0;
+// Each box now has its own fixed treatment instead of the old shared
+// "red whenever the number isn't zero" rule (which made Active Tasks and
+// Active Projects red almost all the time, since they're rarely 0):
+//   - "overdue"  -> red only while overdueCount > 0, otherwise the same
+//                   neutral white style as "white" below
+//   - "green"    -> always green (Active Tasks)
+//   - "white"    -> always the plain neutral glass style (Active Projects)
+function StatBox({ label, value, variant = "white" }) {
+  const isRed = variant === "overdue" && value !== 0;
 
-  if (isAlert) {
+  if (isRed) {
     return (
       <div className="rounded-2xl p-3 bg-red-500/10 border border-red-500/30">
         <p
@@ -215,6 +227,22 @@ function StatBox({ label, value }) {
           {value}
         </p>
         <p className="text-[10px] mt-0.5 leading-tight font-bold text-red-300/90">
+          {label}
+        </p>
+      </div>
+    );
+  }
+
+  if (variant === "green") {
+    return (
+      <div className="rounded-2xl p-3 bg-green-500/10 border border-green-500/30">
+        <p
+          className="text-xl font-semibold text-green-400"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {value}
+        </p>
+        <p className="text-[10px] mt-0.5 leading-tight font-bold text-green-300/90">
           {label}
         </p>
       </div>
