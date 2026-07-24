@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Pencil, CheckCircle2, Circle } from "lucide-react";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
@@ -22,7 +22,11 @@ const emptyForm = {
   description: "",
   teamId: "",
   status: "planning",
+<<<<<<< HEAD
+  members: [],
+=======
   memberIds: [],
+>>>>>>> 24a1ae82bd5cd1a515ff75279bc95d0f61e285d8
   color: PROJECT_COLORS[0],
 };
 
@@ -32,15 +36,22 @@ const getInitialForm = (project) => ({
   description: project?.description || emptyForm.description,
   teamId: project?.teamId ? String(project.teamId) : emptyForm.teamId,
   status: project?.status || emptyForm.status,
+<<<<<<< HEAD
+  members: Array.isArray(project?.memberDetails)
+    ? project.memberDetails.map((m) => m.id)
+    : emptyForm.members,
+=======
   memberIds: Array.isArray(project?.memberDetails)
     ? project.memberDetails.map((m) => m.id)
     : emptyForm.memberIds,
+>>>>>>> 24a1ae82bd5cd1a515ff75279bc95d0f61e285d8
   color: project?.color || emptyForm.color,
 });
 
 function ProjectForm({
   editingProject,
   users,
+  teams,
   teamOptions,
   addProject,
   updateProject,
@@ -54,6 +65,17 @@ function ProjectForm({
 
   const isNew = !editingProject.id;
 
+  // Full team record (with memberDetails) for whichever team is currently
+  // selected in the dropdown — used to show that team's roster right
+  // below it, so picking a team shows who's actually in it.
+  const selectedTeam = useMemo(
+    () =>
+      form.teamId
+        ? teams.find((t) => String(t.id) === String(form.teamId))
+        : null,
+    [teams, form.teamId],
+  );
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) return;
@@ -64,7 +86,11 @@ function ProjectForm({
       teamId: form.teamId ? Number(form.teamId) : null,
       status: form.status,
       color: form.color,
+<<<<<<< HEAD
+      members: form.members,
+=======
       members: form.memberIds,
+>>>>>>> 24a1ae82bd5cd1a515ff75279bc95d0f61e285d8
     };
 
     setFormError(null);
@@ -134,9 +160,15 @@ function ProjectForm({
       </div>
 
       <ProjectMemberPicker
+<<<<<<< HEAD
+        users={selectedTeam?.memberDetails || []}
+        selectedIds={form.members}
+        onChange={(members) => setForm({ ...form, members })}
+=======
         users={users}
         selectedIds={form.memberIds}
         onChange={(memberIds) => setForm({ ...form, memberIds })}
+>>>>>>> 24a1ae82bd5cd1a515ff75279bc95d0f61e285d8
       />
 
       <div>
@@ -293,6 +325,7 @@ export default function ProjectModal() {
           key={`${editingProject.id ?? "new"}-${isModalOpen}`}
           editingProject={editingProject}
           users={users}
+          teams={teams}
           teamOptions={teamOptions}
           addProject={addProject}
           updateProject={updateProject}

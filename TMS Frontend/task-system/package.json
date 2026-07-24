@@ -8,11 +8,14 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
-  },
+  },git
   "dependencies": {
+    "@react-three/fiber": "^8.18.0",
+    "@shadergradient/react": "^2.4.20",
     "@lottiefiles/dotlottie-react": "^0.19.12",
     "@tailwindcss/vite": "^4.3.2",
     "axios": "^1.18.1",
+    "camera-controls": "^2.10.1",
     "emoji-picker-react": "^4.19.1",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.23.0",
@@ -25,6 +28,8 @@
     "recharts": "^3.9.1",
     "socket.io-client": "^4.8.3",
     "tailwindcss": "^4.3.2",
+    "three": "^0.169.0",
+    "three-stdlib": "^2.36.1",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
