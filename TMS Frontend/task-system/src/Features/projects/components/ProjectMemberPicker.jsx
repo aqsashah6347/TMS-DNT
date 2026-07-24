@@ -6,8 +6,7 @@ import { Search, Check } from "lucide-react";
 // usersApi.getAssignableUsers() (passed in as `users`) — the same
 // role-aware endpoint TaskModal already uses for "Assigned To" — so a
 // manager only ever sees their own team's members here, and an admin
-// sees everyone. Includes an "All Members" shortcut to select/deselect
-// every visible person in one click.
+// sees everyone.
 export default function ProjectMemberPicker({ users, selectedIds, onChange }) {
   const [search, setSearch] = useState("");
 
@@ -18,26 +17,12 @@ export default function ProjectMemberPicker({ users, selectedIds, onChange }) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [users, search]);
 
-  const allVisibleIds = useMemo(() => filtered.map((u) => u.id), [filtered]);
-  const allVisibleSelected =
-    allVisibleIds.length > 0 &&
-    allVisibleIds.every((id) => selectedIds.includes(id));
-
   function toggle(userId) {
     const next = selectedIds.includes(userId)
       ? selectedIds.filter((id) => id !== userId)
       : [...selectedIds, userId];
     onChange(next);
-  }
-
-  // Selects/deselects every currently-visible (i.e. search-matched) user
-  // in one go, without touching selections outside the current filter.
-  function toggleAllVisible() {
-    if (allVisibleSelected) {
-      onChange(selectedIds.filter((id) => !allVisibleIds.includes(id)));
-    } else {
-      onChange(Array.from(new Set([...selectedIds, ...allVisibleIds])));
-    }
+    setSearch("");
   }
 
   return (
@@ -59,33 +44,6 @@ export default function ProjectMemberPicker({ users, selectedIds, onChange }) {
           className="glass-input !pl-8"
         />
       </div>
-
-      <button
-        type="button"
-        onClick={toggleAllVisible}
-        disabled={allVisibleIds.length === 0}
-        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors border ${
-          allVisibleSelected
-            ? "bg-orange-400/15 border-orange-400/40"
-            : "border-white/10 hover:bg-white/5"
-        } ${allVisibleIds.length === 0 ? "opacity-40 cursor-not-allowed" : ""}`}
-      >
-        <div
-          className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center ${
-            allVisibleSelected
-              ? "bg-orange-400 border-orange-400"
-              : "border-white/30"
-          }`}
-        >
-          {allVisibleSelected && <Check size={12} className="text-white" />}
-        </div>
-        <span className="text-sm text-white flex-1">
-          All Members{search.trim() && " (matching search)"}
-        </span>
-        <span className="text-[11px] text-white/40 shrink-0">
-          {allVisibleIds.length}
-        </span>
-      </button>
 
       <div className="flex flex-col gap-1 max-h-56 overflow-y-auto border border-white/10 rounded-xl p-1.5">
         {filtered.length === 0 && (
