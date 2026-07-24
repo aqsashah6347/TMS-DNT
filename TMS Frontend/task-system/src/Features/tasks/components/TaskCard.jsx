@@ -33,6 +33,11 @@ const priorityWidth = {
 };
 
 const CARD_MIN_HEIGHT = 260;
+// Fixed card width for the list view — previously relied on w-full,
+// which stretched each card to fill the whole flex-wrap row (so only
+// one card fit per row). A fixed width lets several cards sit side by
+// side and wrap naturally.
+const CARD_WIDTH = 320;
 
 // Status pill colors — gives the top-left label the same "at a glance"
 // legibility as the priority badge, instead of dim uppercase text that
@@ -112,8 +117,8 @@ export default function TaskCard({ task }) {
 
   return (
     <div
-      className="task-carousel-shell w-full h-full"
-      style={{ minHeight: CARD_MIN_HEIGHT }}
+      className="task-carousel-shell h-full"
+      style={{ minHeight: CARD_MIN_HEIGHT, width: CARD_WIDTH }}
     >
       <div
         className="task-carousel-card"
