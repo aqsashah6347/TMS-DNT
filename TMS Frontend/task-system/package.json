@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
-  },git
+  },
   "dependencies": {
     "@react-three/fiber": "^8.18.0",
     "@shadergradient/react": "^2.4.20",
