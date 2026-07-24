@@ -1,6 +1,7 @@
 import { useState } from "react";
 import TaskCard from "./TaskCard";
 import { useTaskStore } from "../taskStore";
+import { useUIStore } from "../../../store/useUIStore";
 
 const columns = [
   { key: "backlog", label: "Backlog" },
@@ -26,6 +27,13 @@ export default function TaskKanbanView({ tasks, onTaskClick }) {
     if (!taskId) return;
     const task = tasks.find((t) => t.id === taskId);
     if (!task || task.status === columnKey) return;
+    if (columnKey === "done") {
+      useUIStore.getState().fireCompletionBubble({
+        x: e.clientX,
+        y: e.clientY,
+        color: effectiveColor(task) || "#fb923c",
+      });
+    }
     updateTask(taskId, { status: columnKey });
   }
 

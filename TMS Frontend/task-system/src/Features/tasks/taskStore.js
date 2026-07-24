@@ -152,13 +152,9 @@ loadMoreTasks: async () => {
         set({ editingTask: updated });
       }
 
-      // Centralized completion trigger — fires for BOTH the "Mark
-      // Complete" button (TaskModal's completeTask) and dragging a card
-      // into the Done column in Kanban, since both paths funnel through
-      // this single updateTask function with { status: "done" } in the
-      // patch. Refreshes the log panel too, so it's up to date if open.
+      
       if (patch.status === "done") {
-        useUIStore.getState().fireConfetti();
+        useUIStore.getState().fireConfetti(updated?.dueDate ?? null);
         get().fetchCompletedLog();
       }
 
