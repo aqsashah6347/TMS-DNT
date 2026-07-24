@@ -50,7 +50,7 @@ export default function Dashboard() {
       {/* ---- Left column (2/3 width) ---- */}
       <div className="col-span-2 flex flex-col gap-4">
         {/* Padding updated from p-8 to p-5 for height reduction */}
-        <div className="glass glass--strong rounded-[24px] p-5 cascade-in">
+        <div className="glass glass--strong rounded-[14px] p-5 cascade-in">
           <div className="glass-content flex flex-col md:flex-row gap-6 md:gap-8">
             <div className="flex-1 min-w-0 flex flex-col justify-between">
               <div>
