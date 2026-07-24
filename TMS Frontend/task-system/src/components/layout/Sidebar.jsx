@@ -35,7 +35,7 @@ export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
   const linkClass = ({ isActive }) =>
     `relative flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
       isActive
-        ? "bg-amber-500/10 text-amber-200"
+        ? "bg-[#fb923c]/10 text-[#ffd7ae]"
         : "text-white/55 hover:bg-white/5 hover:text-white"
     }`;
   return (
@@ -74,7 +74,7 @@ export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-amber-400 transition-opacity duration-200 ${
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-[#fb923c] transition-opacity duration-200 ${
                         isActive ? "opacity-100" : "opacity-0"
                       }`}
                     />
@@ -88,7 +88,7 @@ export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
               </NavLink>
 
               {!expanded && (
-                <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-orange-400/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
+                <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-[#fb923c]/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
                   {label}
                 </div>
               )}
@@ -106,7 +106,7 @@ export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
                   </NavLink>
 
                   {!expanded && (
-                    <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-orange-400/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
+                    <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-[#fb923c]/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
                       {label}
                     </div>
                   )}
@@ -124,7 +124,7 @@ export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
             </NavLink>
 
             {!expanded && (
-              <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-orange-400/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
+              <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-[#fb923c]/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
                 Profile
               </div>
             )}

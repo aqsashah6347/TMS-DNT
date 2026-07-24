@@ -167,18 +167,37 @@ export default function TaskModal() {
       ? ALL_STATUS_OPTIONS
       : ALL_STATUS_OPTIONS.filter((o) => o.value !== "done");
 
-  const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
-  const [form, setForm] = useState(() =>
-    editingTask
-      ? {
-          ...editingTask,
-          assignedTo: editingTask.assignedTo
-            ? String(editingTask.assignedTo)
-            : "",
-          color: editingTask.color || TASK_COLORS[0],
-        }
-      : { ...emptyForm, projectId: pendingProjectId || null },
-  );
+ const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
+
+ function buildInitialForm() {
+   return editingTask
+     ? {
+         ...editingTask,
+         assignedTo: editingTask.assignedTo
+           ? String(editingTask.assignedTo)
+           : "",
+         color: editingTask.color || TASK_COLORS[0],
+       }
+     : { ...emptyForm, projectId: pendingProjectId || null };
+ }
+
+ const [form, setForm] = useState(buildInitialForm);
+
+ // TaskModal is mounted once at the page level and never unmounts between
+ // opens (only the <Modal isOpen=.../> portal toggles), so the useState
+ // initializer above only runs on the very first-ever open. Rather than
+ // syncing this in a useEffect (which causes an extra render pass and
+ // fights React's rules on deriving state from props), we adjust state
+ // directly during render, per React's documented pattern: track the key
+ // we last rendered with, and if it changed, reset form synchronously.
+ // React detects this and re-renders immediately before committing, so
+ // there's no flicker and no cascading effect.
+ const [prevFormKey, setPrevFormKey] = useState(formKey);
+ if (isTaskModalOpen && formKey !== prevFormKey) {
+   setPrevFormKey(formKey);
+   setForm(buildInitialForm());
+   setFormError(null);
+ }
 
   // employee.userId links a roster row to its real tms_users account —
   // only those rows are relevant for tagging an assignable user's department.
