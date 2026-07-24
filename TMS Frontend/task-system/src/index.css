@@ -6,6 +6,14 @@
    palette only means editing the @theme block — components don't need
    to change.
    ========================================================================= */
+/* =========================================================================
+   TMS — Orange & Black Theme
+   Design tokens live in the @theme block below (Tailwind v4 CSS-first
+   config). Everything else in this file consumes those tokens through
+   var(--color-*) / var(--radius-*) / var(--spacing-*), so retuning the
+   palette only means editing the @theme block — components don't need
+   to change.
+   ========================================================================= */
 @import "tailwindcss";
 
 @theme {
@@ -680,9 +688,10 @@
      which ProjectCard still uses untouched.
      Color coding is the shell itself — a translucent, blurred tint of
      accentColor (project color, the task's own saved color, or a
-     priority fallback), a flat solid treatment (no blur/reflection),
-     tinted per task instead of neutral gray. Background/border colors
-     are set inline in TaskCard.jsx. */
+     priority fallback), same glassmorphic treatment as the rest of the
+     app's .glass cards (blur + reflection highlight), just tinted per
+     task instead of neutral white. Background/border colors are set
+     inline in TaskCard.jsx. */
   .task-carousel-shell {
     position: relative;
     display: flex;
@@ -690,15 +699,33 @@
     border-radius: 28px;
     padding: 14px;
     overflow: hidden;
-    /* Flat dark shell, independent of task/priority/project color —
-       the colorful part of the card lives on the inner card instead
-       (see .task-carousel-card below). */
-    background: #232327;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.55);
+    backdrop-filter: var(--blur-md);
+    -webkit-backdrop-filter: var(--blur-md);
+    /* Fixed dark-gray glass, independent of task/priority/project
+       color — the colorful part of the card now lives on the inner
+       pink card instead (see .task-carousel-card below). */
+    background: linear-gradient(
+      160deg,
+      rgba(58, 58, 64, 0.65) 0%,
+      rgba(28, 28, 32, 0.5) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 16px 40px -14px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
     transition:
       transform var(--dur-mid, 0.35s) var(--ease-glass, ease),
       box-shadow var(--dur-mid, 0.35s) var(--ease-glass, ease);
+  }
+
+  .task-carousel-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--reflection-top);
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 1;
   }
 
   .task-carousel-shell > .task-carousel-card,
@@ -711,19 +738,19 @@
     transform: translateY(-4px);
   }
 
-  .task-carousel-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-radius: 18px;
-    /* Dark base with a soft radial wash of accentColor, matching the
+ .task-carousel-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
+  /* Dark base with a soft radial wash of accentColor, matching the
      muted "colored inside" treatment used by .taskello-card__photo
      on ProjectCard — actual accentColor tint is applied inline in
      TaskCard.jsx so this is just the fallback if none is set. */
-    background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-  }
+  background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
 
   .task-carousel-icon {
     width: 34px;
@@ -1346,21 +1373,182 @@
     display: none !important;
   }
 
-  .tms-login-heading {
-    color: rgba(255, 159, 74, 0.92);
-    text-shadow:
-      0 2px 2px rgba(0, 0, 0, 0.55),
-      0 -1px 0px rgba(255, 255, 255, 0.12);
-    letter-spacing: 0.02em;
+.tms-login-heading {
+  color: rgba(255, 159, 74, 0.92);
+  text-shadow:
+    0 2px 2px rgba(0, 0, 0, 0.55),
+    0 -1px 0px rgba(255, 255, 255, 0.12);
+  letter-spacing: 0.02em;
+}
+
+/* Widgets & Calendar Overrides */
+.tms-calendar {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: white;
+  padding-bottom: 8px;
+  font-family: inherit;
+}
+
+.calendar-widget {
+  overflow: hidden;
+  border-radius: 16px;
+  background: #18181b;
+  border: 1px solid rgba(251, 146, 60, 0.22);
+  width: 100%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+ .calendar-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    position: relative;
+    overflow: hidden;
+    background: #ea7c3c;
+    backdrop-filter: var(--blur-md);
+    -webkit-backdrop-filter: var(--blur-md);
+    border-bottom: 1px solid var(--color-glass-border-bright);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -16px 18px -8px rgba(0, 0, 0, 0.25),
+      0 4px 20px rgba(251, 146, 60, 0.35);
   }
-  .analog-clock-box {
-    width: 140px;
-    height: 140px;
-    margin: 0 auto 12px;
-    cursor: pointer;
+  .calendar-date {
+    color: #ffffff;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   }
 
-  .analog-clock-face {
+  .calendar-time {
+    display: inline-block;
+    margin-top: 1px;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+
+  .today-btn {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    border: none;
+    border-radius: 999px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 11px;
+    transition: 0.25s;
+  }
+
+  .tms-calendar .react-calendar__navigation {
+    display: flex;
+    align-items: center;
+    margin: 2px;
+    gap: 2px;
+  }
+
+  .tms-calendar .react-calendar__navigation button {
+    border: none;
+    background: transparent;
+    color: #fb923c;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    transition: 0.25s;
+  }
+
+  .tms-calendar .react-calendar__navigation__label {
+    font-size: 10px;
+    color: white;
+    font-weight: 700;
+  }
+
+ .tms-calendar .react-calendar__month-view__weekdays {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr);
+    justify-items: center;
+    margin: 0 4px 2px;
+  }
+
+  .tms-calendar .react-calendar__month-view__weekdays__weekday {
+    color: #fdba74;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .tms-calendar .react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none;
+    cursor: default;
+  }
+
+  .tms-calendar .react-calendar__month-view__days {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr);
+    justify-items: center;
+    padding: 0 4px 4px;
+    gap: 2px;
+  }
+
+  .tms-calendar .react-calendar__tile {
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    height: 26px;
+    width: 26px;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s, transform 0.15s, box-shadow 0.2s;
+  }
+
+  .tms-calendar .react-calendar__tile:hover {
+    background: rgba(251, 146, 60, 0.18);
+    transform: scale(1.08);
+    box-shadow: 0 0 14px rgba(251, 146, 60, 0.25);
+  }
+
+  .tms-calendar .react-calendar__tile--now {
+    background: transparent !important;
+    border: 2px solid #fb923c;
+    color: #fb923c;
+    font-weight: 700;
+  }
+
+  .tms-calendar .react-calendar__tile--active {
+    background: #fb923c !important;
+    color: #18181b !important;
+    font-weight: 700;
+    box-shadow: 0 0 18px rgba(251, 146, 60, 0.45);
+  }
+
+  .tms-calendar .react-calendar__tile--active:hover {
+    background: #fdba74 !important;
+    color: #18181b !important;
+  }
+
+  .tms-calendar .react-calendar__month-view__days__day--neighboringMonth {
+    color: rgba(255, 255, 255, 0.25);
+  }
+
+  .tms-calendar button:disabled {
+    opacity: 0.35;
+  }
+
+  .tms-calendar button:focus {
+    outline: none;
+  }
+
+  /* Progress Tracking Elements */
+  .progress-track {
     width: 100%;
     height: 100%;
   }
@@ -1411,6 +1599,630 @@
   }
   .tms-calendar {
     width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: background 0.2s ease;
+  }
+
+  .inbox-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .inbox-row__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .inbox-row__msg {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.35;
+  }
+
+  .inbox-row__time {
+    font-size: 12px;
+    color: rgba(8, 8, 8, 0.4);
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-left: auto;
+    padding-left: 8px;
+  }
+
+  /* Accessibility Contrast Enhancements */
+  .task-card {
+    background: rgba(42, 36, 30, 0.6);
+    backdrop-filter: var(--blur-sm);
+    -webkit-backdrop-filter: var(--blur-sm);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .task-card.glass-card-hover:hover {
+    background: rgba(52, 44, 36, 0.72);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-badge--danger { color: #fca5a5; }
+  .glass-badge--amber { color: #fde68a; }
+  .glass-badge--violet { color: #d8c4fb; }
+  .glass-badge--primary { color: #fed7aa; }
+}
+@layer components {
+ .team-card {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--color-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow-glass);
+    transition: transform var(--dur-mid) var(--ease-glass), box-shadow var(--dur-mid);
+  }
+
+  .team-card--clickable {
+    cursor: pointer;
+  }
+
+  .team-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-float);
+  }
+
+  .team-card__inner {
+    position: relative;
+    width: 100%;
+    height: 170px;
+    background: var(--clr);
+  }
+
+  /* "image" area — glass-tinted member list, replaces the original <img> */
+  .team-card__members {
+    position: absolute;
+    inset: 0;
+  }
+
+  .team-card__members::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--clr);
+    opacity: 0.28;
+  }
+
+  .team-card__members::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(0, 0, 0, 0.5) 100%);
+    backdrop-filter: var(--blur-md);
+    -webkit-backdrop-filter: var(--blur-md);
+  }
+
+  .team-card__members-scroll {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    padding-right: 64px; /* keeps the last member row clear of the manager badge */
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .team-card__member-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-full);
+  }
+
+  .team-card__member-name {
+    font-size: var(--text-xs);
+    color: var(--color-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-card__member-enroll {
+    font-size: var(--text-2xs);
+    color: var(--color-text-subtle);
+    font-family: monospace;
+    flex-shrink: 0;
+  }
+
+  .team-card__members-empty {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+    font-style: italic;
+    padding: var(--spacing-md);
+  }
+
+  /* manager badge — sits inside the card, no negative offsets to escape on */
+  .team-card__icon {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    z-index: 3;
+    padding: 3px;
+    border-radius: 50%;
+    background: var(--clr);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    transition: transform var(--dur-fast) var(--ease-glass);
+  }
+
+  .team-card:hover .team-card__icon {
+    transform: scale(1.08);
+  }
+
+  .team-card__content {
+    padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .team-card__title {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-dark);
+    margin-bottom: var(--spacing-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-card__label {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-subtle);
+  }
+
+  .team-card__manager-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .team-card__manager-name {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .team-card__tags {
+    list-style: none;
+    margin: var(--spacing-xs) 0 var(--spacing-md);
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .team-card__tag--empty,
+  .team-card__tag--more {
+    padding: 3px 8px;
+    font-size: var(--text-2xs);
+    border-radius: var(--radius-full);
+    background: var(--color-glass-white);
+    color: var(--color-text-subtle);
+  }
+
+  .team-card__made-by {
+    font-size: var(--text-2xs);
+    color: var(--color-text-subtle);
+  }
+  /* Taskello-style task cards */
+  .taskello-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .taskello-card {
+    width: 100%;
+    border-radius: 34px;
+    background: #151515;
+    padding: 8px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+    transition: transform var(--dur-mid) var(--ease-glass), box-shadow var(--dur-mid);
+  }
+
+  .taskello-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 0 0 24px rgba(251, 146, 60, 0.15);
+  }
+
+  .taskello-card__photo {
+    position: relative;
+    height: 150px;
+    border-radius: 26px;
+    overflow: hidden;
+  }
+
+  .taskello-card__pin {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    color: #a8f08a;
+  }
+
+  .taskello-card__photo-text {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 4px 10px;
+    border-radius: 999px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+  }
+
+  .taskello-card__panel {
+    position: relative;
+    margin-top: -22px;
+    background: #1c1c1c;
+    border-radius: 22px;
+    padding: 20px 18px 16px;
+    min-height: 170px;
+  }
+
+  .taskello-card__tab {
+    position: absolute;
+    top: -16px;
+    left: 0;
+    max-width: 85%;
+    background: #1c1c1c;
+    padding: 10px 22px 10px 18px;
+    border-radius: 16px 16px 0 0;
+    clip-path: polygon(0 0, 78% 0, 100% 100%, 0 100%);
+  }
+
+  .taskello-card__tab-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .taskello-card__tab-sub {
+    color: #8a8a8a;
+    font-size: 0.75rem;
+    margin-top: 2px;
+  }
+
+  .taskello-card__desc {
+    color: #c9c9c9;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin-top: 26px;
+    margin-bottom: 14px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .taskello-card__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+
+  .taskello-card__links {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #9a9a9a;
+    font-size: 0.75rem;
+  }
+
+  .taskello-card__assignee {
+    color: #e8e8e8;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+  }
+  .taskello-card__edit-btn {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .taskello-card__edit-btn:hover {
+    background: rgba(251, 146, 60, 0.5);
+  }
+
+  .taskello-card__edit-btn.\!static {
+    position: static;
+    width: 24px;
+    height: 24px;
+  }
+}
+.tms-loader {
+	--color: #f97316;
+	--size-dot: 10px;
+	--travel: 26px;
+ 
+	display: inline-block;
+	position: relative;
+	width: calc(var(--travel) * 2 + var(--size-dot));
+	height: var(--size-dot);
+}
+ 
+.tms-loader::before,
+.tms-loader::after {
+	content: '';
+	box-sizing: border-box;
+	position: absolute;
+	top: 0;
+	width: var(--size-dot);
+	height: var(--size-dot);
+	background-color: var(--color);
+	border-radius: 50%;
+	opacity: 0;
+	animation: tms-loader-dots 0.8s cubic-bezier(0.2, 0.32, 0, 0.87) infinite;
+}
+ 
+.tms-loader::after {
+	animation-delay: 0.3s;
+}
+ 
+@keyframes tms-loader-dots {
+	0%, 80%, 100% {
+		opacity: 0;
+	}
+ 
+	33% {
+		opacity: 1;
+	}
+ 
+	0%, 100% {
+		transform: translateX(0);
+	}
+ 
+	90% {
+		transform: translateX(var(--travel));
+	}
+}
+/* Underline Input Styling */
+.login-underline-input {
+  width: 100% !important;
+  padding: 10px 32px 10px 4px !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 0 !important;
+  font-size: 0.95rem !important;
+  color: #ffffff !important;
+  outline: none !important;
+  text-align: left !important;
+  transition: border-color 0.25s ease !important;
+}
+
+/* Clear & Sharp Placeholder Colors */
+.login-underline-input::placeholder {
+  color: #ffffff !important;
+  opacity: 0.9 !important;
+}
+
+.login-underline-input::-webkit-input-placeholder {
+  color: #ffffff !important;
+  opacity: 0.9 !important;
+}
+
+.login-underline-input::-moz-placeholder {
+  color: #ffffff !important;
+  opacity: 0.9 !important;
+}
+
+.login-underline-input:-ms-input-placeholder {
+  color: #ffffff !important;
+  opacity: 0.9 !important;
+}
+
+/* Focus State (Highlight Orange Underline) */
+.login-underline-input:focus,
+.login-underline-input:focus-visible {
+  border-bottom-color: rgba(251, 146, 60, 0.8) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+/* Completion bubble landing — bumps the "Completed Log" button so it's
+   obvious a task just landed there. Color comes from the --clog-bump-color
+   custom property, set inline by CompletionBubbleOverlay right before this
+   class is applied, so the glow matches the bubble that just flew in. */
+@keyframes clog-btn-bump {
+  0% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+  30% {
+    transform: scale(1.14);
+    box-shadow:
+      0 0 0 6px color-mix(in srgb, var(--clog-bump-color, #fb923c) 35%, transparent),
+      0 0 18px 2px color-mix(in srgb, var(--clog-bump-color, #fb923c) 70%, transparent);
+  }
+  55% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+}
+.clog-btn-bump {
+  animation: clog-btn-bump 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Browser Auto-fill Overrides (Box Remove Aur Text Clear White) */
+.login-underline-input:-webkit-autofill,
+.login-underline-input:-webkit-autofill:hover,
+.login-underline-input:-webkit-autofill:focus,
+.login-underline-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-background-clip: text !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-display: "Outfit", system-ui, sans-serif;
+  --radius-card: 24px;
+
+
+  /* Glass Surface Tints & Colors */
+  --color-glass-white: rgba(255, 255, 255, 0.12);
+  --color-glass-white-md: rgba(255, 255, 255, 0.2);
+  --color-glass-white-lg: rgba(255, 255, 255, 0.3);
+  --color-glass-dark-md: rgba(0, 0, 0, 0.28);
+  --color-glass-border: rgba(255, 255, 255, 0.25);
+  --color-glass-border-subtle: rgba(255, 255, 255, 0.12);
+  --color-glass-border-bright: rgba(255, 255, 255, 0.5);
+  --color-bg: #18181b;
+  --color-dark: #ffffff;
+  --color-text-muted: rgba(255, 255, 255, 0.55);
+  --color-text-subtle: rgba(255, 255, 255, 0.35);
+  --color-surface: rgba(255, 255, 255, 0.04);
+
+  /* Accents */
+  --color-accent-primary: #fb923c;
+  --color-accent-primary-dim: #c2410c;
+  --color-accent-violet: #b490f5;
+  --color-accent-rose: #f7a8c4;
+  --color-accent-amber: #ffd27f;
+  --color-accent-lime: #a8f08a;
+  --color-accent-danger: #f87171;
+
+  /* Spacing System */
+  --spacing-2xs: 4px;
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+   --container-lg: 32rem;
+
+  /* Typography Sizing */
+  --text-2xs: 0.68rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.82rem;
+  --text-md: 0.9rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.3rem;
+
+  /* Radius System */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-card: 24px;
+  --radius-full: 9999px;
+
+  /* Z-Index System */
+  --z-index-overlay: 100;
+  --z-index-modal: 500;
+  --z-index-toast: 800;
+
+  /* Animations & Easings */
+  --animate-blob-drift: blob-drift var(--dur, 18s) ease-in-out infinite alternate;
+  --animate-pulse-badge: pulse-badge 2s ease infinite;
+  --animate-ring-spin: ring-spin 7s linear infinite;
+  --animate-ring-spin-reverse: ring-spin-reverse 11s linear infinite;
+  --animate-cascade-in: cascade-in var(--dur-slow) var(--ease-glass) both;
+
+  @keyframes blob-drift {
+    0% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(60px, -40px) scale(1.08); }
+    66% { transform: translate(-40px, 60px) scale(0.94); }
+    100% { transform: translate(30px, 30px) scale(1.04); }
+  }
+  @keyframes pulse-badge {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+  @keyframes ring-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes ring-spin-reverse {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+  }
+  @keyframes cascade-in {
+    0% { opacity: 0; transform: translateY(16px) scale(0.98); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+}
+
+/* Base Global Styles & Overrides */
+@layer base {
+  @layer base {
+  /* ...existing rules... */
+
+  /* App-wide themed scrollbar — same orange accent as .activity-scroll,
+     just applied globally instead of one component. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(251, 146, 60, 0.35) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
     background: transparent;
     border: none;
     font-family: var(--font-sans);

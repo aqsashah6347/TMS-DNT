@@ -1,15 +1,14 @@
 // src/Features/teams/components/TeamModal.jsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Pencil } from "lucide-react";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
-import { Dropdown } from "../../../components/ui/Dropdown";
 import Button from "../../../components/ui/Button";
 import { useTeamStore } from "../teamStore";
 import { useProjectStore } from "../../projects/projectStore";
 import { useAuthStore } from "../../../store/useAuthStore";
-import { usersApi } from "../../../api/usersApi";
 import TeamMemberPicker from "./TeamMemberPicker";
+import TeamManagerPicker from "./TeamManagerPicker";
 import { TEAM_COLORS, DEFAULT_TEAM_COLOR } from "../../../utils/teamColors";
 
 const emptyForm = {
@@ -42,7 +41,6 @@ function getInitialForm(team) {
 // (same pattern ProjectModal.jsx already uses for ProjectForm).
 function TeamForm({
   editingTeam,
-  users,
   closeModal,
   addTeam,
   updateTeam,
@@ -53,13 +51,6 @@ function TeamForm({
   const [formError, setFormError] = useState(null);
 
   const isEditing = Boolean(editingTeam);
-  const managerOptions = [
-    { value: "", label: "No manager yet" },
-    ...users.map((u) => ({
-      value: String(u.id),
-      label: `${u.name} (${u.role})`,
-    })),
-  ];
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -124,11 +115,9 @@ function TeamForm({
         placeholder="Optional details..."
       />
 
-      <Dropdown
-        label="Team manager"
-        value={form.managerId}
-        onChange={(v) => setForm({ ...form, managerId: v })}
-        options={managerOptions}
+      <TeamManagerPicker
+        selectedId={form.managerId}
+        onChange={(managerId) => setForm({ ...form, managerId })}
       />
 
       <TeamMemberPicker
@@ -215,16 +204,6 @@ export default function TeamModal() {
   const { user } = useAuthStore();
   const canManageTeam = user?.role === "admin";
 
-  const [users, setUsers] = useState([]);
-
-  useEffect(() => {
-    if (!isModalOpen) return;
-    usersApi
-      .getAllUsers()
-      .then(setUsers)
-      .catch(() => setUsers([]));
-  }, [isModalOpen]);
-
   const teamProjects = useMemo(
     () =>
       editingTeam?.id
@@ -253,7 +232,6 @@ export default function TeamModal() {
         <TeamForm
           key={`${editingTeam?.id ?? "new"}-${isModalOpen}`}
           editingTeam={editingTeam}
-          users={users}
           closeModal={closeModal}
           addTeam={addTeam}
           updateTeam={updateTeam}
