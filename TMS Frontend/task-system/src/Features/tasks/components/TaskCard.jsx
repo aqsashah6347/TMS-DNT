@@ -8,6 +8,8 @@ import {
   Pencil,
 } from "lucide-react";
 import { useTaskStore } from "../taskStore";
+import { useProjectStore } from "../../projects/projectStore";
+import { getProjectColor } from "../../../utils/projectColors";
 
 const priorityBadge = {
   critical: "glass-badge--danger",
