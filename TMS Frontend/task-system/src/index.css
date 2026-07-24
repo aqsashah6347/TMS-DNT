@@ -1,20 +1,27 @@
+/* =========================================================================
+   TMS — Orange & Black Theme
+   Design tokens live in the @theme block below (Tailwind v4 CSS-first
+   config). Everything else in this file consumes those tokens through
+   var(--color-*) / var(--radius-*) / var(--spacing-*), so retuning the
+   palette only means editing the @theme block — components don't need
+   to change.
+   ========================================================================= */
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Outfit", system-ui, sans-serif;
   --font-display: "Outfit", system-ui, sans-serif;
-  --radius-card: 24px;
-
+  --radius-card: 14px;
 
   /* Glass Surface Tints & Colors */
-  --color-glass-white: rgba(255, 255, 255, 0.12);
-  --color-glass-white-md: rgba(255, 255, 255, 0.2);
-  --color-glass-white-lg: rgba(255, 255, 255, 0.3);
-  --color-glass-dark-md: rgba(0, 0, 0, 0.28);
-  --color-glass-border: rgba(255, 255, 255, 0.25);
-  --color-glass-border-subtle: rgba(255, 255, 255, 0.12);
-  --color-glass-border-bright: rgba(255, 255, 255, 0.5);
-  --color-bg: #18181b;
+  --color-glass-white: #19191c; /* flat card surface (was translucent) */
+  --color-glass-white-md: #202024; /* flat hover / raised surface */
+  --color-glass-white-lg: #26262b; /* flat active / brightest surface */
+  --color-glass-dark-md: #111113; /* flat recessed / dark panel */
+  --color-glass-border: rgba(251, 146, 60, 0.28); /* orange border, no blur */
+  --color-glass-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-glass-border-bright: rgba(251, 146, 60, 0.45);
+  --color-bg: #0d0d10; /* rich near-black app background */
   --color-dark: #ffffff;
   --color-text-muted: rgba(255, 255, 255, 0.55);
   --color-text-subtle: rgba(255, 255, 255, 0.35);
@@ -38,7 +45,7 @@
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
 
-   --container-lg: 32rem;
+  --container-lg: 32rem;
 
   /* Typography Sizing */
   --text-2xs: 0.68rem;
@@ -50,14 +57,14 @@
   --text-xl: 1.3rem;
 
   /* Radius System */
-  --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
-  --radius-card: 24px;
-  --radius-full: 9999px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-card: 14px;
+  --radius-full: 9999px; /* pills/badges/buttons stay fully rounded */
 
   /* Z-Index System */
   --z-index-overlay: 100;
@@ -65,40 +72,69 @@
   --z-index-toast: 800;
 
   /* Animations & Easings */
-  --animate-blob-drift: blob-drift var(--dur, 18s) ease-in-out infinite alternate;
+  --animate-blob-drift: blob-drift var(--dur, 18s) ease-in-out infinite
+    alternate;
   --animate-pulse-badge: pulse-badge 2s ease infinite;
   --animate-ring-spin: ring-spin 7s linear infinite;
   --animate-ring-spin-reverse: ring-spin-reverse 11s linear infinite;
   --animate-cascade-in: cascade-in var(--dur-slow) var(--ease-glass) both;
 
   @keyframes blob-drift {
-    0% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(60px, -40px) scale(1.08); }
-    66% { transform: translate(-40px, 60px) scale(0.94); }
-    100% { transform: translate(30px, 30px) scale(1.04); }
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(60px, -40px) scale(1.08);
+    }
+    66% {
+      transform: translate(-40px, 60px) scale(0.94);
+    }
+    100% {
+      transform: translate(30px, 30px) scale(1.04);
+    }
   }
   @keyframes pulse-badge {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.7); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.4;
+      transform: scale(0.7);
+    }
   }
   @keyframes ring-spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
   @keyframes ring-spin-reverse {
-    from { transform: rotate(360deg); }
-    to { transform: rotate(0deg); }
+    from {
+      transform: rotate(360deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
   }
   @keyframes cascade-in {
-    0% { opacity: 0; transform: translateY(16px) scale(0.98); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0% {
+      opacity: 0;
+      transform: translateY(16px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 }
 
 /* Base Global Styles & Overrides */
 @layer base {
-  @layer base {
-  /* ...existing rules... */
+  /* App-wide themed scrollbar — orange accent throughout */
 
   /* App-wide themed scrollbar — same orange accent as .activity-scroll,
      just applied globally instead of one component. */
@@ -124,7 +160,7 @@
   *::-webkit-scrollbar-thumb:hover {
     background-color: rgba(251, 146, 60, 0.55);
   }
-}
+
   * {
     box-sizing: border-box;
   }
@@ -154,16 +190,9 @@
 @layer components {
   /* Dynamic Utilities Map Variables */
   :root {
-    --blur-sm: blur(8px);
-    --blur-md: blur(18px);
-    --blur-lg: blur(32px);
-    --blur-xl: blur(60px);
-
-    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    --shadow-float: 0 20px 60px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
-
-    --reflection-top: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
-    --reflection-inner: inset 0 1px 1px rgba(255, 255, 255, 0.45), inset 0 -1px 1px rgba(0, 0, 0, 0.1);
+    /* flat shadows — no inset glass "sheen" */
+    --shadow-glass: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --shadow-float: 0 20px 44px rgba(0, 0, 0, 0.55);
 
     --ease-glass: cubic-bezier(0.22, 0.68, 0, 1.2);
     --ease-liquid: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -173,112 +202,160 @@
     --dur-mid: 360ms;
     --dur-slow: 600ms;
   }
-/* ============================================================
+  /* ============================================================
    Dark-Bronze/Gray Refactor — MyTeamView
    Self-contained additions. Does not modify existing .glass-*
    or .status-badge rules used elsewhere in the app.
    ============================================================ */
 
-/* Translucent glass backdrop specifically for section headings */
-.section-glass-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: rgba(20, 20, 20, 0.45);
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-lg);
-  padding: 14px 18px;
-}
+  /* Translucent glass backdrop specifically for section headings */
+  .section-glass-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: rgba(20, 20, 20, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    padding: 14px 18px;
+  }
 
-.section-glass-header__title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-lg);
-  color: #f3ede4;
-  letter-spacing: -0.01em;
-}
+  .section-glass-header__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-lg);
+    color: #f3ede4;
+    letter-spacing: -0.01em;
+  }
 
-/* Muted secondary text — visible against dark bronze/gray, not pure gray */
-.text-silver-muted { color: #b9b2a8; }
-.text-amber-dim { color: #c9ac7c; }
+  /* Muted secondary text — visible against dark bronze/gray, not pure gray */
+  .text-silver-muted {
+    color: #b9b2a8;
+  }
+  .text-amber-dim {
+    color: #c9ac7c;
+  }
 
-/* Bronze/gray card shell for the left-column panels */
-/* NEW — dark gray base box, built on your existing --color-glass-dark-md */
-.bronze-panel {
-  border-radius: var(--radius-xl);
-  background: var(--color-glass-dark-md); /* rgba(0,0,0,0.28) — same dark glass tone as .glass-dark */
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  overflow: hidden;
-}
+  /* Bronze/gray card shell for the left-column panels */
+  /* NEW — dark gray base box, built on your existing --color-glass-dark-md */
+  .bronze-panel {
+    border-radius: var(--radius-xl);
+    background: var(
+      --color-glass-dark-md
+    ); /* rgba(0,0,0,0.28) — same dark glass tone as .glass-dark */
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+  }
 
-.bronze-panel__body {
-  padding: 16px 18px 18px;
-}
+  .bronze-panel__body {
+    padding: 16px 18px 18px;
+  }
 
-/* Unified STATUS pill — solid, high-contrast (project status + task status) */
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 11px;
-  border-radius: 7px;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.status-pill--planning { background: rgba(255, 255, 255, 0.08); color: #d7d0c7; border: 1px solid rgba(255,255,255,0.1); }
-.status-pill--active,
-.status-pill--in-progress { background: #c8823f; color: #1a1210; }
-.status-pill--completed,
-.status-pill--done { background: #7fae8f; color: #10201a; }
-.status-pill--review { background: rgba(255, 210, 127, 0.2); color: #ffd27f; border: 1px solid rgba(255, 210, 127, 0.35); }
-.status-pill--backlog { background: rgba(255, 255, 255, 0.06); color: #a39a8e; border: 1px solid rgba(255,255,255,0.08); }
+  /* Unified STATUS pill — solid, high-contrast (project status + task status) */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: 7px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .status-pill--planning {
+    background: rgba(255, 255, 255, 0.08);
+    color: #d7d0c7;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .status-pill--active,
+  .status-pill--in-progress {
+    background: #c8823f;
+    color: #1a1210;
+  }
+  .status-pill--completed,
+  .status-pill--done {
+    background: #7fae8f;
+    color: #10201a;
+  }
+  .status-pill--review {
+    background: rgba(255, 210, 127, 0.2);
+    color: #ffd27f;
+    border: 1px solid rgba(255, 210, 127, 0.35);
+  }
+  .status-pill--backlog {
+    background: rgba(255, 255, 255, 0.06);
+    color: #a39a8e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
 
-/* Subtle-tint PRIORITY tag — visually distinct from status pills */
-.priority-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  font-size: 0.64rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: capitalize;
-  background: transparent;
-}
-.priority-tag--critical { color: #f4a68f; border: 1px solid rgba(244, 166, 143, 0.4); }
-.priority-tag--high     { color: #e8b978; border: 1px solid rgba(232, 185, 120, 0.4); }
-.priority-tag--medium   { color: #cbb896; border: 1px solid rgba(203, 184, 150, 0.4); }
-.priority-tag--low      { color: #9fb8ad; border: 1px solid rgba(159, 184, 173, 0.4); }
+  /* Subtle-tint PRIORITY tag — visually distinct from status pills */
+  .priority-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: capitalize;
+    background: transparent;
+  }
+  .priority-tag--critical {
+    color: #f4a68f;
+    border: 1px solid rgba(244, 166, 143, 0.4);
+  }
+  .priority-tag--high {
+    color: #e8b978;
+    border: 1px solid rgba(232, 185, 120, 0.4);
+  }
+  .priority-tag--medium {
+    color: #cbb896;
+    border: 1px solid rgba(203, 184, 150, 0.4);
+  }
+  .priority-tag--low {
+    color: #9fb8ad;
+    border: 1px solid rgba(159, 184, 173, 0.4);
+  }
 
-/* Gradient-backed initials avatar */
-.avatar-gradient {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  color: #fff;
-  font-weight: 700;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.4);
-}
+  /* Gradient-backed initials avatar */
+  .avatar-gradient {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 2px 8px rgba(0, 0, 0, 0.4);
+  }
   /* Solid Navigation Headers */
   .hash-bar {
     background:
       linear-gradient(transparent, rgba(0, 0, 0, 0.85)),
-      repeating-linear-gradient(45deg, #2a2a2a 0, #2a2a2a 1px, transparent 0, transparent 7px),
-      repeating-linear-gradient(-45deg, #2a2a2a 0, #2a2a2a 1px, transparent 0, transparent 7px),
+      repeating-linear-gradient(
+        45deg,
+        #2a2a2a 0,
+        #2a2a2a 1px,
+        transparent 0,
+        transparent 7px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        #2a2a2a 0,
+        #2a2a2a 1px,
+        transparent 0,
+        transparent 7px
+      ),
       #101512;
     border-bottom: 2px solid rgba(251, 146, 60, 0.35);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
@@ -303,11 +380,25 @@
     text-decoration: none;
     background:
       linear-gradient(transparent, rgba(0, 0, 0, 0.85)),
-      repeating-linear-gradient(45deg, #2a2a2a 0, #2a2a2a 1px, transparent 0, transparent 7px),
-      repeating-linear-gradient(-45deg, #2a2a2a 0, #2a2a2a 1px, transparent 0, transparent 7px),
+      repeating-linear-gradient(
+        45deg,
+        #2a2a2a 0,
+        #2a2a2a 1px,
+        transparent 0,
+        transparent 7px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        #2a2a2a 0,
+        #2a2a2a 1px,
+        transparent 0,
+        transparent 7px
+      ),
       #1a1917;
     color: hsla(0, 0%, 100%, calc(0.55 + 0.45 * var(--curr)));
-    transition: color 0.4s ease-out, box-shadow 0.3s ease-out;
+    transition:
+      color 0.4s ease-out,
+      box-shadow 0.3s ease-out;
   }
 
   .hash-nav__item + .hash-nav__item {
@@ -332,7 +423,12 @@
     display: block;
     font-size: 0.65rem;
     text-transform: lowercase;
-    color: hsla(25, 90%, calc(55% + (1 - var(--curr)) * 20%), calc(0.5 + 0.4 * var(--curr)));
+    color: hsla(
+      25,
+      90%,
+      calc(55% + (1 - var(--curr)) * 20%),
+      calc(0.5 + 0.4 * var(--curr))
+    );
     transition: color 0.4s ease-out;
   }
 
@@ -357,11 +453,9 @@
 
   /* Animated Drift Canvas Blobs */
   .scene {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    pointer-events: none;
+    /* Flat theme: ambient blurred glow blobs removed. Kept as a hook
+       (display:none) so Scene.jsx can stay mounted without a JSX change. */
+    display: none;
   }
 
   .scene__blob {
@@ -401,25 +495,24 @@
     animation-delay: -13s;
   }
 
-  /* Glassmorphic Shell Foundations */
+  /* Flat Card Foundations — solid black panel with a beveled, "3D-ish"
+     outline: the border is lighter on the top/left edge and darker on
+     the bottom/right edge, like light is hitting the top of a raised
+     panel. No blur/translucency involved, just directional border
+     color + a hairline inner highlight. */
   .glass {
-    backdrop-filter: var(--blur-md);
-    -webkit-backdrop-filter: var(--blur-md);
     background: var(--color-glass-white);
     border: 1px solid var(--color-glass-border);
-    box-shadow: var(--shadow-glass);
+    border-top-color: rgba(255, 255, 255, 0.16);
+    border-left-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(0, 0, 0, 0.6);
+    border-right-color: rgba(0, 0, 0, 0.45);
+    box-shadow:
+      var(--shadow-glass),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 0 0 1px rgba(0, 0, 0, 0.5);
     position: relative;
     overflow: hidden;
-  }
-
-  .glass::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: var(--reflection-top);
-    pointer-events: none;
-    border-radius: inherit;
-    z-index: 1;
   }
 
   .glass-content {
@@ -428,17 +521,16 @@
   }
 
   .glass--strong {
-    backdrop-filter: var(--blur-xl);
-    -webkit-backdrop-filter: var(--blur-xl);
     background: var(--color-glass-white-md);
   }
 
   .glass-dark {
     background: var(--color-glass-dark-md);
     border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.14);
+    border-bottom-color: rgba(0, 0, 0, 0.55);
     border-radius: var(--radius-lg);
     padding: 18px 20px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   /* Cards */
@@ -460,9 +552,9 @@
   /* Dark grain/noise card background used ONLY by the Activity page's
      3 boxes (ActionActivityBox, TaskActivityBox, InboxNotificationsBox).
      Self-contained (border/shadow/radius included) — deliberately not
-     layered on .glass, since .glass's white reflection overlay would
-     wash out the flat, uniform grain look that was asked for. Doesn't
-     touch .glass/.glass-card, so nothing else in the app is affected. */
+     layered on .glass so its own background doesn't fight this card's
+     grain texture. Doesn't touch .glass/.glass-card, so nothing else
+     in the app is affected. */
   .activity-noise-card {
     position: relative;
     overflow: hidden;
@@ -473,33 +565,49 @@
     /* Grout/mortar color — shows through in the gaps between bricks */
     background-color: #17120e;
     background-repeat:
-      repeat,
-      no-repeat, no-repeat, no-repeat,
-      repeat, repeat, repeat, repeat;
+      repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, repeat;
     background-image:
       /* fine grain, tiled on top for weathering/texture */
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.14'/%3E%3C/svg%3E"),
       /* warm orange glow, corner-lit like a torch/ambient theme accent */
-      radial-gradient(ellipse at 100% 0%, rgba(251, 146, 60, 0.14) 0%, transparent 55%),
+        radial-gradient(
+          ellipse at 100% 0%,
+          rgba(251, 146, 60, 0.14) 0%,
+          transparent 55%
+        ),
       /* dark vignette — darkens the edges so the center reads brighter */
-      radial-gradient(ellipse at 50% 40%, transparent 35%, rgba(0, 0, 0, 0.55) 100%),
+        radial-gradient(
+          ellipse at 50% 40%,
+          transparent 35%,
+          rgba(0, 0, 0, 0.55) 100%
+        ),
       /* base tone wash behind the bricks */
-      linear-gradient(160deg, #1c150f 0%, #14100c 50%, #100c09 100%),
+        linear-gradient(160deg, #1c150f 0%, #14100c 50%, #100c09 100%),
       /* brick shapes — 4 diagonal-cut gradients tiled at 58px form a
          staggered brick-wall pattern; #2a241d is the brick fill, the
          background-color above shows through as mortar/grout lines */
-      linear-gradient(335deg, #2a241d 23px, transparent 23px),
+        linear-gradient(335deg, #2a241d 23px, transparent 23px),
       linear-gradient(155deg, #2a241d 23px, transparent 23px),
       linear-gradient(335deg, #2a241d 23px, transparent 23px),
       linear-gradient(155deg, #2a241d 23px, transparent 23px);
     background-size:
       140px 140px,
-      100% 100%, 100% 100%, 100% 100%,
-      58px 58px, 58px 58px, 58px 58px, 58px 58px;
+      100% 100%,
+      100% 100%,
+      100% 100%,
+      58px 58px,
+      58px 58px,
+      58px 58px,
+      58px 58px;
     background-position:
       0 0,
-      0 0, 0 0, 0 0,
-      0px 2px, 4px 35px, 29px 31px, 34px 6px;
+      0 0,
+      0 0,
+      0 0,
+      0px 2px,
+      4px 35px,
+      29px 31px,
+      34px 6px;
     transition:
       transform var(--dur-mid) var(--ease-glass),
       box-shadow var(--dur-mid) var(--ease-glass);
@@ -533,7 +641,7 @@
      back = tasks list). .flip-card sets up the 3D perspective,
      .is-flipped rotates the inner wrapper 180deg, and each face hides
      itself when it's facing away from the viewer. */
- .flip-card {
+  .flip-card {
     perspective: 1600px;
     min-height: 220px;
   }
@@ -560,6 +668,163 @@
 
   .flip-card-face--back {
     transform: rotateY(180deg);
+  }
+
+  /* Task cards (Card View + Kanban) — styled after a horizontal-carousel
+     reference: an outer "shell" with breathing-room padding, an inset
+     dark card sitting inside it, and page dots centered below the
+     inset card (outside it, still inside the shell). Hovering the
+     shell slides the inset card's inner track left, revealing page 2
+     (the rest of the task's details) in place of page 1 (name / due
+     date / description). Kept fully separate from .flip-card above,
+     which ProjectCard still uses untouched.
+     Color coding is the shell itself — a translucent, blurred tint of
+     accentColor (project color, the task's own saved color, or a
+     priority fallback), a flat solid treatment (no blur/reflection),
+     tinted per task instead of neutral gray. Background/border colors
+     are set inline in TaskCard.jsx. */
+  .task-carousel-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-radius: 28px;
+    padding: 14px;
+    overflow: hidden;
+    /* Flat dark shell, independent of task/priority/project color —
+       the colorful part of the card lives on the inner card instead
+       (see .task-carousel-card below). */
+    background: #232327;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.55);
+    transition:
+      transform var(--dur-mid, 0.35s) var(--ease-glass, ease),
+      box-shadow var(--dur-mid, 0.35s) var(--ease-glass, ease);
+  }
+
+  .task-carousel-shell > .task-carousel-card,
+  .task-carousel-shell > .task-carousel-dots {
+    position: relative;
+    z-index: 2;
+  }
+
+  .task-carousel-shell:hover {
+    transform: translateY(-4px);
+  }
+
+  .task-carousel-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 18px;
+    /* Dark base with a soft radial wash of accentColor, matching the
+     muted "colored inside" treatment used by .taskello-card__photo
+     on ProjectCard — actual accentColor tint is applied inline in
+     TaskCard.jsx so this is just the fallback if none is set. */
+    background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .task-carousel-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .task-carousel-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .task-carousel-viewport {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .task-carousel-track {
+    display: flex;
+    width: 200%;
+    height: 100%;
+    transition: transform 0.55s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .task-carousel-shell:hover .task-carousel-track {
+    transform: translateX(-50%);
+  }
+
+  .task-carousel-page {
+    width: 50%;
+    height: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .task-carousel-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding-top: 12px;
+  }
+
+  /* Discoverability hint for the hover-to-flip interaction. A normal
+     flex sibling (not absolutely positioned) so it can never overlap
+     the dots — it just sits after them with a bit of breathing room. */
+  .task-carousel-hint {
+    margin-left: 6px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.32);
+    white-space: nowrap;
+    pointer-events: none;
+    transition: color var(--dur-mid, 0.35s) var(--ease-glass, ease);
+  }
+
+  .task-carousel-shell:hover .task-carousel-hint {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .task-carousel-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    transform: scale(1);
+    transition:
+      background 0.4s ease,
+      transform 0.4s ease;
+  }
+
+  .task-carousel-dot--1 {
+    background: #ffffff;
+    transform: scale(1.15);
+  }
+
+  .task-carousel-shell:hover .task-carousel-dot--1 {
+    background: rgba(255, 255, 255, 0.35);
+    transform: scale(1);
+  }
+
+  .task-carousel-shell:hover .task-carousel-dot--2 {
+    background: #ffffff;
+    transform: scale(1.15);
   }
 
   .glass-card__label {
@@ -615,14 +880,22 @@
   }
 
   .glass-btn--primary {
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.55) 0%, rgba(194, 65, 12, 0.55) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(251, 146, 60, 0.55) 0%,
+      rgba(194, 65, 12, 0.55) 100%
+    );
     border: 1px solid rgba(251, 146, 60, 0.5);
-    box-shadow: 0 4px 24px rgba(251, 146, 60, 0.3), var(--reflection-inner);
+    box-shadow: 0 4px 24px rgba(251, 146, 60, 0.3);
   }
 
   .glass-btn--primary:hover {
-    background: linear-gradient(135deg, rgba(251, 146, 60, 0.75) 0%, rgba(194, 65, 12, 0.75) 100%);
-    box-shadow: 0 8px 36px rgba(251, 146, 60, 0.5), var(--reflection-inner);
+    background: linear-gradient(
+      135deg,
+      rgba(251, 146, 60, 0.75) 0%,
+      rgba(194, 65, 12, 0.75) 100%
+    );
+    box-shadow: 0 8px 36px rgba(251, 146, 60, 0.5);
     transform: translateY(-2px);
   }
 
@@ -638,14 +911,18 @@
   }
 
   .glass-btn--danger {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.45) 0%, rgba(220, 38, 38, 0.45) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(239, 68, 68, 0.45) 0%,
+      rgba(220, 38, 38, 0.45) 100%
+    );
     border: 1px solid rgba(239, 68, 68, 0.4);
-    box-shadow: 0 4px 24px rgba(239, 68, 68, 0.25), var(--reflection-inner);
+    box-shadow: 0 4px 24px rgba(239, 68, 68, 0.25);
   }
 
   .glass-btn--danger:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 36px rgba(239, 68, 68, 0.45), var(--reflection-inner);
+    box-shadow: 0 8px 36px rgba(239, 68, 68, 0.45);
   }
 
   .glass-btn--sm {
@@ -713,8 +990,6 @@
     border-radius: var(--radius-md);
     border: 1px solid var(--color-glass-border-subtle);
     background: var(--color-glass-white);
-    backdrop-filter: var(--blur-sm);
-    -webkit-backdrop-filter: var(--blur-sm);
     color: var(--color-dark);
     font-family: var(--font-sans);
     font-size: var(--text-md);
@@ -736,7 +1011,9 @@
   .glass-select:focus {
     border-color: rgba(251, 146, 60, 0.6);
     background: var(--color-glass-white-md);
-    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.15), var(--shadow-glass);
+    box-shadow:
+      0 0 0 3px rgba(251, 146, 60, 0.15),
+      var(--shadow-glass);
   }
 
   .glass-textarea {
@@ -748,9 +1025,7 @@
   .glass-dropdown-menu {
     border-radius: var(--radius-lg);
     padding: var(--spacing-2xs);
-    background: rgba(15, 25, 20, 0.85);
-    backdrop-filter: var(--blur-lg);
-    -webkit-backdrop-filter: var(--blur-lg);
+    background: #17171a;
     border: 1px solid var(--color-glass-border);
     box-shadow: var(--shadow-float);
     z-index: var(--z-index-overlay);
@@ -785,9 +1060,10 @@
     border-radius: var(--radius-full);
     border: 1px solid var(--color-glass-border);
     background: var(--color-glass-white);
-    backdrop-filter: var(--blur-sm);
-    -webkit-backdrop-filter: var(--blur-sm);
-    transition: border-color var(--dur-fast), box-shadow var(--dur-fast), background var(--dur-fast);
+    transition:
+      border-color var(--dur-fast),
+      box-shadow var(--dur-fast),
+      background var(--dur-fast);
     flex-shrink: 0;
     display: inline-block;
   }
@@ -802,7 +1078,9 @@
     background: rgba(255, 255, 255, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.35);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-    transition: transform var(--dur-fast) var(--ease-liquid), background var(--dur-fast);
+    transition:
+      transform var(--dur-fast) var(--ease-liquid),
+      background var(--dur-fast);
   }
 
   .glass-switch-label input {
@@ -815,7 +1093,7 @@
   .glass-switch-label input:checked + .glass-switch-track {
     background: rgba(251, 146, 60, 0.3);
     border-color: rgba(251, 146, 60, 0.65);
-    box-shadow: 0 0 14px rgba(251, 146, 60, 0.22), var(--reflection-inner);
+    box-shadow: 0 0 14px rgba(251, 146, 60, 0.22);
   }
 
   .glass-switch-label input:checked + .glass-switch-track .glass-switch-thumb {
@@ -828,8 +1106,6 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -837,21 +1113,22 @@
     padding: var(--spacing-md);
   }
 
- .glass-modal {
-  border-radius: var(--radius-2xl);
-  width: 100%;
-  max-width: 32rem; /* fallback in case Tailwind's max-w-* isn't compiling */
-  margin: 0 16px;   /* fallback in case Tailwind's mx-4 isn't compiling */
-  max-height: 90vh;
-  overflow-y: auto;
-  background: rgba(24, 16, 10, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: var(--blur-lg);
-  -webkit-backdrop-filter: var(--blur-lg);
-  position: relative;
-  flex-shrink: 0;
-}
+  .glass-modal {
+    border-radius: var(--radius-2xl);
+    width: 100%;
+    max-width: 32rem; /* fallback in case Tailwind's max-w-* isn't compiling */
+    margin: 0 16px; /* fallback in case Tailwind's mx-4 isn't compiling */
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #17130f;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 32px 80px rgba(0, 0, 0, 0.55),
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    position: relative;
+    flex-shrink: 0;
+  }
   .glass-modal::before {
     content: "";
     position: absolute;
@@ -859,7 +1136,11 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, var(--color-accent-primary) 0%, var(--color-accent-primary-dim) 100%);
+    background: linear-gradient(
+      90deg,
+      var(--color-accent-primary) 0%,
+      var(--color-accent-primary-dim) 100%
+    );
     z-index: 10;
   }
 
@@ -870,7 +1151,9 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    transition: transform var(--dur-fast) var(--ease-liquid), background var(--dur-fast);
+    transition:
+      transform var(--dur-fast) var(--ease-liquid),
+      background var(--dur-fast);
   }
 
   .glass-row:hover {
@@ -979,29 +1262,29 @@
     filter: drop-shadow(0 0 25px #a1a1aa);
   }
 
- .login-underline-input {
-  width: 100%;
-  padding: 10px 32px 10px 4px;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 0;
-  font-size: 0.95rem;
-  color: #fff;
-  outline: none;
-  text-align: left;
-  transition: border-color 0.25s;
-}
+  .login-underline-input {
+    width: 100%;
+    padding: 10px 32px 10px 4px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0;
+    font-size: 0.95rem;
+    color: #fff;
+    outline: none;
+    text-align: left;
+    transition: border-color 0.25s;
+  }
 
-.login-underline-input::placeholder {
-  color: rgba(255, 255, 255, 0.45);
-}
+  .login-underline-input::placeholder {
+    color: rgba(255, 255, 255, 0.45);
+  }
 
-.login-underline-input:focus {
-  border-bottom-color: rgba(251, 146, 60, 0.8);
-  box-shadow: none;
-  background: transparent;
-}
+  .login-underline-input:focus {
+    border-bottom-color: rgba(251, 146, 60, 0.8);
+    box-shadow: none;
+    background: transparent;
+  }
   .login-signin-btn {
     background: #4b5563;
     border: 1px solid #6b7280;
@@ -1024,224 +1307,252 @@
     outline: 2px solid #fb923c;
     outline-offset: 2px;
   }
-/* Horizontal glass strip */
-.login-glass-wrapper {
-  overflow: hidden;
-  border-radius: 0;
-}
-
-.login-glass-wrapper::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  isolation: isolate;
-  backdrop-filter: blur(1px);
-  -webkit-backdrop-filter: blur(1px);
-  filter: url(#login-glass-distort);
-}
-
-.login-glass-tint {
-  z-index: 1;
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 10, 10, 0.08);
-  pointer-events: none;
-}
-
-.login-glass-shine {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  overflow: hidden;
-  pointer-events: none;
-}
-/* Grey blurred card sitting inside the glass strip, holding the inputs */
-.login-form-card {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-.login-form-card::before {
-  display: none !important;
-}
-
-.tms-login-heading {
-  color: rgba(255, 159, 74, 0.92);
-  text-shadow:
-    0 2px 2px rgba(0, 0, 0, 0.55),
-    0 -1px 0px rgba(255, 255, 255, 0.12);
-  letter-spacing: 0.02em;
-}
-
-/* Widgets & Calendar Overrides */
-.tms-calendar {
-  width: 100%;
-  background: transparent;
-  border: none;
-  color: white;
-  padding-bottom: 8px;
-  font-family: inherit;
-}
-
-.calendar-widget {
-  overflow: hidden;
-  border-radius: 16px;
-  background: #18181b;
-  border: 1px solid rgba(251, 146, 60, 0.22);
-  width: 100%;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 40px rgba(0, 0, 0, 0.35);
-}
- .calendar-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 10px;
-    position: relative;
+  /* Flat login strip — was a distorted/blurred glass panel, now a solid card */
+  .login-glass-wrapper {
     overflow: hidden;
-    background: #ea7c3c;
-    backdrop-filter: var(--blur-md);
-    -webkit-backdrop-filter: var(--blur-md);
-    border-bottom: 1px solid var(--color-glass-border-bright);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.4),
-      inset 0 -16px 18px -8px rgba(0, 0, 0, 0.25),
-      0 4px 20px rgba(251, 146, 60, 0.35);
+    border-radius: 0;
+    background: #0d0d10;
   }
-  .calendar-date {
-    color: #ffffff;
-    margin: 0;
+
+  .login-glass-wrapper::after {
+    /* distortion filter removed for the flat theme */
+    content: none;
+  }
+
+  .login-glass-tint {
+    z-index: 1;
+    position: absolute;
+    inset: 0;
+    background: none;
+    pointer-events: none;
+  }
+
+  .login-glass-shine {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    pointer-events: none;
+    display: none;
+  }
+  /* Flat card sitting inside the login strip, holding the inputs */
+  .login-form-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .login-form-card::before {
+    display: none !important;
+  }
+
+  .tms-login-heading {
+    color: rgba(255, 159, 74, 0.92);
+    text-shadow:
+      0 2px 2px rgba(0, 0, 0, 0.55),
+      0 -1px 0px rgba(255, 255, 255, 0.12);
+    letter-spacing: 0.02em;
+  }
+  .analog-clock-box {
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 12px;
+    cursor: pointer;
+  }
+
+  .analog-clock-face {
+    width: 100%;
+    height: 100%;
+  }
+
+  .clock-rim {
+    fill: #17171a;
+    stroke: rgba(251, 146, 60, 0.4);
+    stroke-width: 2;
+  }
+
+  .clock-tick-major {
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-width: 2;
+  }
+
+  .clock-tick-minor {
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 1;
+  }
+
+  .clock-hand-hour {
+    stroke: #ffffff;
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+
+  .clock-hand-minute {
+    stroke: #ffffff;
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .clock-hand-second {
+    stroke: #fb923c;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+
+  .clock-hub {
+    fill: #fb923c;
+  }
+  .tms-calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 4px 10px;
+    gap: 4px;
+  }
+  .tms-calendar {
+    width: 100%;
+    background: transparent;
+    border: none;
+    font-family: var(--font-sans);
+  }
+
+  .tms-calendar abbr {
+    text-decoration: none;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .calendar-widget {
+    border: 1px solid rgba(251, 146, 60, 0.28);
+    border-radius: var(--radius-xl);
+    padding: 16px 14px;
+    background: var(--color-glass-dark-md);
+  }
+
+  .tms-nav-arrow {
+    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fb923c;
+    min-width: 26px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
     font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0.2px;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
-  }
-
-  .calendar-time {
-    display: inline-block;
-    margin-top: 1px;
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  }
-
-  .today-btn {
-    background: rgba(255, 255, 255, 0.18);
-    color: white;
-    border: none;
-    border-radius: 999px;
-    padding: 3px 8px;
     cursor: pointer;
-    font-weight: 700;
-    font-size: 11px;
-    transition: 0.25s;
-  }
-
-  .tms-calendar .react-calendar__navigation {
     display: flex;
     align-items: center;
-    margin: 2px;
-    gap: 2px;
-  }
-
-  .tms-calendar .react-calendar__navigation button {
-    border: none;
-    background: transparent;
-    color: #fb923c;
-    min-width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    font-size: 10px;
-    font-weight: 700;
+    justify-content: center;
+    flex: 0 0 auto;
     transition: 0.25s;
   }
 
-  .tms-calendar .react-calendar__navigation__label {
-    font-size: 10px;
-    color: white;
-    font-weight: 700;
-  }
-
- .tms-calendar .react-calendar__month-view__weekdays {
-    display: grid !important;
-    grid-template-columns: repeat(7, 1fr);
-    justify-items: center;
-    margin: 0 4px 2px;
+  .tms-calendar .react-calendar__month-view__weekdays {
+    margin-bottom: 6px;
   }
 
   .tms-calendar .react-calendar__month-view__weekdays__weekday {
-    color: #fdba74;
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
+    text-align: center;
+    padding: 4px 0;
   }
 
-  .tms-calendar .react-calendar__month-view__weekdays__weekday abbr {
-    text-decoration: none;
-    cursor: default;
-  }
-
-  .tms-calendar .react-calendar__month-view__days {
-    display: grid !important;
-    grid-template-columns: repeat(7, 1fr);
-    justify-items: center;
-    padding: 0 4px 4px;
-    gap: 2px;
-  }
-
-  .tms-calendar .react-calendar__tile {
-    border: none;
-    background: transparent;
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    height: 26px;
-    width: 26px;
-    border-radius: 50%;
-    transition: background 0.2s, color 0.2s, transform 0.15s, box-shadow 0.2s;
-  }
-
-  .tms-calendar .react-calendar__tile:hover {
-    background: rgba(251, 146, 60, 0.18);
-    transform: scale(1.08);
-    box-shadow: 0 0 14px rgba(251, 146, 60, 0.25);
-  }
-
-  .tms-calendar .react-calendar__tile--now {
-    background: transparent !important;
-    border: 2px solid #fb923c;
-    color: #fb923c;
-    font-weight: 700;
-  }
-
-  .tms-calendar .react-calendar__tile--active {
-    background: #fb923c !important;
-    color: #18181b !important;
-    font-weight: 700;
-    box-shadow: 0 0 18px rgba(251, 146, 60, 0.45);
-  }
-
-  .tms-calendar .react-calendar__tile--active:hover {
-    background: #fdba74 !important;
-    color: #18181b !important;
-  }
+.tms-calendar .react-calendar__tile {
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+  padding: 8px 0;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
 
   .tms-calendar .react-calendar__month-view__days__day--neighboringMonth {
     color: rgba(255, 255, 255, 0.25);
   }
 
-  .tms-calendar button:disabled {
-    opacity: 0.35;
+  .tms-calendar .react-calendar__tile:hover {
+    background: rgba(251, 146, 60, 0.15);
   }
 
-  .tms-calendar button:focus {
-    outline: none;
+  .tms-calendar .react-calendar__tile--now {
+    background: rgba(251, 146, 60, 0.12);
+    color: var(--color-accent-primary);
+    font-weight: 700;
+  }
+
+.tms-calendar .react-calendar__tile--active {
+  background: var(--color-accent-primary);
+  color: #000000;
+  font-weight: 700;
+}
+
+.tms-calendar .react-calendar__tile--active abbr {
+  color: #000000;
+}
+
+.tms-calendar .react-calendar__tile--now.react-calendar__tile--active {
+  color: #000000;
+}
+
+.tms-calendar .react-calendar__tile--now.react-calendar__tile--active abbr {
+  color: #000000;
+}
+
+.tms-calendar .react-calendar__tile--active:hover {
+  background: var(--color-accent-primary);
+  color: #000000;
+}
+
+.tms-calendar .react-calendar__tile--active:hover abbr {
+  color: #000000;
+}
+  .tms-calendar .react-calendar__navigation {
+    display: none;
+  }
+
+  .tms-nav-arrow:hover {
+    background: rgba(251, 146, 60, 0.22);
+  }
+
+  .tms-calendar-label-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .tms-calendar-label {
+    font-size: 13px;
+    color: white;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+
+  .calendar-today-jump {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(251, 146, 60, 0.15);
+    color: #fb923c;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .calendar-today-jump:hover {
+    background: rgba(251, 146, 60, 0.32);
   }
 
   /* Progress Tracking Elements */
@@ -1455,8 +1766,6 @@
   /* Accessibility Contrast Enhancements */
   .task-card {
     background: rgba(42, 36, 30, 0.6);
-    backdrop-filter: var(--blur-sm);
-    -webkit-backdrop-filter: var(--blur-sm);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
@@ -1475,20 +1784,30 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .glass-badge--danger { color: #fca5a5; }
-  .glass-badge--amber { color: #fde68a; }
-  .glass-badge--violet { color: #d8c4fb; }
-  .glass-badge--primary { color: #fed7aa; }
+  .glass-badge--danger {
+    color: #fca5a5;
+  }
+  .glass-badge--amber {
+    color: #fde68a;
+  }
+  .glass-badge--violet {
+    color: #d8c4fb;
+  }
+  .glass-badge--primary {
+    color: #fed7aa;
+  }
 }
 @layer components {
- .team-card {
+  .team-card {
     position: relative;
     border-radius: var(--radius-xl);
     overflow: hidden;
     background: var(--color-bg);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: var(--shadow-glass);
-    transition: transform var(--dur-mid) var(--ease-glass), box-shadow var(--dur-mid);
+    transition:
+      transform var(--dur-mid) var(--ease-glass),
+      box-shadow var(--dur-mid);
   }
 
   .team-card--clickable {
@@ -1518,16 +1837,18 @@
     position: absolute;
     inset: 0;
     background: var(--clr);
-    opacity: 0.28;
+    opacity: 0.45;
   }
 
   .team-card__members::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(0, 0, 0, 0.5) 100%);
-    backdrop-filter: var(--blur-md);
-    -webkit-backdrop-filter: var(--blur-md);
+    background: linear-gradient(
+      180deg,
+      transparent 40%,
+      rgba(0, 0, 0, 0.6) 100%
+    );
   }
 
   .team-card__members-scroll {
@@ -1662,12 +1983,16 @@
     background: #151515;
     padding: 8px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
-    transition: transform var(--dur-mid) var(--ease-glass), box-shadow var(--dur-mid);
+    transition:
+      transform var(--dur-mid) var(--ease-glass),
+      box-shadow var(--dur-mid);
   }
 
   .taskello-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 0 0 24px rgba(251, 146, 60, 0.15);
+    box-shadow:
+      0 24px 50px rgba(0, 0, 0, 0.55),
+      0 0 24px rgba(251, 146, 60, 0.15);
   }
 
   .taskello-card__photo {
@@ -1696,8 +2021,6 @@
     background: rgba(0, 0, 0, 0.35);
     padding: 4px 10px;
     border-radius: 999px;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
   }
@@ -1779,8 +2102,6 @@
     height: 26px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
     color: #fff;
     display: flex;
     align-items: center;
@@ -1801,50 +2122,53 @@
   }
 }
 .tms-loader {
-	--color: #f97316;
-	--size-dot: 10px;
-	--travel: 26px;
- 
-	display: inline-block;
-	position: relative;
-	width: calc(var(--travel) * 2 + var(--size-dot));
-	height: var(--size-dot);
+  --color: #f97316;
+  --size-dot: 10px;
+  --travel: 26px;
+
+  display: inline-block;
+  position: relative;
+  width: calc(var(--travel) * 2 + var(--size-dot));
+  height: var(--size-dot);
 }
- 
+
 .tms-loader::before,
 .tms-loader::after {
-	content: '';
-	box-sizing: border-box;
-	position: absolute;
-	top: 0;
-	width: var(--size-dot);
-	height: var(--size-dot);
-	background-color: var(--color);
-	border-radius: 50%;
-	opacity: 0;
-	animation: tms-loader-dots 0.8s cubic-bezier(0.2, 0.32, 0, 0.87) infinite;
+  content: "";
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  width: var(--size-dot);
+  height: var(--size-dot);
+  background-color: var(--color);
+  border-radius: 50%;
+  opacity: 0;
+  animation: tms-loader-dots 0.8s cubic-bezier(0.2, 0.32, 0, 0.87) infinite;
 }
- 
+
 .tms-loader::after {
-	animation-delay: 0.3s;
+  animation-delay: 0.3s;
 }
- 
+
 @keyframes tms-loader-dots {
-	0%, 80%, 100% {
-		opacity: 0;
-	}
- 
-	33% {
-		opacity: 1;
-	}
- 
-	0%, 100% {
-		transform: translateX(0);
-	}
- 
-	90% {
-		transform: translateX(var(--travel));
-	}
+  0%,
+  80%,
+  100% {
+    opacity: 0;
+  }
+
+  33% {
+    opacity: 1;
+  }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  90% {
+    transform: translateX(var(--travel));
+  }
 }
 /* Underline Input Styling */
 .login-underline-input {
@@ -1889,6 +2213,34 @@
   box-shadow: none !important;
   outline: none !important;
   background: transparent !important;
+}
+/* Completion bubble landing — bumps the "Completed Log" button so it's
+   obvious a task just landed there. Color comes from the --clog-bump-color
+   custom property, set inline by CompletionBubbleOverlay right before this
+   class is applied, so the glow matches the bubble that just flew in. */
+@keyframes clog-btn-bump {
+  0% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+  30% {
+    transform: scale(1.14);
+    box-shadow:
+      0 0 0 6px
+        color-mix(in srgb, var(--clog-bump-color, #fb923c) 35%, transparent),
+      0 0 18px 2px
+        color-mix(in srgb, var(--clog-bump-color, #fb923c) 70%, transparent);
+  }
+  55% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+}
+.clog-btn-bump {
+  animation: clog-btn-bump 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Browser Auto-fill Overrides (Box Remove Aur Text Clear White) */
