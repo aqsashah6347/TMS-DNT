@@ -232,10 +232,6 @@ async function createTask(req, res, next) {
     } = req.body;
 
     if (!title) return res.status(400).json({ message: "Title is required" });
-    // Mandatory assignee — prevents unassigned tasks from ever reaching
-    // the DB, even via a direct API call bypassing the modal.
-    if (!assignedTo)
-      return res.status(400).json({ message: "Assigned To is required" });
 
     const pool = await getPool();
     const result = await pool
@@ -311,11 +307,12 @@ async function updateTask(req, res, next) {
       .request()
       .input("id", sql.Int, id)
       .query(
-        "SELECT project_id, status, assigned_to, due_date, title, priority FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
+        "SELECT project_id, status, assigned_to, assigned_by, due_date, title, priority FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
       );
     const previousProjectId = before.recordset[0]?.project_id ?? null;
     const previousStatus = before.recordset[0]?.status ?? null;
     const previousAssignedTo = before.recordset[0]?.assigned_to ?? null;
+    const previousAssignedBy = before.recordset[0]?.assigned_by ?? null;
     const previousDueDate = before.recordset[0]?.due_date ?? null;
     const previousTitle = before.recordset[0]?.title ?? null;
     const previousPriority = before.recordset[0]?.priority ?? null;
@@ -339,6 +336,23 @@ async function updateTask(req, res, next) {
           message: `You're not allowed to change: ${disallowed.join(", ")}. Only status can be updated.`,
         });
       }
+    }
+
+    // Marking a task complete is restricted to just the task's creator
+    // and its assignee — regardless of role, so even an admin/manager
+    // who is neither can't complete someone else's task on their behalf.
+    // Only checked on the actual completion transition (not re-saving an
+    // already-done task, and not other status moves like backlog ->
+    // in progress), so this doesn't affect any other editing ability.
+    if (
+      updates.status === "done" &&
+      previousStatus !== "done" &&
+      req.user.id !== previousAssignedTo &&
+      req.user.id !== previousAssignedBy
+    ) {
+      return res.status(403).json({
+        message: "Only this task's creator or assignee can mark it complete",
+      });
     }
 
     // Only stamp completedBy/completedAt on the FIRST transition into

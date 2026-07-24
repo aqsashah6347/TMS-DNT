@@ -12,9 +12,11 @@ export default function Button({
   type = "button",
   disabled = false,
   className = "",
+  id,
 }) {
   return (
     <button
+      id={id}
       type={type}
       onClick={onClick}
       disabled={disabled}
