@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Flag,
   Calendar,
@@ -6,7 +5,6 @@ import {
   Pin,
   Video,
   GitBranch,
-  RotateCcw,
   Pencil,
 } from "lucide-react";
 import { useTaskStore } from "../taskStore";
@@ -34,14 +32,26 @@ const priorityWidth = {
   low: "25%",
 };
 
+const CARD_MIN_HEIGHT = 260;
+
+// Status pill colors — gives the top-left label the same "at a glance"
+// legibility as the priority badge, instead of dim uppercase text that
+// blends into the card.
 const statusBadge = {
   backlog: "glass-badge--primary",
-  "in progress": "glass-badge--violet",
+  todo: "glass-badge--primary",
+  in_progress: "glass-badge--violet",
   review: "glass-badge--amber",
-  done: "glass-badge--primary",
+  done: "glass-badge--rose",
 };
 
-const CARD_MIN_HEIGHT = 260;
+function formatStatus(status) {
+  if (!status) return "Backlog";
+  return status
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 function hexToRgba(hex, alpha) {
   const safe = (hex || "#fb923c").replace("#", "");
@@ -67,17 +77,15 @@ function getInitial(name) {
 }
 
 export default function TaskCard({ task }) {
-  const [isFlipped, setIsFlipped] = useState(false);
   const openTaskView = useTaskStore((s) => s.openTaskView);
   const projects = useProjectStore((s) => s.projects);
 
-  // FIX: previously this never looked at task.color at all — a
-  // project-less task always fell back to the flat priority color,
-  // so picking a swatch in the modal visually did nothing. Now:
-  // projectId present -> project's color (project always wins, matches
-  // backend's "projectColor should be preferred" comment). No project
-  // -> the task's own saved color. Only falls back to priority color
-  // if neither exists (e.g. legacy tasks created before this column).
+  // Color precedence stays exactly as before: a project always wins if
+  // the task belongs to one (and that project actually has a real color
+  // set), otherwise fall back to the task's own saved color, and only
+  // fall back to the flat priority color if neither exists. Whichever
+  // source it comes from, accentColor is what draws the shell's
+  // color-coded neon outline below.
   const rawProjectColor = getProjectColor(task.projectId, projects);
   const hasValidProjectColor =
     rawProjectColor &&
@@ -95,155 +103,132 @@ export default function TaskCard({ task }) {
     openTaskView(task);
   }
 
+  const hasBackDetails =
+    task.dueDate ||
+    task.assignedToName ||
+    task.assignedByName ||
+    task.zoomLink ||
+    task.githubLink;
+
   return (
     <div
-      className={`flip-card ${isFlipped ? "is-flipped" : ""}`}
+      className="task-carousel-shell w-full h-full"
       style={{ minHeight: CARD_MIN_HEIGHT }}
-      onClick={() => setIsFlipped((f) => !f)}
     >
-      <div className="flip-card-inner" style={{ minHeight: CARD_MIN_HEIGHT }}>
-        {/* ---- FRONT ---- */}
-        <div
-          className="flip-card-face glass glass-card-hover w-full h-full cursor-pointer !p-0 !rounded-[32px] overflow-hidden"
-          style={{
-            backgroundColor: "#1e1e20",
-            // Vibrant glassmorphism: colored glow ring around the whole
-            // card body, tinted by the task's own color instead of a
-            // generic dark shadow.
-            boxShadow: `0 20px 50px -12px ${hexToRgba(accentColor, 0.35)}, inset 0 1px 0 rgba(255,255,255,0.06)`,
-            border: `1px solid ${hexToRgba(accentColor, 0.35)}`,
-          }}
-        >
-          <div className="glass-content flex flex-col h-full">
-            {/* Header zone — richer, more saturated gradient + stronger
-                glass blur so the accent color actually reads as vibrant
-                instead of a muted wash. */}
-            <div
-              className="relative px-5 pt-4 pb-7 shrink-0"
-              style={{
-                background: `linear-gradient(160deg, ${hexToRgba(accentColor, 0.9)} 0%, ${hexToRgba(accentColor, 0.45)} 100%)`,
-                backdropFilter: "blur(18px) saturate(160%)",
-                WebkitBackdropFilter: "blur(18px) saturate(160%)",
-                borderBottom: `2px solid ${hexToRgba(accentColor, 1)}`,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -14px 18px -14px rgba(0,0,0,0.45), 0 0 24px -6px ${hexToRgba(accentColor, 0.55)}`,
-              }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
-                  {task.pinned && (
-                    <Pin size={12} className="text-white fill-white" />
-                  )}
-                  {task.status}
-                </span>
-                <button
-                  onClick={handleEditClick}
-                  className="text-white/80 hover:text-white transition-colors p-1"
-                  title="Edit task"
-                >
-                  <Pencil size={15} />
-                </button>
-              </div>
-              <h4 className="mt-1 text-white font-bold text-lg leading-snug truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
-                {task.title}
-              </h4>
-            </div>
-
-            {/* Avatar */}
-            <div className="relative flex justify-center -mt-6 z-10 shrink-0">
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold text-white border-2"
-                style={{
-                  background: `linear-gradient(160deg, ${hexToRgba(accentColor, 1)}, ${hexToRgba(accentColor, 0.65)})`,
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  borderColor: "rgba(255,255,255,0.4)",
-                  boxShadow: `0 6px 18px ${hexToRgba(accentColor, 0.55)}, inset 0 1px 0 rgba(255,255,255,0.4)`,
-                }}
-                title={task.assignedToName || "Unassigned"}
-              >
-                {getInitial(task.assignedToName)}
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 flex flex-col gap-3 px-5 pt-2 pb-4">
-              {task.description ? (
-                <p className="text-sm text-white/90 leading-relaxed line-clamp-2">
-                  {task.description}
-                </p>
-              ) : (
-                <p className="text-sm text-white/35 italic">
-                  No description yet.
-                </p>
-              )}
-
-              {task.assignedByName && (
-                <p className="text-xs text-white/45 -mt-1.5">
-                  Created by {task.assignedByName}
-                </p>
-              )}
-
-              <div className="mt-auto flex flex-col gap-3">
-                <div>
-                  <div className="flex justify-between items-center text-xs font-medium text-white/85 mb-1.5">
-                    <span className="capitalize">{task.priority} priority</span>
-                    <Flag size={12} />
-                  </div>
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: priorityWidth[task.priority],
-                        backgroundImage: colorGradient(accentColor),
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/85 flex items-center gap-1.5">
-                    {task.dueDate && (
-                      <>
-                        <Calendar size={14} /> {task.dueDate}
-                      </>
-                    )}
-                  </span>
-                  {!task.assignedToName && (
-                    <span className="text-sm text-white/35">Unassigned</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+      <div
+        className="task-carousel-card"
+        style={{
+          // Same muted "colored inside" treatment as ProjectCard's
+          // .taskello-card__photo — a soft radial wash of accentColor
+          // over a dark base, instead of a flat bright color fill.
+          background: `
+            radial-gradient(circle at 75% 20%, #ffffff22 0%, transparent 35%),
+            radial-gradient(circle at 20% 80%, ${accentColor}aa 0%, transparent 55%),
+            radial-gradient(circle at 70% 70%, ${accentColor}55 0%, transparent 60%),
+            linear-gradient(135deg, #1a1a1a, #0a0a0a)
+          `,
+          boxShadow: `inset 0 0 0 1.5px ${hexToRgba(accentColor, 0.45)}`,
+        }}
+      >
+        {/* Top-right: status badge, pin, edit. Status is now a colored
+            pill (matching the priority badge's visual language) so it
+            reads at a glance instead of dissolving into dim gray text. */}
+        <div className="task-carousel-actions">
+          {task.pinned && (
+            <Pin
+              size={12}
+              className="text-white/70 fill-white/70"
+              aria-label="Pinned"
+            />
+          )}
+          <span
+            className={`glass-badge ${statusBadge[task.status] || "glass-badge--primary"} !py-1 !px-2.5 max-w-[120px] truncate`}
+          >
+            {formatStatus(task.status)}
+          </span>
+          <button
+            onClick={handleEditClick}
+            className="text-white/60 hover:text-white transition-colors"
+            title="Edit task"
+          >
+            <Pencil size={13} />
+          </button>
         </div>
 
-        {/* ---- BACK ---- */}
-        <div
-          className="flip-card-face flip-card-face--back glass w-full h-full cursor-pointer flex flex-col gap-3 !p-6 !rounded-[32px]"
-          style={{
-            backgroundColor: "#1e1e20",
-            border: `1px solid ${hexToRgba(accentColor, 0.35)}`,
-            boxShadow: `0 20px 50px -12px ${hexToRgba(accentColor, 0.3)}`,
-          }}
-        >
-          <div className="glass-content flex flex-col gap-3 h-full">
-            <div className="flex items-center justify-between gap-2">
-              <h4 className="text-white font-bold text-lg truncate">Details</h4>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsFlipped(false);
-                }}
-                className="text-white/50 hover:text-white transition-colors p-1"
-                title="Flip back"
-              >
-                <RotateCcw size={15} />
-              </button>
+        {/* ---- Sliding viewport: page 1 = icon/name/due date/description,
+              page 2 = the rest of the task's information. Hovering the
+              shell slides the track left, like a two-page carousel. ---- */}
+        <div className="task-carousel-viewport">
+          <div className="task-carousel-track">
+            {/* Page 1 */}
+            <div className="task-carousel-page px-5 pt-5 pb-4">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <div
+                    className="task-carousel-icon shrink-0"
+                    style={{ color: accentColor }}
+                    title={task.assignedToName || "Unassigned"}
+                  >
+                    {getInitial(task.assignedToName)}
+                  </div>
+
+                  <div className="flex flex-col gap-1 min-w-0 pt-0.5">
+                    <h4 className="text-white font-bold text-lg leading-snug line-clamp-1 pr-36">
+                      {task.title || "Untitled task"}
+                    </h4>
+
+                    <span className="text-xs text-white/60 flex items-center gap-1.5">
+                      <Calendar size={12} />
+                      {task.dueDate || "No due date"}
+                    </span>
+                  </div>
+                </div>
+
+                {task.description ? (
+                  <p className="text-sm text-white/70 leading-relaxed line-clamp-2">
+                    {task.description}
+                  </p>
+                ) : (
+                  <p className="text-sm text-white/40 italic">
+                    No description yet.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex-1 min-h-3" />
+
+              <div className="pt-3 border-t border-white/10">
+                <div className="flex justify-between items-center text-xs font-semibold text-white/80 mb-1.5">
+                  <span className="flex items-center gap-1.5 capitalize">
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{
+                        backgroundColor: priorityColorHex[task.priority],
+                      }}
+                    />
+                    {task.priority} priority
+                  </span>
+                  <Flag
+                    size={12}
+                    style={{ color: priorityColorHex[task.priority] }}
+                  />
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: priorityWidth[task.priority],
+                      backgroundImage: colorGradient(accentColor),
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
+            {/* Page 2 */}
+            <div className="task-carousel-page gap-2 px-5 pt-5 pb-4 overflow-y-auto">
               <div className="flex items-center gap-2.5 bg-white/5 rounded-lg px-3 py-2">
-                <Flag size={15} className="text-white/50 shrink-0" />
+                <Flag size={15} className="text-white/60 shrink-0" />
                 <span className="text-sm text-white/90 flex-1 capitalize">
                   {task.priority} priority
                 </span>
@@ -254,15 +239,15 @@ export default function TaskCard({ task }) {
 
               {task.dueDate && (
                 <div className="flex items-center gap-2.5 bg-white/5 rounded-lg px-3 py-2">
-                  <Calendar size={15} className="text-white/50 shrink-0" />
+                  <Calendar size={15} className="text-white/60 shrink-0" />
                   <span className="text-sm text-white/90 flex-1">Due date</span>
                   <span className="text-sm text-white/70">{task.dueDate}</span>
                 </div>
               )}
 
-              {task.assignedToName && (
+              {task.assignedToName ? (
                 <div className="flex items-center gap-2.5 bg-white/5 rounded-lg px-3 py-2">
-                  <User size={15} className="text-white/50 shrink-0" />
+                  <User size={15} className="text-white/60 shrink-0" />
                   <span className="text-sm text-white/90 flex-1">
                     Assigned to
                   </span>
@@ -270,11 +255,18 @@ export default function TaskCard({ task }) {
                     {task.assignedToName}
                   </span>
                 </div>
+              ) : (
+                <div className="flex items-center gap-2.5 bg-white/5 rounded-lg px-3 py-2">
+                  <User size={15} className="text-white/60 shrink-0" />
+                  <span className="text-sm text-white/40 flex-1 italic">
+                    Unassigned
+                  </span>
+                </div>
               )}
 
               {task.assignedByName && (
                 <div className="flex items-center gap-2.5 bg-white/5 rounded-lg px-3 py-2">
-                  <User size={15} className="text-white/50 shrink-0" />
+                  <User size={15} className="text-white/60 shrink-0" />
                   <span className="text-sm text-white/90 flex-1">
                     Created by
                   </span>
@@ -292,7 +284,7 @@ export default function TaskCard({ task }) {
                   onClick={(e) => e.stopPropagation()}
                   className="flex items-center gap-2.5 bg-white/5 hover:bg-white/10 rounded-lg px-3 py-2 transition-colors"
                 >
-                  <Video size={15} className="text-white/50 shrink-0" />
+                  <Video size={15} className="text-white/60 shrink-0" />
                   <span className="text-sm text-white/90 flex-1">
                     Zoom link
                   </span>
@@ -307,25 +299,27 @@ export default function TaskCard({ task }) {
                   onClick={(e) => e.stopPropagation()}
                   className="flex items-center gap-2.5 bg-white/5 hover:bg-white/10 rounded-lg px-3 py-2 transition-colors"
                 >
-                  <GitBranch size={15} className="text-white/50 shrink-0" />
+                  <GitBranch size={15} className="text-white/60 shrink-0" />
                   <span className="text-sm text-white/90 flex-1">
                     GitHub link
                   </span>
                 </a>
               )}
 
-              {!task.dueDate &&
-                !task.assignedToName &&
-                !task.assignedByName &&
-                !task.zoomLink &&
-                !task.githubLink && (
-                  <p className="text-sm text-white/40 text-center py-6 flex-1">
-                    No additional details.
-                  </p>
-                )}
+              {!hasBackDetails && (
+                <p className="text-sm text-white/45 text-center py-6 flex-1">
+                  No additional details.
+                </p>
+              )}
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="task-carousel-dots">
+        <span className="task-carousel-dot task-carousel-dot--1" />
+        <span className="task-carousel-dot task-carousel-dot--2" />
+        <span className="task-carousel-hint">Hover for details</span>
       </div>
     </div>
   );

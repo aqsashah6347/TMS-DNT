@@ -9,7 +9,9 @@ import { useTaskStore } from "../../tasks/taskStore";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import { teamApi } from "../../../api/teamApi";
+import { taskApi } from "../../../api/taskApi";
 import { PROJECT_COLORS } from "../../../utils/projectColors";
+import ProjectMemberPicker from "./ProjectMemberPicker";
 
 const statusOptions = ["planning", "active", "completed"].map((v) => ({
   value: v,
@@ -20,7 +22,7 @@ const emptyForm = {
   description: "",
   teamId: "",
   status: "planning",
-  members: "",
+  memberIds: [],
   color: PROJECT_COLORS[0],
 };
 
@@ -30,9 +32,9 @@ const getInitialForm = (project) => ({
   description: project?.description || emptyForm.description,
   teamId: project?.teamId ? String(project.teamId) : emptyForm.teamId,
   status: project?.status || emptyForm.status,
-  members: Array.isArray(project?.members)
-    ? project.members.join(", ")
-    : emptyForm.members,
+  memberIds: Array.isArray(project?.memberDetails)
+    ? project.memberDetails.map((m) => m.id)
+    : emptyForm.memberIds,
   color: project?.color || emptyForm.color,
 });
 
@@ -56,32 +58,13 @@ function ProjectForm({
     e.preventDefault();
     if (!form.name.trim()) return;
 
-    const names = form.members
-      .split(",")
-      .map((m) => m.trim())
-      .filter(Boolean);
-
-    const memberIds = [];
-    const unmatched = [];
-
-    for (const n of names) {
-      const match = users.find((u) => u.name.toLowerCase() === n.toLowerCase());
-      if (match) memberIds.push(match.id);
-      else unmatched.push(n);
-    }
-
-    if (unmatched.length > 0) {
-      setFormError(`No user found named: ${unmatched.join(", ")}`);
-      return;
-    }
-
     const payload = {
       name: form.name,
       description: form.description,
       teamId: form.teamId ? Number(form.teamId) : null,
       status: form.status,
       color: form.color,
-      members: memberIds,
+      members: form.memberIds,
     };
 
     setFormError(null);
@@ -150,11 +133,10 @@ function ProjectForm({
         />
       </div>
 
-      <Input
-        label="Members"
-        value={form.members}
-        onChange={(e) => setForm({ ...form, members: e.target.value })}
-        placeholder="Comma-separated, e.g. Aqsa, Sara"
+      <ProjectMemberPicker
+        users={users}
+        selectedIds={form.memberIds}
+        onChange={(memberIds) => setForm({ ...form, memberIds })}
       />
 
       <div>
@@ -232,19 +214,24 @@ export default function ProjectModal() {
     updateProject,
     deleteProject,
   } = useProjectStore();
-  const { getTasksByProject, openTaskView, openCreateModalForProject } =
+  const { openTaskView, openCreateModalForProject, isTaskModalOpen } =
     useTaskStore();
   const { user } = useAuthStore();
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
 
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [projectTasks, setProjectTasks] = useState([]);
 
   useEffect(() => {
     if (!isModalOpen) return;
 
+    // Role-scoped: a manager gets only their own team's members here
+    // (same endpoint TaskModal's "Assigned To" already uses), an admin
+    // gets everyone. Keeps project membership limited to who a manager
+    // is actually allowed to assign.
     usersApi
-      .getAllUsers()
+      .getAssignableUsers()
       .then(setUsers)
       .catch(() => setUsers([]));
 
@@ -253,6 +240,33 @@ export default function ProjectModal() {
       .then(setTeams)
       .catch(() => setTeams([]));
   }, [isModalOpen]);
+
+  // Fetch this project's tasks directly instead of filtering the task
+  // store's `tasks` array — that array only ever holds whatever
+  // page/filters the Tasks page last loaded (25 at a time, possibly
+  // narrowed by priority/assignee/search), so a project with more tasks
+  // than that — or tasks outside the current filters — used to go
+  // missing from this list. Pulling straight from the API with
+  // projectId set (and a page size large enough to cover a project's
+  // full task list) guarantees every task assigned to this project
+  // shows up here, done or not.
+  // Re-fetches whenever the nested Task modal closes too, so completing
+  // or editing a task from this view immediately reflects here.
+  useEffect(() => {
+    if (!isModalOpen || !editingProject?.id || isTaskModalOpen) return;
+    let cancelled = false;
+    taskApi
+      .getAllTasks({ projectId: editingProject.id }, 1, 100)
+      .then(({ tasks }) => {
+        if (!cancelled) setProjectTasks(tasks);
+      })
+      .catch(() => {
+        if (!cancelled) setProjectTasks([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isModalOpen, editingProject?.id, isTaskModalOpen]);
 
   if (!editingProject) return null;
 
@@ -263,9 +277,6 @@ export default function ProjectModal() {
 
   const isEditing = modalMode === "edit";
   const isNew = !editingProject.id;
-  const projectTasks = editingProject.id
-    ? getTasksByProject(editingProject.id)
-    : [];
   const doneCount = projectTasks.filter((t) => t.status === "done").length;
 
   return (
@@ -364,9 +375,9 @@ export default function ProjectModal() {
                     <span className="text-sm text-dark flex-1 truncate">
                       {task.title}
                     </span>
-                    {task.status === "done" && task.completedBy && (
+                    {task.status === "done" && task.completedByName && (
                       <span className="text-[11px] text-muted shrink-0">
-                        by {task.completedBy}
+                        by {task.completedByName}
                       </span>
                     )}
                   </button>
@@ -376,15 +387,20 @@ export default function ProjectModal() {
           </div>
 
           {/* Edit button now lives at the bottom of the modal, matching
-              the footer position used by the edit form's action buttons. */}
-          <div className="flex justify-end pt-2 border-t border-bg">
-            <Button
-              variant="primary"
-              onClick={() => useProjectStore.setState({ modalMode: "edit" })}
-            >
-              <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit Project
-            </Button>
-          </div>
+              the footer position used by the edit form's action buttons.
+              Gated behind canManageTasks so only admins/managers see it,
+              matching TeamModal's canManageTeam gating. */}
+          {canManageTasks && (
+            <div className="flex justify-end pt-2 border-t border-bg">
+              <Button
+                variant="primary"
+                onClick={() => useProjectStore.setState({ modalMode: "edit" })}
+              >
+                <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
+                Project
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </Modal>

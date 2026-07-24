@@ -18,6 +18,7 @@ import CompletedLogPanel from "../Features/tasks/components/CompletedLogPanel";
 import Button from "../components/ui/Button";
 import { useEffect, useRef, useState } from "react";
 import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
+import CompletionBubbleOverlay from "../Features/tasks/components/CompletionBubbleOverlay";
 
 const viewOptions = [
   { key: "list", label: "Card View", icon: List },
@@ -116,6 +117,7 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
             </div>
 
             <Button
+              id="completed-log-btn"
               variant="secondary"
               onClick={toggleCompletedLog}
               className="text-base px-5 py-3"
@@ -153,7 +155,7 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
             {error}
           </div>
         )}
-      {view === "list" && <TaskListView tasks={scopedTasks} />}
+        {view === "list" && <TaskListView tasks={scopedTasks} />}
         {view === "kanban" && <TaskKanbanView tasks={scopedAllTasks} />}
         {view === "calendar" && <TaskCalendarView tasks={scopedTasks} />}
 
@@ -165,7 +167,9 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
               disabled={isLoading}
               className="text-base px-5 py-3"
             >
-              {isLoading ? "Loading..." : `Load more (${allTasks.length} of ${total})`}
+              {isLoading
+                ? "Loading..."
+                : `Load more (${allTasks.length} of ${total})`}
             </Button>
           </div>
         )}
@@ -173,6 +177,7 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
         <TaskModal />
         <TaskFiltersModal />
         <CompletedLogPanel />
+        <CompletionBubbleOverlay />
       </div>
     </div>
   );

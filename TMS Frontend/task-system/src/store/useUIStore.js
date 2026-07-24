@@ -7,9 +7,26 @@ import { create } from "zustand";
 // unchanged with a boolean.
 export const useUIStore = create((set) => ({
   confettiTrigger: 0,
+  // The dueDate of whichever task was just marked done, captured alongside
+  // confettiTrigger so TaskCompleteLottie can read it the moment the
+  // trigger fires and render a "time left" readout under the tick
+  // animation. null when the completed task had no due date.
+  lastCompletedDueDate: null,
   isCompletedLogOpen: false,
+  // completionBubble: null | { id, x, y, color }. Same "fresh object each
+  // time" pattern as confettiTrigger being a counter — CompletionBubbleOverlay
+  // compares the `id` (not the object reference) so firing it twice in a
+  // row, e.g. completing two tasks back-to-back, still re-triggers the
+  // flight even though the previous bubble already finished.
+  completionBubble: null,
 
-  fireConfetti: () => set((s) => ({ confettiTrigger: s.confettiTrigger + 1 })),
+  fireConfetti: (dueDate = null) =>
+    set((s) => ({
+      confettiTrigger: s.confettiTrigger + 1,
+      lastCompletedDueDate: dueDate,
+    })),
+  fireCompletionBubble: ({ x, y, color }) =>
+    set({ completionBubble: { id: Date.now() + Math.random(), x, y, color } }),
   openCompletedLog: () => set({ isCompletedLogOpen: true }),
   closeCompletedLog: () => set({ isCompletedLogOpen: false }),
   toggleCompletedLog: () =>

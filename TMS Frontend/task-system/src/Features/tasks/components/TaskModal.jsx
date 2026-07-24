@@ -9,6 +9,7 @@ import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import { employeesApi } from "../../../api/employeesApi";
 import { getProjectColor } from "../../../utils/projectColors";
+import { useUIStore } from "../../../store/useUIStore";
 import {
   Pencil,
   Pin,
@@ -26,10 +27,12 @@ const priorityOptions = ["low", "medium", "high", "critical"].map((v) => ({
   value: v,
   label: v,
 }));
-const statusOptions = ["backlog", "in progress", "review", "done"].map((v) => ({
-  value: v,
-  label: v,
-}));
+const ALL_STATUS_OPTIONS = ["backlog", "in progress", "review", "done"].map(
+  (v) => ({
+    value: v,
+    label: v,
+  }),
+);
 
 const priorityBadgeMap = {
   critical: "glass-badge--danger",
@@ -81,8 +84,42 @@ export default function TaskModal() {
   const { user } = useAuthStore();
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
   const isAdmin = user?.role === "admin";
+  // Marking a task complete is restricted to just its creator and its
+  // assignee — regardless of role, so an admin/manager who is neither
+  // can't complete someone else's task on their behalf. Editing other
+  // fields is unaffected; this only gates the completion action.
+  const canCompleteTask =
+    !!editingTask &&
+    !!user &&
+    (user.id === editingTask.assignedTo || user.id === editingTask.assignedBy);
 
   const { projects, fetchProjects } = useProjectStore();
+
+  // Same color precedence as TaskCard's accentColor: project color wins
+  // when the task belongs to a project, otherwise the task's own saved
+  // color, otherwise a priority-based fallback. Used to tint the
+  // "flies to Completed Log" bubble so it matches the card the user just
+  // completed.
+  const priorityColorHex = {
+    critical: "#f87171",
+    high: "#ffd27f",
+    medium: "#b490f5",
+    low: "#a1a1aa",
+  };
+  const rawProjectColor = editingTask
+    ? getProjectColor(editingTask.projectId, projects)
+    : null;
+  const hasValidProjectColor =
+    rawProjectColor &&
+    rawProjectColor !== "#ffffff" &&
+    rawProjectColor !== "#fff";
+  const accentColor = editingTask
+    ? editingTask.projectId
+      ? hasValidProjectColor
+        ? rawProjectColor
+        : priorityColorHex[editingTask.priority]
+      : editingTask.color || priorityColorHex[editingTask.priority]
+    : "#fb923c";
 
   // Assignable users — usersApi.getAssignableUsers() already returns just
   // this manager's team for managers and everyone for admins, so no
@@ -121,6 +158,15 @@ export default function TaskModal() {
     }
   }, [isTaskModalOpen, projects.length, fetchProjects]);
 
+  // Hide "done" as a selectable status for anyone who isn't allowed to
+  // complete this task, so the dropdown can't be used to sneak past the
+  // same rule the backend enforces. A task that's already done keeps
+  // "done" visible so its current value still shows correctly.
+  const statusOptions =
+    !editingTask || canCompleteTask || editingTask.status === "done"
+      ? ALL_STATUS_OPTIONS
+      : ALL_STATUS_OPTIONS.filter((o) => o.value !== "done");
+
   const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
   const [form, setForm] = useState(() =>
     editingTask
@@ -149,7 +195,9 @@ export default function TaskModal() {
     ...assignableUsers.map((u) => ({
       value: String(u.id),
       label: u.name,
-      group: isAdmin ? departmentByUserId[String(u.id)] || "Unassigned" : undefined,
+      group: isAdmin
+        ? departmentByUserId[String(u.id)] || "Unassigned"
+        : undefined,
     })),
   ];
 
@@ -189,14 +237,9 @@ export default function TaskModal() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!(form.title || "").trim()) return;
-   if (!form.assignedTo) {
-     setFormError("Please assign this task to someone before saving.");
-     return;
-   }
 
     setFormError(null);
     setIsSubmitting(true);
-
     // When a task belongs to a project, its color comes from the project
     // (see TaskCard.jsx / TaskKanbanView.jsx), so don't send a stale
     // standalone color that could shadow it.
@@ -228,8 +271,14 @@ export default function TaskModal() {
     closeTaskModal();
   }
 
-  async function handleComplete() {
+  async function handleComplete(e) {
     if (!editingTask) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    useUIStore.getState().fireCompletionBubble({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+      color: accentColor,
+    });
     setIsCompleting(true);
     await completeTask(editingTask.id);
     setIsCompleting(false);
@@ -289,13 +338,13 @@ export default function TaskModal() {
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
             />
             <Dropdown
-              label="Assigned To *"
+              label="Assigned To"
               value={form.assignedTo}
               onChange={(v) => setForm({ ...form, assignedTo: v })}
               options={assigneeOptions}
               searchable
               tabs={departmentTabs}
-              placeholder="Select an assignee (required)"
+              placeholder="Select an assignee"
             />
           </div>
 
@@ -487,27 +536,30 @@ export default function TaskModal() {
                 {editingTask.pinned ? "Unpin" : "Pin to top"}
               </button>
 
-              {canManageTasks ? (
-                <Button
-                  variant="primary"
-                  onClick={() => openTaskEdit(editingTask)}
-                >
-                  <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
-                </Button>
-              ) : editingTask.status === "done" ? (
-                <span className="flex items-center gap-1.5 text-xs text-success-text">
-                  <CheckCircle2 size={14} /> Completed
-                </span>
-              ) : (
-                <Button
-                  variant="primary"
-                  onClick={handleComplete}
-                  disabled={isCompleting}
-                >
-                  <CheckCircle2 size={14} className="inline mr-1.5 -mt-0.5" />
-                  {isCompleting ? "Completing…" : "Mark Complete"}
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {canManageTasks && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => openTaskEdit(editingTask)}
+                  >
+                    <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
+                  </Button>
+                )}
+                {editingTask.status === "done" ? (
+                  <span className="flex items-center gap-1.5 text-xs text-success-text">
+                    <CheckCircle2 size={14} /> Completed
+                  </span>
+                ) : canCompleteTask ? (
+                  <Button
+                    variant="primary"
+                    onClick={handleComplete}
+                    disabled={isCompleting}
+                  >
+                    <CheckCircle2 size={14} className="inline mr-1.5 -mt-0.5" />
+                    {isCompleting ? "Completing…" : "Mark Complete"}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
         )
