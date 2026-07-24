@@ -1,21 +1,18 @@
-// src/Features/teams/components/TeamMemberPicker.jsx  (NEW FILE)
+// src/Features/teams/components/TeamManagerPicker.jsx  (NEW FILE)
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Check } from "lucide-react";
+import { Search, Check, X } from "lucide-react";
 import { employeesApi } from "../../../api/employeesApi";
 
-// Employee picker for the New/Edit Team modal. Pulls from the same
-// employeesApi.getRoster() the Employees page uses, then reuses that
-// page's "search + department" pattern (built here as tabs instead of a
-// dropdown, per the Teams requirements doc) so picking members feels
-// consistent with the rest of the app. Results render as a dropdown
-// panel that only opens on focus/click, closing again on an outside
-// click — stays open across multiple picks since this is multi-select.
+// Manager picker for the New/Edit Team modal. Same search + department
+// tabs pattern as TeamMemberPicker, but single-select, and the results
+// render as a dropdown panel that only opens on focus/click instead of
+// always being expanded — closes again on selection or on an outside
+// click, so it behaves like a real search-dropdown rather than an
+// always-open list.
 //
 // Only roster employees with an existing tms_users login (emp.userId)
-// can actually be selected — a team member has to be a real account.
-// Employees without one yet show up grayed out with a "no account" tag;
-// give them a role on the Access page first.
-export default function TeamMemberPicker({ selectedIds, onChange }) {
+// can be picked as manager — same "no account" rule as members.
+export default function TeamManagerPicker({ selectedId, onChange }) {
   const [roster, setRoster] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -68,19 +65,26 @@ export default function TeamMemberPicker({ selectedIds, onChange }) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [roster, search, activeDept]);
 
-  function toggle(emp) {
+  const selectedEmp = useMemo(
+    () =>
+      selectedId
+        ? roster.find((e) => String(e.userId) === String(selectedId))
+        : null,
+    [roster, selectedId],
+  );
+
+  function select(emp) {
     if (!emp.userId) return; // no account yet — not selectable
-    const next = selectedIds.includes(emp.userId)
-      ? selectedIds.filter((id) => id !== emp.userId)
-      : [...selectedIds, emp.userId];
-    onChange(next);
+    const alreadySelected = String(selectedId) === String(emp.userId);
+    onChange(alreadySelected ? "" : String(emp.userId));
+    setIsOpen(false);
     setSearch("");
   }
 
   return (
     <div className="flex flex-col gap-2.5" ref={containerRef}>
       <label className="text-xs font-medium text-white/50 uppercase tracking-wide">
-        Members {selectedIds.length > 0 && `(${selectedIds.length} selected)`}
+        Manager{selectedEmp && `: ${selectedEmp.name}`}
       </label>
 
       <div className="relative">
@@ -94,17 +98,24 @@ export default function TeamMemberPicker({ selectedIds, onChange }) {
           onChange={(e) => setSearch(e.target.value)}
           onFocus={() => setIsOpen(true)}
           placeholder="Search employees..."
-          className="glass-input !pl-8"
+          className="glass-input !pl-8 !pr-8"
         />
+        {selectedId && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            title="Clear manager"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70"
+          >
+            <X size={14} />
+          </button>
+        )}
 
         {/* Dropdown panel — only rendered while open, floats over the
-            rest of the form instead of pushing it down. Stays open
-            after a pick since multiple members can be selected. */}
+            rest of the form instead of pushing it down. */}
         {isOpen && (
           <div className="absolute left-0 right-0 top-full mt-1.5 z-20 flex flex-col gap-2 p-2 bg-[#1a1410] border border-white/10 rounded-xl shadow-xl">
-            {/* Department tabs — same organizing pattern as the Employees
-                page's department filter, just rendered as tabs instead of
-                a dropdown. */}
+            {/* Department tabs — same organizing pattern as TeamMemberPicker. */}
             <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 overflow-x-auto">
               {departments.map((dept) => (
                 <button
@@ -145,13 +156,13 @@ export default function TeamMemberPicker({ selectedIds, onChange }) {
                 filtered.map((emp) => {
                   const hasAccount = Boolean(emp.userId);
                   const isSelected =
-                    hasAccount && selectedIds.includes(emp.userId);
+                    hasAccount && String(selectedId) === String(emp.userId);
 
                   return (
                     <button
                       key={emp.employeeCode}
                       type="button"
-                      onClick={() => toggle(emp)}
+                      onClick={() => select(emp)}
                       disabled={!hasAccount}
                       title={
                         hasAccount

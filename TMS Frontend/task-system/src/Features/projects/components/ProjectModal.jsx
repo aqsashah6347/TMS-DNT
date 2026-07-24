@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Pencil, CheckCircle2, Circle } from "lucide-react";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
@@ -10,6 +10,7 @@ import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import { teamApi } from "../../../api/teamApi";
 import { PROJECT_COLORS } from "../../../utils/projectColors";
+import ProjectMemberPicker from "./ProjectMemberPicker";
 
 const statusOptions = ["planning", "active", "completed"].map((v) => ({
   value: v,
@@ -20,7 +21,7 @@ const emptyForm = {
   description: "",
   teamId: "",
   status: "planning",
-  members: "",
+  members: [],
   color: PROJECT_COLORS[0],
 };
 
@@ -30,8 +31,8 @@ const getInitialForm = (project) => ({
   description: project?.description || emptyForm.description,
   teamId: project?.teamId ? String(project.teamId) : emptyForm.teamId,
   status: project?.status || emptyForm.status,
-  members: Array.isArray(project?.members)
-    ? project.members.join(", ")
+  members: Array.isArray(project?.memberDetails)
+    ? project.memberDetails.map((m) => m.id)
     : emptyForm.members,
   color: project?.color || emptyForm.color,
 });
@@ -39,6 +40,7 @@ const getInitialForm = (project) => ({
 function ProjectForm({
   editingProject,
   users,
+  teams,
   teamOptions,
   addProject,
   updateProject,
@@ -52,28 +54,20 @@ function ProjectForm({
 
   const isNew = !editingProject.id;
 
+  // Full team record (with memberDetails) for whichever team is currently
+  // selected in the dropdown — used to show that team's roster right
+  // below it, so picking a team shows who's actually in it.
+  const selectedTeam = useMemo(
+    () =>
+      form.teamId
+        ? teams.find((t) => String(t.id) === String(form.teamId))
+        : null,
+    [teams, form.teamId],
+  );
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) return;
-
-    const names = form.members
-      .split(",")
-      .map((m) => m.trim())
-      .filter(Boolean);
-
-    const memberIds = [];
-    const unmatched = [];
-
-    for (const n of names) {
-      const match = users.find((u) => u.name.toLowerCase() === n.toLowerCase());
-      if (match) memberIds.push(match.id);
-      else unmatched.push(n);
-    }
-
-    if (unmatched.length > 0) {
-      setFormError(`No user found named: ${unmatched.join(", ")}`);
-      return;
-    }
 
     const payload = {
       name: form.name,
@@ -81,7 +75,7 @@ function ProjectForm({
       teamId: form.teamId ? Number(form.teamId) : null,
       status: form.status,
       color: form.color,
-      members: memberIds,
+      members: form.members,
     };
 
     setFormError(null);
@@ -150,11 +144,10 @@ function ProjectForm({
         />
       </div>
 
-      <Input
-        label="Members"
-        value={form.members}
-        onChange={(e) => setForm({ ...form, members: e.target.value })}
-        placeholder="Comma-separated, e.g. Aqsa, Sara"
+      <ProjectMemberPicker
+        users={selectedTeam?.memberDetails || []}
+        selectedIds={form.members}
+        onChange={(members) => setForm({ ...form, members })}
       />
 
       <div>
@@ -282,6 +275,7 @@ export default function ProjectModal() {
           key={`${editingProject.id ?? "new"}-${isModalOpen}`}
           editingProject={editingProject}
           users={users}
+          teams={teams}
           teamOptions={teamOptions}
           addProject={addProject}
           updateProject={updateProject}
