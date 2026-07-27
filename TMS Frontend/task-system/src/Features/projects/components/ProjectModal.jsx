@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Pencil, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Pencil, CheckCircle2, Circle, PieChart, BarChart3 } from "lucide-react";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
@@ -14,8 +14,9 @@ import ProjectMemberPicker from "./ProjectMemberPicker";
 
 const statusOptions = ["planning", "active", "completed"].map((v) => ({
   value: v,
-  label: v,
+  label: v.charAt(0).toUpperCase() + v.slice(1),
 }));
+
 const emptyForm = {
   name: "",
   description: "",
@@ -54,9 +55,6 @@ function ProjectForm({
 
   const isNew = !editingProject.id;
 
-  // Full team record (with memberDetails) for whichever team is currently
-  // selected in the dropdown — used to show that team's roster right
-  // below it, so picking a team shows who's actually in it.
   const selectedTeam = useMemo(
     () =>
       form.teamId
@@ -114,7 +112,7 @@ function ProjectForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-black p-4 rounded-xl text-orange-500">
       <Input
         label="Project name"
         required
@@ -151,7 +149,7 @@ function ProjectForm({
       />
 
       <div>
-        <label className="text-xs font-medium text-muted mb-1.5 block">
+        <label className="text-xs font-medium text-orange-400 mb-1.5 block">
           Project color
         </label>
         <div className="flex gap-2">
@@ -163,7 +161,7 @@ function ProjectForm({
               className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
               style={{
                 backgroundColor: c,
-                borderColor: form.color === c ? "#001021" : "transparent",
+                borderColor: form.color === c ? "#f97316" : "transparent",
               }}
             />
           ))}
@@ -261,14 +259,16 @@ export default function ProjectModal() {
     : [];
   const doneCount = projectTasks.filter((t) => t.status === "done").length;
 
+  const currentTeam = teams.find(
+    (t) => String(t.id) === String(editingProject.teamId)
+  );
+
   return (
     <Modal
       isOpen={isModalOpen}
       onClose={closeModal}
-      title={
-        isNew ? "New Project" : isEditing ? "Edit Project" : editingProject.name
-      }
-      width="max-w-2xl"
+      title=""
+      width="max-w-4xl"
     >
       {isEditing ? (
         <ProjectForm
@@ -284,101 +284,155 @@ export default function ProjectModal() {
           taskCount={projectTasks.length}
         />
       ) : (
-        <div className="flex flex-col gap-5">
-          {/* Read-only info — no Edit button up here anymore, it now
-              lives at the bottom of the modal instead. */}
-          <div className="flex items-center gap-2">
-            <span
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: editingProject.color }}
-            />
-            <span className="text-sm text-muted">
-              {editingProject.teamName}
-            </span>
-          </div>
-
-          {editingProject.description && (
-            <p className="text-sm text-muted">{editingProject.description}</p>
-          )}
-
-          <div>
-            <div className="flex justify-between text-xs text-muted mb-1">
-              <span>Progress</span>
-              <span>{editingProject.progress}%</span>
-            </div>
-            <div className="h-2 bg-bg rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${editingProject.progress}%`,
-                  backgroundColor: editingProject.color,
-                }}
+        <div className="flex flex-col gap-6 bg-black p-6 rounded-2xl text-orange-500 border border-orange-500/30">
+          
+          {/* Top Header */}
+          <div className="flex justify-between items-center border-b border-orange-500/20 pb-4">
+            <div className="flex items-center gap-3">
+              <span
+                className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
+                style={{ backgroundColor: editingProject.color || "#f97316" }}
               />
+              <h2 className="text-xl font-bold tracking-wide uppercase text-orange-500">
+                {editingProject.name}
+              </h2>
+            </div>
+            <div className="text-right text-xs text-orange-400/80 border-l border-orange-500/20 pl-4">
+              <p>Assigned by: <span className="text-orange-500 font-medium">{editingProject.assignedBy || "Name Name"}</span></p>
+              <p>Created On: <span className="text-orange-500 font-medium">{editingProject.createdAt ? new Date(editingProject.createdAt).toLocaleDateString() : "xx-yy-zzzz"}</span></p>
             </div>
           </div>
 
-          <div className="border-t border-bg pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold text-dark">
-                Tasks{" "}
-                <span className="text-muted font-normal">
-                  ({doneCount}/{projectTasks.length} done)
-                </span>
-              </h4>
-              {canManageTasks && (
-                <Button
-                  variant="secondary"
-                  onClick={() => openCreateModalForProject(editingProject.id)}
-                >
-                  <Plus size={14} className="inline mr-1.5 -mt-0.5" /> Add Task
-                </Button>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Left 2 Columns */}
+            <div className="md:col-span-2 flex flex-col gap-5 border border-orange-500/30 p-4 rounded-xl bg-black">
+              {editingProject.description && (
+                <p className="text-sm text-orange-400/90">
+                  <strong className="text-orange-500">Description:</strong> {editingProject.description}
+                </p>
               )}
+
+              {/* Progress */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between text-xs text-orange-400">
+                  <span>Project Tasks:</span>
+                  <span>{editingProject.progress || 0}%</span>
+                </div>
+                <div className="h-2 bg-stone-900 rounded-full overflow-hidden border border-orange-500/20">
+                  <div
+                    className="h-full rounded-full transition-all bg-orange-500"
+                    style={{
+                      width: `${editingProject.progress || 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Task Breakdown */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-orange-500 uppercase tracking-wider">
+                    Task Breakdown ({doneCount}/{projectTasks.length} done)
+                  </h4>
+                  {canManageTasks && (
+                    <Button
+                      variant="secondary"
+                      className="text-xs py-1 px-3 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border border-orange-500/30 rounded-full"
+                      onClick={() => openCreateModalForProject(editingProject.id)}
+                    >
+                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Add Task
+                    </Button>
+                  )}
+                </div>
+
+                {projectTasks.length === 0 ? (
+                  <p className="text-xs text-orange-400/60 text-center py-4">
+                    No tasks yet for this project.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
+                    {projectTasks.map((task) => (
+                      <button
+                        key={task.id}
+                        onClick={() => openTaskView(task)}
+                        className="w-full flex items-center justify-between bg-stone-950 border border-orange-500/20 rounded-lg px-3 py-2.5 hover:border-orange-500/60 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          {task.status === "done" ? (
+                            <CheckCircle2 size={16} className="text-orange-500 shrink-0" />
+                          ) : (
+                            <Circle size={16} className="text-orange-400/50 shrink-0" />
+                          )}
+                          <span className="text-sm text-orange-300 truncate">
+                            <strong className="text-orange-500">Task:</strong> {task.title}
+                          </span>
+                        </div>
+                        <span className="text-xs text-orange-400 shrink-0 font-mono">45%</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {projectTasks.length === 0 ? (
-              <p className="text-xs text-muted text-center py-4">
-                No tasks yet for this project.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-                {projectTasks.map((task) => (
-                  <button
-                    key={task.id}
-                    onClick={() => openTaskView(task)}
-                    className="w-full flex items-center gap-3 bg-bg rounded-card px-3 py-2 hover:bg-primary-light/40 transition-colors text-left"
-                  >
-                    {task.status === "done" ? (
-                      <CheckCircle2
-                        size={16}
-                        className="text-success-text shrink-0"
-                      />
-                    ) : (
-                      <Circle size={16} className="text-muted shrink-0" />
-                    )}
-                    <span className="text-sm text-dark flex-1 truncate">
-                      {task.title}
-                    </span>
-                    {task.status === "done" && task.completedBy && (
-                      <span className="text-[11px] text-muted shrink-0">
-                        by {task.completedBy}
-                      </span>
-                    )}
-                  </button>
-                ))}
+            {/* Right 1 Column */}
+            <div className="flex flex-col gap-4">
+              
+              {/* Status */}
+              <div className="flex items-center gap-2 text-xs text-orange-400 font-medium bg-black border border-orange-500/30 px-3 py-3 rounded-xl">
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0 shadow-sm shadow-orange-500/50" />
+                <span>Status: <strong className="capitalize text-orange-500">{editingProject.status || "Planning"}</strong></span>
               </div>
-            )}
+
+              {/* Team Assigned */}
+              <div className="flex flex-col gap-2 bg-black border border-orange-500/30 p-3.5 rounded-xl">
+                <h5 className="text-xs font-semibold text-orange-500 uppercase tracking-wider border-b border-orange-500/20 pb-1.5">
+                  Team Assigned:
+                </h5>
+                <ul className="flex flex-col gap-1.5 text-xs text-orange-400/90 max-h-36 overflow-y-auto">
+                  {currentTeam?.memberDetails && currentTeam.memberDetails.length > 0 ? (
+                    currentTeam.memberDetails.map((member) => (
+                      <li key={member.id} className="flex items-center gap-2 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                        {member.name || member.email}
+                      </li>
+                    ))
+                  ) : editingProject.memberDetails && editingProject.memberDetails.length > 0 ? (
+                    editingProject.memberDetails.map((member) => (
+                      <li key={member.id || member} className="flex items-center gap-2 truncate">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                        {typeof member === 'object' ? member.name : member}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-orange-400/50 italic text-[11px]">No members assigned</li>
+                  )}
+                </ul>
+              </div>
+
+              {/* Graphs Section (Pie & Bar side by side, separate from Edit button) */}
+              <div className="flex items-center justify-around bg-black border border-orange-500/30 p-3.5 rounded-xl text-orange-500">
+                <PieChart size={32} className="opacity-90" />
+                <BarChart3 size={32} className="opacity-90" />
+              </div>
+
+              {/* Edit Button (Separate Box) */}
+              <div>
+                <Button
+                  variant="primary"
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-black font-bold py-2.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+                  onClick={() => useProjectStore.setState({ modalMode: "edit" })}
+                >
+                  <Pencil size={15} /> Edit
+                </Button>
+              </div>
+
+            </div>
+
           </div>
 
-          {/* Edit button now lives at the bottom of the modal, matching
-              the footer position used by the edit form's action buttons. */}
-          <div className="flex justify-end pt-2 border-t border-bg">
-            <Button
-              variant="primary"
-              onClick={() => useProjectStore.setState({ modalMode: "edit" })}
-            >
-              <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit Project
-            </Button>
-          </div>
         </div>
       )}
     </Modal>
