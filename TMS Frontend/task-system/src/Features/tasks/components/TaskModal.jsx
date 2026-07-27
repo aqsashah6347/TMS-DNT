@@ -8,26 +8,18 @@ import { useProjectStore } from "../../projects/projectStore";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import { employeesApi } from "../../../api/employeesApi";
-<<<<<<< HEAD
-import { getProjectColor } from "../../../utils/projectColors";
-import { useUIStore } from "../../../store/useUIStore";
-=======
 import { taskApi } from "../../../api/taskApi";
 import { getProjectColor } from "../../../utils/projectColors";
 import { useUIStore } from "../../../store/useUIStore";
 import { BarChart } from "@mui/x-charts/BarChart";
 import { PieChart } from "@mui/x-charts/PieChart";
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 import {
   Pencil,
   Pin,
   PinOff,
   Video,
   GitBranch,
-<<<<<<< HEAD
-=======
   ExternalLink,
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
   Calendar,
   User,
   Flag,
@@ -53,8 +45,6 @@ const priorityBadgeMap = {
   low: "glass-badge--primary",
 };
 
-<<<<<<< HEAD
-=======
 // Same status -> badge class mapping as TaskCard.jsx, kept in sync so a
 // task's status pill looks identical whether you're looking at the card
 // or the modal.
@@ -68,7 +58,6 @@ const statusBadgeMap = {
 
 const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
 
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 // Palette a user picks from when a task has no project (same rotating-swatch
 // pattern as PROJECT_COLORS / TEAM_COLORS elsewhere in the app).
 const TASK_COLORS = [
@@ -161,8 +150,6 @@ export default function TaskModal() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [formError, setFormError] = useState(null);
 
-<<<<<<< HEAD
-=======
   // Local mirror of editingTask.progress so the number field feels
   // instant to type in, while the actual save still goes through
   // updateTask (on blur) so it's clamped 0-100 and persisted the same
@@ -195,7 +182,6 @@ export default function TaskModal() {
       .catch(() => setProgressHistory([]));
   }, [isTaskModalOpen, modalMode, editingTask?.id]);
 
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
   useEffect(() => {
     if (!isTaskModalOpen) return;
     usersApi
@@ -230,39 +216,6 @@ export default function TaskModal() {
       ? ALL_STATUS_OPTIONS
       : ALL_STATUS_OPTIONS.filter((o) => o.value !== "done");
 
-<<<<<<< HEAD
- const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
-
- function buildInitialForm() {
-   return editingTask
-     ? {
-         ...editingTask,
-         assignedTo: editingTask.assignedTo
-           ? String(editingTask.assignedTo)
-           : "",
-         color: editingTask.color || TASK_COLORS[0],
-       }
-     : { ...emptyForm, projectId: pendingProjectId || null };
- }
-
- const [form, setForm] = useState(buildInitialForm);
-
- // TaskModal is mounted once at the page level and never unmounts between
- // opens (only the <Modal isOpen=.../> portal toggles), so the useState
- // initializer above only runs on the very first-ever open. Rather than
- // syncing this in a useEffect (which causes an extra render pass and
- // fights React's rules on deriving state from props), we adjust state
- // directly during render, per React's documented pattern: track the key
- // we last rendered with, and if it changed, reset form synchronously.
- // React detects this and re-renders immediately before committing, so
- // there's no flicker and no cascading effect.
- const [prevFormKey, setPrevFormKey] = useState(formKey);
- if (isTaskModalOpen && formKey !== prevFormKey) {
-   setPrevFormKey(formKey);
-   setForm(buildInitialForm());
-   setFormError(null);
- }
-=======
   const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
   const [form, setForm] = useState(() =>
     editingTask
@@ -275,7 +228,6 @@ export default function TaskModal() {
         }
       : { ...emptyForm, projectId: pendingProjectId || null },
   );
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 
   // employee.userId links a roster row to its real tms_users account —
   // only those rows are relevant for tagging an assignable user's department.
@@ -389,8 +341,6 @@ export default function TaskModal() {
       ? "Edit Task"
       : editingTask.title;
 
-<<<<<<< HEAD
-=======
   // Completion pie — split of current progress vs remaining, tinted with
   // the task's real accent color instead of MUI's default palette.
   const pieData = editingTask
@@ -405,7 +355,6 @@ export default function TaskModal() {
       ]
     : [];
 
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
   return (
     <Modal
       key={formKey}
@@ -558,124 +507,6 @@ export default function TaskModal() {
         </form>
       ) : (
         editingTask && (
-<<<<<<< HEAD
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className="w-3 h-3 rounded-full border border-bg shrink-0"
-                style={{
-                  backgroundColor: editingTask.projectId
-                    ? getProjectColor(editingTask.projectId, projects)
-                    : editingTask.color || TASK_COLORS[0],
-                }}
-              />
-              <span
-                className={`glass-badge ${priorityBadgeMap[editingTask.priority]}`}
-              >
-                <Flag size={10} className="inline mr-1 -mt-0.5" />
-                {editingTask.priority}
-              </span>
-              <span className="glass-badge glass-badge--violet">
-                {editingTask.status}
-              </span>
-              {selectedProject && (
-                <span
-                  className="glass-badge flex items-center gap-1"
-                  style={{
-                    backgroundColor: `${selectedProject.color}33`,
-                    color: selectedProject.color,
-                  }}
-                >
-                  <Folder size={10} />
-                  {selectedProject.name}
-                </span>
-              )}
-            </div>
-
-            {editingTask.description && (
-              <p className="text-sm text-muted">{editingTask.description}</p>
-            )}
-
-            <div className="flex flex-col gap-2 text-sm">
-              {editingTask.dueDate && (
-                <div className="flex items-center gap-2 text-dark">
-                  <Calendar size={14} className="text-muted" /> Due{" "}
-                  {editingTask.dueDate}
-                </div>
-              )}
-              {editingTask.assignedToName && (
-                <div className="flex items-center gap-2 text-dark">
-                  <User size={14} className="text-muted" /> Assigned to{" "}
-                  {editingTask.assignedToName}
-                </div>
-              )}
-              {editingTask.assignedByName && (
-                <div className="flex items-center gap-2 text-dark">
-                  <User size={14} className="text-muted" /> Created by{" "}
-                  {editingTask.assignedByName}
-                </div>
-              )}
-            </div>
-
-            {(editingTask.zoomLink || editingTask.githubLink) && (
-              <div className="flex flex-col gap-2 border-t border-bg pt-3">
-                {editingTask.zoomLink && (
-                  <a
-                    href={editingTask.zoomLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 text-sm text-primary hover:underline"
-                  >
-                    <Video size={14} /> Join Zoom
-                  </a>
-                )}
-                {editingTask.githubLink && (
-                  <a
-                    href={editingTask.githubLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 text-sm text-primary hover:underline"
-                  >
-                    <GitBranch size={14} /> View on GitHub
-                  </a>
-                )}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between pt-2 border-t border-bg">
-              <button
-                onClick={() => togglePin(editingTask.id)}
-                className="flex items-center gap-1.5 text-xs text-muted hover:text-dark"
-              >
-                {editingTask.pinned ? <PinOff size={14} /> : <Pin size={14} />}
-                {editingTask.pinned ? "Unpin" : "Pin to top"}
-              </button>
-
-              <div className="flex items-center gap-2">
-                {canManageTasks && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => openTaskEdit(editingTask)}
-                  >
-                    <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
-                  </Button>
-                )}
-                {editingTask.status === "done" ? (
-                  <span className="flex items-center gap-1.5 text-xs text-success-text">
-                    <CheckCircle2 size={14} /> Completed
-                  </span>
-                ) : canCompleteTask ? (
-                  <Button
-                    variant="primary"
-                    onClick={handleComplete}
-                    disabled={isCompleting}
-                  >
-                    <CheckCircle2 size={14} className="inline mr-1.5 -mt-0.5" />
-                    {isCompleting ? "Completing…" : "Mark Complete"}
-                  </Button>
-                ) : null}
-              </div>
-=======
           <div className="tvm-body">
             {/* Project name + pin, right under the modal's own title bar */}
             <div className="tvm-top-row">
@@ -736,7 +567,7 @@ export default function TaskModal() {
 
             {/* Github / Zoom link rows */}
             {editingTask.githubLink && (
-              <a
+              
                 href={editingTask.githubLink}
                 target="_blank"
                 rel="noreferrer"
@@ -751,7 +582,7 @@ export default function TaskModal() {
             )}
 
             {editingTask.zoomLink && (
-              <a
+              
                 href={editingTask.zoomLink}
                 target="_blank"
                 rel="noreferrer"
@@ -805,7 +636,18 @@ export default function TaskModal() {
                     min={0}
                     max={100}
                     value={progressInput}
-                    onChange={(e) => setProgressInput(e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      // Let the field go empty while the user is
+                      // clearing it to retype, but never let a typed
+                      // number sit outside 0-100 even before blur.
+                      if (raw === "") {
+                        setProgressInput("");
+                        return;
+                      }
+                      const num = clamp(parseInt(raw, 10) || 0, 0, 100);
+                      setProgressInput(num);
+                    }}
                     onBlur={(e) => commitProgress(e.target.value)}
                     className="tvm-progress-input"
                   />
@@ -817,37 +659,47 @@ export default function TaskModal() {
             {/* Charts — 7-day trend from creation date, and a completion pie */}
             <div className="tvm-charts-row">
               <div className="tvm-chart-box tvm-chart-bar">
-                <BarChart
-                  dataset={progressHistory}
-                  xAxis={[
-                    {
-                      dataKey: "day",
-                      scaleType: "band",
-                      tickLabelPlacement: "middle",
-                    },
-                  ]}
-                  yAxis={[{ min: 0, max: 100, width: 30 }]}
-                  series={[
-                    {
-                      dataKey: "progress",
-                      label: "Progress",
-                      color: accentColor,
-                      valueFormatter: (v) => `${v}%`,
-                    },
-                  ]}
-                  height={140}
-                  margin={{ left: 30, right: 8, top: 8, bottom: 24 }}
-                  slotProps={{ legend: { hidden: true } }}
-                  sx={{
-                    "& .MuiChartsAxis-tickLabel": { fill: "#9ca3af" },
-                    "& .MuiChartsAxis-line": {
-                      stroke: "rgba(255,255,255,0.15)",
-                    },
-                    "& .MuiChartsAxis-tick": {
-                      stroke: "rgba(255,255,255,0.15)",
-                    },
-                  }}
-                />
+                {progressHistory.length > 0 ? (
+                  <BarChart
+                    dataset={progressHistory}
+                    xAxis={[
+                      {
+                        dataKey: "day",
+                        scaleType: "band",
+                        tickLabelPlacement: "middle",
+                      },
+                    ]}
+                    yAxis={[{ min: 0, max: 100, width: 30 }]}
+                    series={[
+                      {
+                        dataKey: "progress",
+                        label: "Progress",
+                        color: accentColor,
+                        valueFormatter: (v) => `${v}%`,
+                      },
+                    ]}
+                    height={140}
+                    margin={{ left: 30, right: 8, top: 8, bottom: 24 }}
+                    slotProps={{ legend: { hidden: true } }}
+                    sx={{
+                      // Explicit fill on the bar elements themselves —
+                      // without this they were rendering solid black
+                      // instead of picking up the series `color`.
+                      "& .MuiBarElement-root": { fill: accentColor },
+                      "& .MuiChartsAxis-tickLabel": { fill: "#9ca3af" },
+                      "& .MuiChartsAxis-line": {
+                        stroke: "rgba(255,255,255,0.15)",
+                      },
+                      "& .MuiChartsAxis-tick": {
+                        stroke: "rgba(255,255,255,0.15)",
+                      },
+                    }}
+                  />
+                ) : (
+                  <p className="text-xs text-white/40 italic py-8 text-center">
+                    No progress history yet.
+                  </p>
+                )}
               </div>
               <div className="tvm-chart-box">
                 <PieChart
@@ -896,7 +748,6 @@ export default function TaskModal() {
               ) : (
                 <span />
               )}
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
             </div>
           </div>
         )
