@@ -53,7 +53,26 @@ function titleCase(value) {
   if (!value) return "—";
   return value.replace(/\b\w/g, (c) => c.toUpperCase());
 }
+<<<<<<< HEAD
 
+=======
+// Upserts today's row in tms_task_progress_log — MERGE means editing
+// progress twice in the same day updates that day's value instead of
+// creating a duplicate row.
+async function logProgressHistory(pool, taskId, progress) {
+  await pool
+    .request()
+    .input("taskId", sql.Int, taskId)
+    .input("progress", sql.Int, progress).query(`
+      MERGE tms_task_progress_log AS target
+      USING (SELECT @taskId AS task_id, CAST(SYSUTCDATETIME() AS DATE) AS log_date) AS src
+      ON target.task_id = src.task_id AND target.log_date = src.log_date
+      WHEN MATCHED THEN UPDATE SET progress = @progress
+      WHEN NOT MATCHED THEN INSERT (task_id, log_date, progress)
+        VALUES (@taskId, src.log_date, @progress);
+    `);
+}
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 // Recomputes tms_projects.progress as "% of this project's tasks that
 // are done", straight from tms_tasks. Called after any create/update/
 // delete that could change a project's task mix, so the number on the
@@ -156,6 +175,12 @@ async function getAllTasks(req, res, next) {
 async function getTaskById(req, res, next) {
   try {
     const pool = await getPool();
+<<<<<<< HEAD
+=======
+      if (updates.progress !== undefined) {
+        await logProgressHistory(pool, id, updates.progress);
+      }
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
     const task = await fetchTaskWithJoins(pool, req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
@@ -292,7 +317,11 @@ async function createTask(req, res, next) {
   }
 }
 
+<<<<<<< HEAD
 const USER_EDITABLE_FIELDS = ["status", "pinned", "completedBy"];
+=======
+const USER_EDITABLE_FIELDS = ["status", "pinned", "completedBy", "progress"];
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 
 async function updateTask(req, res, next) {
   try {
@@ -353,6 +382,7 @@ async function updateTask(req, res, next) {
       return res.status(403).json({
         message: "Only this task's creator or assignee can mark it complete",
       });
+<<<<<<< HEAD
     }
 
     // Only stamp completedBy/completedAt on the FIRST transition into
@@ -392,6 +422,48 @@ async function updateTask(req, res, next) {
       completedBy: "completed_by",
       completedAt: "completed_at",
     };
+=======
+    }
+
+    // Only stamp completedBy/completedAt on the FIRST transition into
+    // "done" — guarded by previousStatus !== "done" so re-saving an
+    // already-done task (e.g. editing its description later) doesn't
+    // keep overwriting the original completion timestamp.
+    if (updates.status === "done" && previousStatus !== "done") {
+      updates.completedBy = updates.completedBy || previousAssignedTo || null;
+      updates.completedAt = new Date();
+    }
+    if (updates.assignedTo !== undefined && req.user.role !== "admin") {
+      const canAssign = await hasPermission(
+        req.user.id,
+        req.user.role,
+        "tasks",
+        "assign",
+      );
+      if (!canAssign) {
+        return res
+          .status(403)
+          .json({ message: "You're not allowed to reassign tasks" });
+      }
+    }
+
+   const fieldMap = {
+     title: "title",
+     description: "description",
+     priority: "priority",
+     status: "status",
+     dueDate: "due_date",
+     assignedTo: "assigned_to",
+     projectId: "project_id",
+     pinned: "pinned",
+     color: "color",
+     zoomLink: "zoom_link",
+     githubLink: "github_link",
+     completedBy: "completed_by",
+     completedAt: "completed_at",
+     progress: "progress",
+   };
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 
     const request = pool.request().input("id", sql.Int, id);
     const setClauses = [];
@@ -704,6 +776,10 @@ function mapTask(row) {
     projectName: row.projectName || null,
     projectColor: row.projectColor || null,
     pinned: row.pinned,
+<<<<<<< HEAD
+=======
+    progress: row.progress ?? 0,
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
     color: row.color || null,
     zoomLink: row.zoom_link,
     githubLink: row.github_link,
@@ -714,6 +790,57 @@ function mapTask(row) {
     updatedAt: row.updated_at,
   };
 }
+// GET /api/tasks/:id/progress-history — 7 fixed days starting from the
+// task's creation date (not a rolling window). Days with no logged
+// update carry forward the last known value, so the chart shows a
+// step trend instead of gaps/zeros between edits.
+async function getTaskProgressHistory(req, res, next) {
+  try {
+    const pool = await getPool();
+    const taskResult = await pool
+      .request()
+      .input("id", sql.Int, req.params.id)
+      .query(
+        "SELECT created_at FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
+      );
+    const taskRow = taskResult.recordset[0];
+    if (!taskRow) return res.status(404).json({ message: "Task not found" });
+
+    const startDate = new Date(taskRow.created_at);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6);
+
+    const logResult = await pool
+      .request()
+      .input("taskId", sql.Int, req.params.id)
+      .input("start", sql.Date, startDate)
+      .input("end", sql.Date, endDate).query(`
+        SELECT log_date, progress FROM tms_task_progress_log
+        WHERE task_id = @taskId AND log_date BETWEEN @start AND @end
+        ORDER BY log_date ASC
+      `);
+
+    const logMap = {};
+    logResult.recordset.forEach((r) => {
+      logMap[new Date(r.log_date).toISOString().split("T")[0]] = r.progress;
+    });
+
+    let carry = 0;
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().split("T")[0];
+      if (logMap[key] !== undefined) carry = logMap[key];
+      days.push({ day: `Day ${i + 1}`, date: key, progress: carry });
+    }
+
+    res.json(days);
+  } catch (err) {
+    next(err);
+  }
+}
 
 module.exports = {
   getAllTasks,
@@ -723,4 +850,5 @@ module.exports = {
   updateTask,
   deleteTask,
   getCompletionStats,
+  getTaskProgressHistory,
 };

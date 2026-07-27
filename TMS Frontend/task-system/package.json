@@ -10,7 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@lottiefiles/dotlottie-react": "^0.19.12",
+=======
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@lottiefiles/dotlottie-react": "^0.19.12",
+    "@mui/material": "^9.2.0",
+    "@mui/x-charts": "^9.10.1",
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
     "@react-three/fiber": "^8.18.0",
     "@shadergradient/react": "^2.4.20",
     "@tailwindcss/vite": "^4.3.2",
@@ -20,6 +28,10 @@
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.23.0",
     "motion": "^12.42.2",
+<<<<<<< HEAD
+=======
+    "ogl": "^1.0.11",
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
     "quote-lib": "^2.0.1",
     "react": "^18.2.0",
     "react-calendar": "^6.0.1",

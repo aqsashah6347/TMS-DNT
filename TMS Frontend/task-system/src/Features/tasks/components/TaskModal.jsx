@@ -8,14 +8,26 @@ import { useProjectStore } from "../../projects/projectStore";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import { employeesApi } from "../../../api/employeesApi";
+<<<<<<< HEAD
 import { getProjectColor } from "../../../utils/projectColors";
 import { useUIStore } from "../../../store/useUIStore";
+=======
+import { taskApi } from "../../../api/taskApi";
+import { getProjectColor } from "../../../utils/projectColors";
+import { useUIStore } from "../../../store/useUIStore";
+import { BarChart } from "@mui/x-charts/BarChart";
+import { PieChart } from "@mui/x-charts/PieChart";
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 import {
   Pencil,
   Pin,
   PinOff,
   Video,
   GitBranch,
+<<<<<<< HEAD
+=======
+  ExternalLink,
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
   Calendar,
   User,
   Flag,
@@ -41,6 +53,22 @@ const priorityBadgeMap = {
   low: "glass-badge--primary",
 };
 
+<<<<<<< HEAD
+=======
+// Same status -> badge class mapping as TaskCard.jsx, kept in sync so a
+// task's status pill looks identical whether you're looking at the card
+// or the modal.
+const statusBadgeMap = {
+  backlog: "glass-badge--primary",
+  todo: "glass-badge--primary",
+  "in progress": "glass-badge--violet",
+  review: "glass-badge--amber",
+  done: "glass-badge--rose",
+};
+
+const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
+
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 // Palette a user picks from when a task has no project (same rotating-swatch
 // pattern as PROJECT_COLORS / TEAM_COLORS elsewhere in the app).
 const TASK_COLORS = [
@@ -133,6 +161,41 @@ export default function TaskModal() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [formError, setFormError] = useState(null);
 
+<<<<<<< HEAD
+=======
+  // Local mirror of editingTask.progress so the number field feels
+  // instant to type in, while the actual save still goes through
+  // updateTask (on blur) so it's clamped 0-100 and persisted the same
+  // way any other field edit is.
+  const [progressInput, setProgressInput] = useState(
+    editingTask?.progress ?? 0,
+  );
+
+  function commitProgress(raw) {
+    const num = clamp(
+      Number.isNaN(parseInt(raw, 10)) ? 0 : parseInt(raw, 10),
+      0,
+      100,
+    );
+    setProgressInput(num);
+    if (editingTask && num !== editingTask.progress) {
+      updateTask(editingTask.id, { progress: num });
+    }
+  }
+
+  // 7-day progress trend, starting from the task's creation date —
+  // fetched fresh whenever the modal opens in view mode for a task.
+  const [progressHistory, setProgressHistory] = useState([]);
+
+  useEffect(() => {
+    if (!isTaskModalOpen || modalMode !== "view" || !editingTask?.id) return;
+    taskApi
+      .getProgressHistory(editingTask.id)
+      .then(setProgressHistory)
+      .catch(() => setProgressHistory([]));
+  }, [isTaskModalOpen, modalMode, editingTask?.id]);
+
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
   useEffect(() => {
     if (!isTaskModalOpen) return;
     usersApi
@@ -167,6 +230,7 @@ export default function TaskModal() {
       ? ALL_STATUS_OPTIONS
       : ALL_STATUS_OPTIONS.filter((o) => o.value !== "done");
 
+<<<<<<< HEAD
  const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
 
  function buildInitialForm() {
@@ -198,6 +262,20 @@ export default function TaskModal() {
    setForm(buildInitialForm());
    setFormError(null);
  }
+=======
+  const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
+  const [form, setForm] = useState(() =>
+    editingTask
+      ? {
+          ...editingTask,
+          assignedTo: editingTask.assignedTo
+            ? String(editingTask.assignedTo)
+            : "",
+          color: editingTask.color || TASK_COLORS[0],
+        }
+      : { ...emptyForm, projectId: pendingProjectId || null },
+  );
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 
   // employee.userId links a roster row to its real tms_users account —
   // only those rows are relevant for tagging an assignable user's department.
@@ -311,6 +389,23 @@ export default function TaskModal() {
       ? "Edit Task"
       : editingTask.title;
 
+<<<<<<< HEAD
+=======
+  // Completion pie — split of current progress vs remaining, tinted with
+  // the task's real accent color instead of MUI's default palette.
+  const pieData = editingTask
+    ? [
+        { id: 0, value: progressInput, label: "Completed", color: accentColor },
+        {
+          id: 1,
+          value: 100 - progressInput,
+          label: "Remaining",
+          color: "#3a3a3a",
+        },
+      ]
+    : [];
+
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
   return (
     <Modal
       key={formKey}
@@ -463,6 +558,7 @@ export default function TaskModal() {
         </form>
       ) : (
         editingTask && (
+<<<<<<< HEAD
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 flex-wrap">
               <span
@@ -579,6 +675,228 @@ export default function TaskModal() {
                   </Button>
                 ) : null}
               </div>
+=======
+          <div className="tvm-body">
+            {/* Project name + pin, right under the modal's own title bar */}
+            <div className="tvm-top-row">
+              <span className="tvm-project-name">
+                {selectedProject ? (
+                  <>
+                    <Folder size={13} className="tvm-project-icon" />
+                    {selectedProject.name}
+                  </>
+                ) : (
+                  "No project"
+                )}
+              </span>
+              <button
+                onClick={() => togglePin(editingTask.id)}
+                className="tvm-pin-btn"
+              >
+                {editingTask.pinned ? (
+                  <>
+                    <PinOff size={13} /> Unpin
+                  </>
+                ) : (
+                  <>
+                    <Pin size={13} /> Pin to top
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="tvm-divider" />
+
+            {/* Description + priority/status badges */}
+            <div className="tvm-desc-row">
+              <div className="tvm-desc-col">
+                <p className="tvm-label">Description:</p>
+                {editingTask.description ? (
+                  <p className="tvm-desc-text">{editingTask.description}</p>
+                ) : (
+                  <p className="tvm-desc-text tvm-desc-empty">
+                    No description yet.
+                  </p>
+                )}
+              </div>
+              <div className="tvm-badge-col">
+                <span
+                  className={`glass-badge ${priorityBadgeMap[editingTask.priority]} tvm-pill`}
+                >
+                  <Flag size={11} className="tvm-pill-icon" />
+                  {editingTask.priority}
+                </span>
+                <span
+                  className={`glass-badge ${statusBadgeMap[editingTask.status] || "glass-badge--primary"} tvm-pill`}
+                >
+                  {editingTask.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Github / Zoom link rows */}
+            {editingTask.githubLink && (
+              <a
+                href={editingTask.githubLink}
+                target="_blank"
+                rel="noreferrer"
+                className="tvm-link-row"
+              >
+                <span className="tvm-link-left">
+                  <GitBranch size={16} />
+                  Github:
+                </span>
+                <ExternalLink size={14} className="tvm-link-icon" />
+              </a>
+            )}
+
+            {editingTask.zoomLink && (
+              <a
+                href={editingTask.zoomLink}
+                target="_blank"
+                rel="noreferrer"
+                className="tvm-link-row"
+              >
+                <span className="tvm-link-left">
+                  <Video size={16} />
+                  Meeting:
+                </span>
+                <ExternalLink size={14} className="tvm-link-icon" />
+              </a>
+            )}
+
+            {(editingTask.dueDate ||
+              editingTask.assignedToName ||
+              editingTask.assignedByName) && (
+              <div className="tvm-meta-row">
+                {editingTask.dueDate && (
+                  <span className="tvm-meta-item">
+                    <Calendar size={13} /> Due {editingTask.dueDate}
+                  </span>
+                )}
+                {editingTask.assignedToName && (
+                  <span className="tvm-meta-item">
+                    <User size={13} /> {editingTask.assignedToName}
+                  </span>
+                )}
+                {editingTask.assignedByName && (
+                  <span className="tvm-meta-item">
+                    <User size={13} /> By {editingTask.assignedByName}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Progress — editable 0-100, clamped */}
+            <div className="tvm-progress-block">
+              <p className="tvm-label">Task Progress:</p>
+              <div className="tvm-progress-row">
+                <div
+                  className="mask-progress-bar"
+                  style={{
+                    flex: 1,
+                    backgroundImage: `linear-gradient(${accentColor}, ${accentColor})`,
+                    backgroundSize: `${progressInput}% 100%`,
+                  }}
+                />
+                <div className="tvm-progress-value">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={progressInput}
+                    onChange={(e) => setProgressInput(e.target.value)}
+                    onBlur={(e) => commitProgress(e.target.value)}
+                    className="tvm-progress-input"
+                  />
+                  <span>%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts — 7-day trend from creation date, and a completion pie */}
+            <div className="tvm-charts-row">
+              <div className="tvm-chart-box tvm-chart-bar">
+                <BarChart
+                  dataset={progressHistory}
+                  xAxis={[
+                    {
+                      dataKey: "day",
+                      scaleType: "band",
+                      tickLabelPlacement: "middle",
+                    },
+                  ]}
+                  yAxis={[{ min: 0, max: 100, width: 30 }]}
+                  series={[
+                    {
+                      dataKey: "progress",
+                      label: "Progress",
+                      color: accentColor,
+                      valueFormatter: (v) => `${v}%`,
+                    },
+                  ]}
+                  height={140}
+                  margin={{ left: 30, right: 8, top: 8, bottom: 24 }}
+                  slotProps={{ legend: { hidden: true } }}
+                  sx={{
+                    "& .MuiChartsAxis-tickLabel": { fill: "#9ca3af" },
+                    "& .MuiChartsAxis-line": {
+                      stroke: "rgba(255,255,255,0.15)",
+                    },
+                    "& .MuiChartsAxis-tick": {
+                      stroke: "rgba(255,255,255,0.15)",
+                    },
+                  }}
+                />
+              </div>
+              <div className="tvm-chart-box">
+                <PieChart
+                  series={[
+                    {
+                      data: pieData,
+                      innerRadius: 0,
+                      outerRadius: 40,
+                    },
+                  ]}
+                  width={140}
+                  height={120}
+                  slotProps={{ legend: { hidden: true } }}
+                />
+              </div>
+            </div>
+
+            <div className="tvm-divider" />
+
+            {/* Footer */}
+            <div className="tvm-footer">
+              {canManageTasks ? (
+                <button
+                  className="tvm-btn-edit"
+                  onClick={() => openTaskEdit(editingTask)}
+                >
+                  <Pencil size={14} className="tvm-pill-icon" /> Edit
+                </button>
+              ) : (
+                <span />
+              )}
+
+              {editingTask.status === "done" ? (
+                <span className="tvm-completed-label">
+                  <CheckCircle2 size={14} /> Completed
+                </span>
+              ) : canCompleteTask ? (
+                <button
+                  className="tvm-btn-complete"
+                  onClick={handleComplete}
+                  disabled={isCompleting}
+                >
+                  <CheckCircle2 size={14} className="tvm-pill-icon" />
+                  {isCompleting ? "Completing…" : "Mark Complete"}
+                </button>
+              ) : (
+                <span />
+              )}
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
             </div>
           </div>
         )

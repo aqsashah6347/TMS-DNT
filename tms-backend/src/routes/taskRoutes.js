@@ -17,9 +17,15 @@ router.get("/", requirePermission("tasks", "view"), taskController.getAllTasks);
  router.get("/completed-log", taskController.getCompletedLog);
 
 router.get(
+<<<<<<< HEAD
   "/:id",
   requirePermission("tasks", "view"),
   taskController.getTaskById,
+=======
+  "/:id/progress-history",
+  requirePermission("tasks", "view"),
+  taskController.getTaskProgressHistory,
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 );
 
 router.post(

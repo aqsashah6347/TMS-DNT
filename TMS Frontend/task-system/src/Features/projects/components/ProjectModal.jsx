@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Pencil, CheckCircle2, Circle } from "lucide-react";
+<<<<<<< HEAD
 import {
   BarChart,
   Bar,
@@ -11,6 +12,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+=======
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
@@ -21,6 +24,7 @@ import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import { teamApi } from "../../../api/teamApi";
 import { PROJECT_COLORS } from "../../../utils/projectColors";
+<<<<<<< HEAD
 import {
   getTaskProgress,
   setTaskProgress,
@@ -35,6 +39,14 @@ const statusOptions = ["planning", "active", "completed"].map((v) => ({
   label: v.charAt(0).toUpperCase() + v.slice(1),
 }));
 
+=======
+import ProjectMemberPicker from "./ProjectMemberPicker";
+
+const statusOptions = ["planning", "active", "completed"].map((v) => ({
+  value: v,
+  label: v,
+}));
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 const emptyForm = {
   name: "",
   description: "",
@@ -73,6 +85,12 @@ function ProjectForm({
 
   const isNew = !editingProject.id;
 
+<<<<<<< HEAD
+=======
+  // Full team record (with memberDetails) for whichever team is currently
+  // selected in the dropdown — used to show that team's roster right
+  // below it, so picking a team shows who's actually in it.
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
   const selectedTeam = useMemo(
     () =>
       form.teamId
@@ -130,7 +148,11 @@ function ProjectForm({
   }
 
   return (
+<<<<<<< HEAD
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-black p-4 rounded-xl text-orange-500">
+=======
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
       <Input
         label="Project name"
         required
@@ -167,7 +189,11 @@ function ProjectForm({
       />
 
       <div>
+<<<<<<< HEAD
         <label className="text-xs font-medium text-orange-400 mb-1.5 block">
+=======
+        <label className="text-xs font-medium text-muted mb-1.5 block">
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
           Project color
         </label>
         <div className="flex gap-2">
@@ -179,7 +205,11 @@ function ProjectForm({
               className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
               style={{
                 backgroundColor: c,
+<<<<<<< HEAD
                 borderColor: form.color === c ? "#f97316" : "transparent",
+=======
+                borderColor: form.color === c ? "#001021" : "transparent",
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
               }}
             />
           ))}
@@ -248,8 +278,11 @@ export default function ProjectModal() {
 
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
+<<<<<<< HEAD
   // eslint-disable-next-line no-unused-vars -- value itself is unused, it only exists to force a re-render/re-read of localStorage
   const [progressVersion, setProgressVersion] = useState(0);
+=======
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 
   useEffect(() => {
     if (!isModalOpen) return;
@@ -278,6 +311,7 @@ export default function ProjectModal() {
     ? getTasksByProject(editingProject.id)
     : [];
   const doneCount = projectTasks.filter((t) => t.status === "done").length;
+<<<<<<< HEAD
   const pendingCount = Math.max(projectTasks.length - doneCount, 0);
 
   const currentTeam = teams.find(
@@ -303,14 +337,23 @@ export default function ProjectModal() {
     setTaskProgress(taskId, value);
     setProgressVersion((v) => v + 1);
   }
+=======
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 
   return (
     <Modal
       isOpen={isModalOpen}
       onClose={closeModal}
+<<<<<<< HEAD
       title=""
       width="max-w-6xl"
       style={{ maxWidth: "60rem" }}
+=======
+      title={
+        isNew ? "New Project" : isEditing ? "Edit Project" : editingProject.name
+      }
+      width="max-w-2xl"
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
     >
       {isEditing ? (
         <ProjectForm
@@ -326,6 +369,7 @@ export default function ProjectModal() {
           taskCount={projectTasks.length}
         />
       ) : (
+<<<<<<< HEAD
         <div className="flex flex-col gap-6 bg-black p-6 rounded-2xl text-orange-500 border border-orange-500/30">
           
           {/* Top Header */}
@@ -605,6 +649,103 @@ export default function ProjectModal() {
 
           </div>
 
+=======
+        <div className="flex flex-col gap-5">
+          {/* Read-only info — no Edit button up here anymore, it now
+              lives at the bottom of the modal instead. */}
+          <div className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: editingProject.color }}
+            />
+            <span className="text-sm text-muted">
+              {editingProject.teamName}
+            </span>
+          </div>
+
+          {editingProject.description && (
+            <p className="text-sm text-muted">{editingProject.description}</p>
+          )}
+
+          <div>
+            <div className="flex justify-between text-xs text-muted mb-1">
+              <span>Progress</span>
+              <span>{editingProject.progress}%</span>
+            </div>
+            <div className="h-2 bg-bg rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${editingProject.progress}%`,
+                  backgroundColor: editingProject.color,
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-bg pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-dark">
+                Tasks{" "}
+                <span className="text-muted font-normal">
+                  ({doneCount}/{projectTasks.length} done)
+                </span>
+              </h4>
+              {canManageTasks && (
+                <Button
+                  variant="secondary"
+                  onClick={() => openCreateModalForProject(editingProject.id)}
+                >
+                  <Plus size={14} className="inline mr-1.5 -mt-0.5" /> Add Task
+                </Button>
+              )}
+            </div>
+
+            {projectTasks.length === 0 ? (
+              <p className="text-xs text-muted text-center py-4">
+                No tasks yet for this project.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                {projectTasks.map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => openTaskView(task)}
+                    className="w-full flex items-center gap-3 bg-bg rounded-card px-3 py-2 hover:bg-primary-light/40 transition-colors text-left"
+                  >
+                    {task.status === "done" ? (
+                      <CheckCircle2
+                        size={16}
+                        className="text-success-text shrink-0"
+                      />
+                    ) : (
+                      <Circle size={16} className="text-muted shrink-0" />
+                    )}
+                    <span className="text-sm text-dark flex-1 truncate">
+                      {task.title}
+                    </span>
+                    {task.status === "done" && task.completedBy && (
+                      <span className="text-[11px] text-muted shrink-0">
+                        by {task.completedBy}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Edit button now lives at the bottom of the modal, matching
+              the footer position used by the edit form's action buttons. */}
+          <div className="flex justify-end pt-2 border-t border-bg">
+            <Button
+              variant="primary"
+              onClick={() => useProjectStore.setState({ modalMode: "edit" })}
+            >
+              <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit Project
+            </Button>
+          </div>
+>>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
         </div>
       )}
     </Modal>
