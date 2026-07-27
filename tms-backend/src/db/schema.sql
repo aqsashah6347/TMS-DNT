@@ -91,6 +91,7 @@ CREATE TABLE tms_tasks (
     assigned_by     INT             NULL FOREIGN KEY REFERENCES tms_users(id),
     project_id      INT             NULL FOREIGN KEY REFERENCES tms_projects(id),
     pinned          BIT             NOT NULL DEFAULT 0,
+     progress        INT             NOT NULL DEFAULT 0,  
     zoom_link       NVARCHAR(500)   NULL,
     github_link     NVARCHAR(500)   NULL,
     completed_by    INT             NULL FOREIGN KEY REFERENCES tms_users(id),
