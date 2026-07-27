@@ -1,5 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Pencil, CheckCircle2, Circle, PieChart, BarChart3 } from "lucide-react";
+import { Plus, Pencil, CheckCircle2, Circle } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  PieChart as RePieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
@@ -10,7 +21,14 @@ import { useAuthStore } from "../../../store/useAuthStore";
 import { usersApi } from "../../../api/usersApi";
 import { teamApi } from "../../../api/teamApi";
 import { PROJECT_COLORS } from "../../../utils/projectColors";
+import {
+  getTaskProgress,
+  setTaskProgress,
+  getProductivityByDate,
+} from "../../../utils/taskProgress";
 import ProjectMemberPicker from "./ProjectMemberPicker";
+
+const PIE_COLORS = ["#f97316", "#3f3f46"];
 
 const statusOptions = ["planning", "active", "completed"].map((v) => ({
   value: v,
@@ -230,6 +248,8 @@ export default function ProjectModal() {
 
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
+  // eslint-disable-next-line no-unused-vars -- value itself is unused, it only exists to force a re-render/re-read of localStorage
+  const [progressVersion, setProgressVersion] = useState(0);
 
   useEffect(() => {
     if (!isModalOpen) return;
@@ -258,17 +278,39 @@ export default function ProjectModal() {
     ? getTasksByProject(editingProject.id)
     : [];
   const doneCount = projectTasks.filter((t) => t.status === "done").length;
+  const pendingCount = Math.max(projectTasks.length - doneCount, 0);
 
   const currentTeam = teams.find(
     (t) => String(t.id) === String(editingProject.teamId)
   );
+
+  // Re-read from localStorage on every render; changing a task's progress
+  // bumps progressVersion, which triggers this re-render and re-read.
+  const productivityData = getProductivityByDate(
+    projectTasks.map((t) => t.id)
+  );
+
+  const completionData = [
+    { name: "Completed", value: doneCount },
+    { name: "Pending", value: pendingCount },
+  ];
+  const hasTasks = projectTasks.length > 0;
+  const completionPct = hasTasks
+    ? Math.round((doneCount / projectTasks.length) * 100)
+    : 0;
+
+  function handleProgressChange(taskId, value) {
+    setTaskProgress(taskId, value);
+    setProgressVersion((v) => v + 1);
+  }
 
   return (
     <Modal
       isOpen={isModalOpen}
       onClose={closeModal}
       title=""
-      width="max-w-4xl"
+      width="max-w-6xl"
+      style={{ maxWidth: "60rem" }}
     >
       {isEditing ? (
         <ProjectForm
@@ -353,25 +395,56 @@ export default function ProjectModal() {
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
-                    {projectTasks.map((task) => (
-                      <button
-                        key={task.id}
-                        onClick={() => openTaskView(task)}
-                        className="w-full flex items-center justify-between bg-stone-950 border border-orange-500/20 rounded-lg px-3 py-2.5 hover:border-orange-500/60 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-2.5 truncate">
-                          {task.status === "done" ? (
-                            <CheckCircle2 size={16} className="text-orange-500 shrink-0" />
-                          ) : (
-                            <Circle size={16} className="text-orange-400/50 shrink-0" />
-                          )}
-                          <span className="text-sm text-orange-300 truncate">
-                            <strong className="text-orange-500">Task:</strong> {task.title}
-                          </span>
+                    {projectTasks.map((task) => {
+                      const todayProgress = getTaskProgress(task.id);
+                      return (
+                        <div
+                          key={task.id}
+                          className="w-full bg-stone-950 border border-orange-500/20 rounded-lg px-3 py-2.5 hover:border-orange-500/60 transition-colors"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openTaskView(task)}
+                            className="w-full flex items-center gap-2.5 text-left mb-2"
+                          >
+                            {task.status === "done" ? (
+                              <CheckCircle2 size={16} className="text-orange-500 shrink-0" />
+                            ) : (
+                              <Circle size={16} className="text-orange-400/50 shrink-0" />
+                            )}
+                            <span className="text-sm text-orange-300 truncate">
+                              <strong className="text-orange-500">Task:</strong> {task.title}
+                            </span>
+                          </button>
+
+                          <div className="flex items-center gap-2 pl-[26px]">
+                            <div className="flex-1 h-1.5 bg-stone-900 rounded-full overflow-hidden border border-orange-500/10">
+                              <div
+                                className="h-full rounded-full bg-orange-500 transition-all"
+                                style={{ width: `${todayProgress}%` }}
+                              />
+                            </div>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={todayProgress}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                handleProgressChange(task.id, e.target.value)
+                              }
+                              className="w-14 shrink-0 bg-stone-900 border border-orange-500/30 rounded-md px-1.5 py-0.5 text-xs text-orange-300 font-mono text-right focus:outline-none focus:border-orange-500"
+                              aria-label={`Today's progress for ${task.title}`}
+                            />
+                            <span className="text-xs text-orange-500 font-mono shrink-0">%</span>
+                          </div>
+                          <p className="text-[10px] text-orange-400/50 pl-[26px] mt-1">
+                            Today's progress — updates the charts on the right
+                          </p>
                         </div>
-                        <span className="text-xs text-orange-400 shrink-0 font-mono">45%</span>
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -412,10 +485,109 @@ export default function ProjectModal() {
                 </ul>
               </div>
 
-              {/* Graphs Section (Pie & Bar side by side, separate from Edit button) */}
-              <div className="flex items-center justify-around bg-black border border-orange-500/30 p-3.5 rounded-xl text-orange-500">
-                <PieChart size={32} className="opacity-90" />
-                <BarChart3 size={32} className="opacity-90" />
+              {/* Completion Rate (Pie) */}
+              <div className="bg-black border border-orange-500/30 p-3.5 rounded-xl">
+                <h5 className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">
+                  Completion Rate
+                </h5>
+                {hasTasks ? (
+                  <div className="relative h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RePieChart>
+                        <Pie
+                          data={completionData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={38}
+                          outerRadius={55}
+                          startAngle={90}
+                          endAngle={-270}
+                          stroke="none"
+                        >
+                          {completionData.map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#000",
+                            border: "1px solid rgba(249,115,22,0.4)",
+                            borderRadius: "8px",
+                            fontSize: "11px", 
+                            color: "#fdba74",
+                          }}
+                        />
+                      </RePieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-lg font-bold text-orange-500">
+                        {completionPct}%
+                      </span>
+                      <span className="text-[10px] text-orange-400/70">
+                        {doneCount}/{projectTasks.length} done
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-orange-400/50 text-center py-8">
+                    No tasks to chart yet.
+                  </p>
+                )}
+              </div>
+
+              {/* Productivity by Date (Bar) */}
+              <div className="bg-black border border-orange-500/30 p-3.5 rounded-xl">
+                <h5 className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">
+                  Productivity by Date
+                </h5>
+                {productivityData.length > 0 ? (
+                  <div className="h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={productivityData}
+                        margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+                        barCategoryGap="35%"
+                      >
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 10, fill: "#fb923c" }}
+                          axisLine={{ stroke: "rgba(249,115,22,0.2)" }}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fontSize: 10, fill: "#fb923c" }}
+                          axisLine={{ stroke: "rgba(249,115,22,0.2)" }}
+                          tickLine={false}
+                          width={28}
+                        />
+                        <Tooltip
+                          cursor={{ fill: "rgba(249,115,22,0.08)" }}
+                          contentStyle={{
+                            backgroundColor: "#000",
+                            border: "1px solid rgba(249,115,22,0.4)",
+                            borderRadius: "8px",
+                            fontSize: "11px",
+                            color: "#fdba74",
+                          }}
+                        />
+                        <Bar
+                          dataKey="productivity"
+                          fill="#f97316"
+                          radius={[4, 4, 0, 0]}
+                          barSize={28}
+                          maxBarSize={32}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-xs text-orange-400/50 text-center py-8">
+                    Log progress on a task to see productivity by date.
+                  </p>
+                )}
               </div>
 
               {/* Edit Button (Separate Box) */}

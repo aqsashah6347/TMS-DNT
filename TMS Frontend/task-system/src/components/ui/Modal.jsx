@@ -8,6 +8,7 @@ export default function Modal({
   title,
   children,
   width = "max-w-[32rem]",
+  style,
 }) {
   useEffect(() => {
     function handleEsc(e) {
@@ -22,7 +23,7 @@ export default function Modal({
   return createPortal(
     <div className="glass-modal-backdrop">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="glass-modal relative mx-4 flex-shrink-0">
+      <div className="glass-modal relative mx-4 flex-shrink-0" style={style}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button
