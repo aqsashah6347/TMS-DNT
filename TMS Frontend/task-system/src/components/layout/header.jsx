@@ -172,7 +172,7 @@ export default function Header() {
         <div className="ml-auto flex items-center gap-4">
           {/* Search */}
           <div className="relative" ref={searchRef}>
-            <div className="flex items-center gap-2 w-72 rounded-full border border-white/10 bg-[#2a2d34] px-4 py-2 transition-all duration-300 hover:border-orange-500/60 focus-within:border-orange-500 focus-within:shadow-[0_0_18px_rgba(249,115,22,0.25)]">
+            <div className="flex items-center gap-2 w-72 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md px-4 py-2.5 transition-colors duration-200 hover:border-white/20 focus-within:border-orange-500/40 focus-within:bg-orange-500/10">
               <Search size={16} className="text-orange-400" />
 
               <input
