@@ -8,6 +8,7 @@ import {
   Users as UsersIcon,
   LayoutGrid,
   X,
+  Filter,
 } from "lucide-react";
 import { usersApi } from "../api/usersApi";
 import { taskApi } from "../api/taskApi";
@@ -64,6 +65,7 @@ function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
     const onTimeRate = completed.length
       ? Math.round((onTimeCompleted.length / completed.length) * 100)
       : null;
+    const onTimeCount = onTimeCompleted.length;
 
     const roster = rosterByCode.get(u.enroll_no);
     const teamInfo = teamByUserId.get(u.id);
@@ -75,6 +77,7 @@ function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
       avatarColor: u.avatarColor,
       employeeCode: u.enroll_no || roster?.employeeCode || null,
       department: roster?.department || "—",
+      branch: roster?.branch || "Unassigned",
       status: roster?.status || null,
       team: teamInfo?.teamName || null,
       assigned: userTasks.length,
@@ -85,6 +88,7 @@ function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
         ? Math.round((completed.length / userTasks.length) * 100)
         : 0,
       onTimeRate,
+      onTimeCount,
       avgCompletionDays,
     };
   });
@@ -139,9 +143,16 @@ function buildTeamStats(teams, employeeStatsById) {
     });
 }
 
-// Same custom-styled dropdown pattern used on the Employees page, kept
-// local here since it's the only other place a department filter is needed.
-function DepartmentDropdown({ departments, value, onChange }) {
+// Single "Filters" button holding both the Department and Branch pickers
+// in one panel — same pattern used on the Employees page.
+function FiltersMenu({
+  departments,
+  departmentValue,
+  onDepartmentChange,
+  branches,
+  branchValue,
+  onBranchChange,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
 
@@ -153,20 +164,23 @@ function DepartmentDropdown({ departments, value, onChange }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const label = value || "All Departments";
+  const activeCount = (departmentValue ? 1 : 0) + (branchValue ? 1 : 0);
 
   return (
     <div ref={ref} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`flex items-center justify-between gap-2 min-w-[180px] px-4 py-2.5 rounded-xl bg-white/5 border text-sm text-white transition-colors ${
+        className={`flex items-center justify-between gap-2 min-w-[150px] px-4 py-2.5 rounded-xl bg-white/5 border text-sm text-white transition-colors ${
           isOpen
             ? "border-orange-500/40 ring-2 ring-orange-500/40"
             : "border-white/10 hover:border-white/20"
         }`}
       >
-        <span className="truncate">{label}</span>
+        <span className="flex items-center gap-2">
+          <Filter size={14} className="text-white/50" />
+          Filters{activeCount > 0 ? ` (${activeCount})` : ""}
+        </span>
         <ChevronDown
           size={15}
           className={`text-white/40 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
@@ -174,41 +188,93 @@ function DepartmentDropdown({ departments, value, onChange }) {
       </button>
 
       {isOpen && (
-        <div className="absolute z-30 mt-2 w-full min-w-[200px] rounded-xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden py-1">
-          <button
-            type="button"
-            onClick={() => {
-              onChange("");
-              setIsOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
-              value === ""
-                ? "text-orange-400 bg-orange-500/10"
-                : "text-white/70 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            All Departments
-            {value === "" && <Check size={14} />}
-          </button>
+        <div className="absolute z-30 mt-2 right-0 w-72 rounded-xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden p-3 space-y-4">
+          <div>
+            <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2 px-1">
+              Department
+            </p>
+            <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
+              <button
+                type="button"
+                onClick={() => onDepartmentChange("")}
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left transition-colors ${
+                  departmentValue === ""
+                    ? "text-orange-400 bg-orange-500/10"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                All Departments
+                {departmentValue === "" && <Check size={14} />}
+              </button>
+              {departments.map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  onClick={() => onDepartmentChange(dept)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left truncate transition-colors ${
+                    departmentValue === dept
+                      ? "text-orange-400 bg-orange-500/10"
+                      : "text-white/70 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span className="truncate">{dept}</span>
+                  {departmentValue === dept && (
+                    <Check size={14} className="shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {departments.map((dept) => (
+          <div>
+            <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2 px-1">
+              Branch
+            </p>
+            <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
+              <button
+                type="button"
+                onClick={() => onBranchChange("")}
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left transition-colors ${
+                  branchValue === ""
+                    ? "text-orange-400 bg-orange-500/10"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                All Branches
+                {branchValue === "" && <Check size={14} />}
+              </button>
+              {branches.map((branch) => (
+                <button
+                  key={branch}
+                  type="button"
+                  onClick={() => onBranchChange(branch)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left truncate transition-colors ${
+                    branchValue === branch
+                      ? "text-orange-400 bg-orange-500/10"
+                      : "text-white/70 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span className="truncate">{branch}</span>
+                  {branchValue === branch && (
+                    <Check size={14} className="shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {activeCount > 0 && (
             <button
-              key={dept}
               type="button"
               onClick={() => {
-                onChange(dept);
-                setIsOpen(false);
+                onDepartmentChange("");
+                onBranchChange("");
               }}
-              className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left truncate transition-colors ${
-                value === dept
-                  ? "text-orange-400 bg-orange-500/10"
-                  : "text-white/70 hover:bg-white/5 hover:text-white"
-              }`}
+              className="w-full text-center text-xs font-medium text-orange-400 hover:text-orange-300 pt-1 border-t border-white/10"
             >
-              <span className="truncate">{dept}</span>
-              {value === dept && <Check size={14} className="shrink-0" />}
+              Clear filters
             </button>
-          ))}
+          )}
         </div>
       )}
     </div>
@@ -219,6 +285,176 @@ function formatDuration(days) {
   if (days === null || days === undefined || Number.isNaN(days)) return "—";
   if (days < 1) return `${Math.round(days * 24)}h`;
   return `${days.toFixed(1)}d`;
+}
+
+// Shared between the header row and every employee row so columns stay
+// aligned. Built with divs/grid instead of a real <table> so each row can
+// be its own independently rounded, independently glowing element (a real
+// <tr>/<td> would get its glow clipped by the table's own borders).
+const EMPLOYEE_TABLE_GRID =
+  "grid-cols-[3rem_minmax(0,1fr)_11rem_6rem_6rem_6rem_5.5rem_10rem]";
+
+function initials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] || "";
+  const second = parts[1]?.[0] || "";
+  return (first + second).toUpperCase();
+}
+
+// Deterministic color per department so the same department always gets
+// the same badge color, without needing to hardcode every department name.
+const DEPARTMENT_PALETTE = [
+  "#a78bfa", // violet
+  "#60a5fa", // blue
+  "#fb923c", // orange
+  "#34d399", // emerald
+  "#f472b6", // pink
+  "#facc15", // yellow
+  "#22d3ee", // cyan
+];
+
+function colorForDepartment(department) {
+  if (!department || department === "—") return "#94a3b8";
+  let hash = 0;
+  for (let i = 0; i < department.length; i++) {
+    hash = department.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return DEPARTMENT_PALETTE[Math.abs(hash) % DEPARTMENT_PALETTE.length];
+}
+
+// A simple blended score out of 100 — average of completion rate and
+// on-time rate — used to color the Score column and pick a Rating badge.
+// There's no historical snapshot data to compute a real week-over-week
+// trend, so unlike the reference design this doesn't show a fake up/down
+// arrow — just an honest rating based on current performance.
+function performanceScore(emp) {
+  if (!emp.assigned) return null;
+  const onTime = emp.onTimeRate ?? emp.completionRate;
+  return Math.round((emp.completionRate + onTime) / 2);
+}
+
+function scoreColorClass(score) {
+  if (score === null) return "text-white/40";
+  if (score >= 90) return "text-emerald-400";
+  if (score >= 75) return "text-blue-400";
+  if (score >= 60) return "text-orange-400";
+  return "text-red-400";
+}
+
+function ratingBadge(score) {
+  if (score === null)
+    return { label: "—", className: "text-white/40 bg-white/5 border-white/10" };
+  if (score >= 90)
+    return {
+      label: "Excellent",
+      className: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    };
+  if (score >= 75)
+    return {
+      label: "Good",
+      className: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    };
+  if (score >= 60)
+    return {
+      label: "Average",
+      className: "text-orange-400 bg-orange-500/10 border-orange-500/20",
+    };
+  return {
+    label: "Needs Improvement",
+    className: "text-red-400 bg-red-500/10 border-red-500/20",
+  };
+}
+
+// Row for the full/searchable employee list — column layout modeled on
+// the reference design (#, Employee, Department, Tasks, On Time,
+// Overdue, Score, Trend), styled with the same glow accent as the Top
+// Performers cards above, in orange instead of green.
+function EmployeeTableRow({ emp, index, onClick }) {
+  const score = performanceScore(emp);
+  const rating = ratingBadge(score);
+  const deptColor = colorForDepartment(emp.department);
+  const hasDept = emp.department && emp.department !== "—";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`grid ${EMPLOYEE_TABLE_GRID} gap-3 items-center w-full text-left rounded-2xl border border-orange-400/50 bg-orange-400/5 hover:bg-orange-400/[0.1] transition-colors px-5 py-3`}
+    >
+      <span className="text-white/40 font-medium text-sm">
+        {String(index).padStart(2, "0")}
+      </span>
+
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border text-xs font-semibold"
+          style={{
+            background: `${emp.avatarColor || "#fb923c"}22`,
+            borderColor: `${emp.avatarColor || "#fb923c"}55`,
+            color: emp.avatarColor || "#fb923c",
+          }}
+        >
+          {initials(emp.name)}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm text-white font-medium truncate">
+            {emp.name}
+          </p>
+          <p className="text-xs text-white/40 truncate">
+            {emp.team || emp.role || "—"}
+          </p>
+        </div>
+      </div>
+
+      <div>
+        {hasDept ? (
+          <span
+            className="inline-flex px-2.5 py-1 rounded-lg text-xs font-medium border whitespace-nowrap"
+            style={{
+              color: deptColor,
+              background: `${deptColor}1a`,
+              borderColor: `${deptColor}40`,
+            }}
+          >
+            {emp.department}
+          </span>
+        ) : (
+          <span className="text-white/30 text-xs">—</span>
+        )}
+      </div>
+
+      <span className="text-center text-sm text-white font-medium whitespace-nowrap">
+        {emp.completed}/{emp.assigned}
+      </span>
+
+      <span className="text-center text-sm text-white/70">
+        {emp.assigned ? emp.onTimeCount : "—"}
+      </span>
+
+      <span
+        className={`text-center text-sm font-medium ${
+          emp.overdue > 0 ? "text-red-400" : "text-white/40"
+        }`}
+      >
+        {emp.overdue}
+      </span>
+
+      <span
+        className={`text-center text-sm font-semibold ${scoreColorClass(score)}`}
+      >
+        {score === null ? "—" : score}
+      </span>
+
+      <span className="flex justify-center">
+        <span
+          className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${rating.className}`}
+        >
+          {rating.label}
+        </span>
+      </span>
+    </button>
+  );
 }
 
 function EmployeeRow({ emp, rank, onClick }) {
@@ -302,6 +538,7 @@ export default function Performance() {
 
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
   useEffect(() => {
@@ -391,6 +628,11 @@ export default function Performance() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [employeeStats]);
 
+  const branches = useMemo(() => {
+    const set = new Set(employeeStats.map((e) => e.branch || "Unassigned"));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [employeeStats]);
+
   const filteredEmployees = useMemo(() => {
     return employeeStats.filter((e) => {
       const matchesSearch =
@@ -399,9 +641,10 @@ export default function Performance() {
         (e.employeeCode || "").toLowerCase().includes(search.toLowerCase());
       const matchesDept =
         !departmentFilter || e.department === departmentFilter;
-      return matchesSearch && matchesDept;
+      const matchesBranch = !branchFilter || e.branch === branchFilter;
+      return matchesSearch && matchesDept && matchesBranch;
     });
-  }, [employeeStats, search, departmentFilter]);
+  }, [employeeStats, search, departmentFilter, branchFilter]);
 
   const selectedEmployee = selectedEmployeeId
     ? employeeStatsById.get(selectedEmployeeId)
@@ -505,10 +748,13 @@ export default function Performance() {
                 </button>
               )}
             </div>
-            <DepartmentDropdown
+            <FiltersMenu
               departments={departments}
-              value={departmentFilter}
-              onChange={setDepartmentFilter}
+              departmentValue={departmentFilter}
+              onDepartmentChange={setDepartmentFilter}
+              branches={branches}
+              branchValue={branchFilter}
+              onBranchChange={setBranchFilter}
             />
           </div>
 
@@ -518,14 +764,32 @@ export default function Performance() {
               No employees match your search or filter.
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {filteredEmployees.map((emp) => (
-                <EmployeeRow
-                  key={emp.id}
-                  emp={emp}
-                  onClick={() => setSelectedEmployeeId(emp.id)}
-                />
-              ))}
+            <div className="overflow-x-auto">
+              <div className="min-w-[860px]">
+                <div
+                  className={`hidden sm:grid ${EMPLOYEE_TABLE_GRID} gap-3 px-5 py-2 mb-2 text-[11px] uppercase tracking-wider text-white/40`}
+                >
+                  <span>#</span>
+                  <span>Employee</span>
+                  <span>Department</span>
+                  <span className="text-center">Tasks</span>
+                  <span className="text-center">On Time</span>
+                  <span className="text-center">Overdue</span>
+                  <span className="text-center">Score</span>
+                  <span className="text-center">Trend</span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  {filteredEmployees.map((emp, i) => (
+                    <EmployeeTableRow
+                      key={emp.id}
+                      emp={emp}
+                      index={i + 1}
+                      onClick={() => setSelectedEmployeeId(emp.id)}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </>

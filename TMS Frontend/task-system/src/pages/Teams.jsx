@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Plus, Search, X, SlidersHorizontal } from "lucide-react";
 import { useTeamStore } from "../Features/teams/teamStore";
 import { useAuthStore } from "../store/useAuthStore";
@@ -9,7 +9,6 @@ import TeamModal from "../Features/teams/components/TeamModal";
 import TeamFiltersModal from "../Features/teams/components/TeamFiltersModal";
 import MyTeamView from "../Features/teams/components/MyTeamView";
 import Button from "../components/ui/Button";
-import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
 
 export default function Teams() {
   const { user } = useAuthStore();
@@ -31,7 +30,6 @@ export default function Teams() {
   const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const allTasks = useTaskStore((s) => s.tasks);
   const fetchProjects = useProjectStore((s) => s.fetchProjects);
-  const containerRef = useRef(null);
 
   useEffect(() => {
     // Admin/manager get the full teams collection; the "user" role only
@@ -51,12 +49,7 @@ export default function Teams() {
   const hasManagerFilter = Boolean(filters.managerId);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative overflow-hidden min-h-screen w-full"
-    >
-      <TeamFluidCursor containerRef={containerRef} />
-
+    <div className="relative overflow-hidden min-h-screen w-full">
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <h2
