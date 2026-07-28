@@ -8,10 +8,6 @@ export default function Modal({
   title,
   children,
   width = "max-w-[32rem]",
-<<<<<<< HEAD
-  style,
-=======
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 }) {
   useEffect(() => {
     function handleEsc(e) {
@@ -26,11 +22,7 @@ export default function Modal({
   return createPortal(
     <div className="glass-modal-backdrop">
       <div className="absolute inset-0" onClick={onClose} />
-<<<<<<< HEAD
-      <div className="glass-modal relative mx-4 flex-shrink-0" style={style}>
-=======
       <div className="glass-modal relative mx-4 flex-shrink-0">
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button
@@ -45,8 +37,4 @@ export default function Modal({
     </div>,
     document.body,
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc

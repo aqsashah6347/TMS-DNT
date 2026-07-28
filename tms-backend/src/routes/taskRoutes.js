@@ -6,26 +6,32 @@ const taskController = require("../controllers/taskController");
 
 router.use(requireAuth);
 
+// Static/specific endpoints MUST come before parameterized /:id routes
 router.get(
   "/stats/completion",
   requirePermission("tasks", "view"),
   taskController.getCompletionStats,
 );
-router.get("/completed-log", taskController.getCompletedLog);
-
-router.get("/", requirePermission("tasks", "view"), taskController.getAllTasks);
- router.get("/completed-log", taskController.getCompletedLog);
 
 router.get(
-<<<<<<< HEAD
+  "/completed-log",
+  requirePermission("tasks", "view"),
+  taskController.getCompletedLog,
+);
+
+router.get("/", requirePermission("tasks", "view"), taskController.getAllTasks);
+
+// Individual task routes
+router.get(
   "/:id",
   requirePermission("tasks", "view"),
   taskController.getTaskById,
-=======
+);
+
+router.get(
   "/:id/progress-history",
   requirePermission("tasks", "view"),
   taskController.getTaskProgressHistory,
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 );
 
 router.post(

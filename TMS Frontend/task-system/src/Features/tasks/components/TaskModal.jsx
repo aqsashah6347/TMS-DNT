@@ -567,7 +567,7 @@ export default function TaskModal() {
 
             {/* Github / Zoom link rows */}
             {editingTask.githubLink && (
-              
+              <a
                 href={editingTask.githubLink}
                 target="_blank"
                 rel="noreferrer"
@@ -582,7 +582,7 @@ export default function TaskModal() {
             )}
 
             {editingTask.zoomLink && (
-              
+              <a
                 href={editingTask.zoomLink}
                 target="_blank"
                 rel="noreferrer"

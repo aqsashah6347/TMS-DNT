@@ -12,10 +12,6 @@ const JOIN_QUERY = `
   LEFT JOIN tms_projects p ON t.project_id = p.id
 `;
 
-// Re-fetches a task WITH its joined names after an insert/update, since
-// "OUTPUT INSERTED.*" only returns raw columns (assigned_to as an id,
-// no name) — without this, the frontend never sees assignedToName after
-// creating/editing a task, only after a full page refresh.
 async function fetchTaskWithJoins(pool, id) {
   const result = await pool
     .request()
@@ -23,6 +19,7 @@ async function fetchTaskWithJoins(pool, id) {
     .query(`${JOIN_QUERY} WHERE t.id = @id AND t.deleted_at IS NULL`);
   return result.recordset[0] ? mapTask(result.recordset[0]) : null;
 }
+
 async function getProjectName(pool, projectId) {
   const result = await pool
     .request()
@@ -39,8 +36,6 @@ async function getUserName(pool, userId) {
   return result.recordset[0]?.name || null;
 }
 
-// "15 Jul" style — used for the Due Date row inside the grouped edit
-// activity's changes list.
 function formatShortDate(date) {
   if (!date) return "—";
   const d = new Date(date);
@@ -48,35 +43,11 @@ function formatShortDate(date) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-// "in progress" -> "In Progress" — used for Status/Priority rows.
 function titleCase(value) {
   if (!value) return "—";
   return value.replace(/\b\w/g, (c) => c.toUpperCase());
 }
-<<<<<<< HEAD
 
-=======
-// Upserts today's row in tms_task_progress_log — MERGE means editing
-// progress twice in the same day updates that day's value instead of
-// creating a duplicate row.
-async function logProgressHistory(pool, taskId, progress) {
-  await pool
-    .request()
-    .input("taskId", sql.Int, taskId)
-    .input("progress", sql.Int, progress).query(`
-      MERGE tms_task_progress_log AS target
-      USING (SELECT @taskId AS task_id, CAST(SYSUTCDATETIME() AS DATE) AS log_date) AS src
-      ON target.task_id = src.task_id AND target.log_date = src.log_date
-      WHEN MATCHED THEN UPDATE SET progress = @progress
-      WHEN NOT MATCHED THEN INSERT (task_id, log_date, progress)
-        VALUES (@taskId, src.log_date, @progress);
-    `);
-}
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
-// Recomputes tms_projects.progress as "% of this project's tasks that
-// are done", straight from tms_tasks. Called after any create/update/
-// delete that could change a project's task mix, so the number on the
-// Projects page is always live instead of a manually-set static value.
 async function recalcProjectProgress(pool, projectId) {
   if (!projectId) return;
 
@@ -101,8 +72,6 @@ async function recalcProjectProgress(pool, projectId) {
     );
 }
 
-// GET /api/tasks?priority=&assignedTo=&search=&status=&projectId=
-// src/controllers/taskController.js — replace getAllTasks
 async function getAllTasks(req, res, next) {
   try {
     const { priority, assignedTo, search, status, projectId } = req.query;
@@ -175,17 +144,9 @@ async function getAllTasks(req, res, next) {
 async function getTaskById(req, res, next) {
   try {
     const pool = await getPool();
-<<<<<<< HEAD
-=======
-      if (updates.progress !== undefined) {
-        await logProgressHistory(pool, id, updates.progress);
-      }
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
     const task = await fetchTaskWithJoins(pool, req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // Regular users can only fetch their own task by id directly — blocks
-    // someone from guessing/typing another user's task URL.
     if (req.user.role === "user" && task.assignedTo !== req.user.id) {
       return res
         .status(403)
@@ -198,25 +159,20 @@ async function getTaskById(req, res, next) {
   }
 }
 
-// GET /api/tasks/completed-log — plain completed-tasks log feed for the
-// CompletedLogPanel drawer. Placed above any /:id-style route in
-// taskRoutes.js so "completed-log" doesn't get swallowed as a param.
 async function getCompletedLog(req, res, next) {
   try {
     const pool = await getPool();
     const request = pool.request();
 
     let query = `
-  SELECT t.id, t.title, t.completed_at, t.assigned_to, t.assigned_by,
-         u1.name AS assignedToName, u2.name AS assignedByName
-  FROM tms_tasks t
-  LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
-  LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
-  WHERE t.deleted_at IS NULL AND t.status = 'done' AND t.completed_at IS NOT NULL
-`;
+      SELECT t.id, t.title, t.completed_at, t.assigned_to, t.assigned_by,
+             u1.name AS assignedToName, u2.name AS assignedByName
+      FROM tms_tasks t
+      LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
+      LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
+      WHERE t.deleted_at IS NULL AND t.status = 'done' AND t.completed_at IS NOT NULL
+    `;
 
-    // Same visibility rule as getAllTasks — regular users only see their
-    // own completed tasks in the log.
     if (req.user.role === "user") {
       query += " AND t.assigned_to = @scopedAssignedTo";
       request.input("scopedAssignedTo", sql.Int, req.user.id);
@@ -284,9 +240,6 @@ async function createTask(req, res, next) {
       ? await getProjectName(pool, task.projectId)
       : null;
 
-    // Self-logged so the creator sees it on their own Activity page
-    // (Box 1 / Action Activity — distinct from the task_assigned
-    // notification below, which goes to the assignee instead).
     await logActivity({
       userId: req.user.id,
       type: "task_created",
@@ -317,21 +270,14 @@ async function createTask(req, res, next) {
   }
 }
 
-<<<<<<< HEAD
 const USER_EDITABLE_FIELDS = ["status", "pinned", "completedBy"];
-=======
-const USER_EDITABLE_FIELDS = ["status", "pinned", "completedBy", "progress"];
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 
 async function updateTask(req, res, next) {
   try {
     const id = req.params.id;
     const updates = req.body;
     const pool = await getPool();
-    // Grab the current project/status/assignee before we change anything —
-    // needed to (a) recalc progress for old + new project, (b) detect a
-    // done-transition for the task_completed activity, and (c) detect a
-    // reassignment for the task_assigned activity.
+
     const before = await pool
       .request()
       .input("id", sql.Int, id)
@@ -367,12 +313,6 @@ async function updateTask(req, res, next) {
       }
     }
 
-    // Marking a task complete is restricted to just the task's creator
-    // and its assignee — regardless of role, so even an admin/manager
-    // who is neither can't complete someone else's task on their behalf.
-    // Only checked on the actual completion transition (not re-saving an
-    // already-done task, and not other status moves like backlog ->
-    // in progress), so this doesn't affect any other editing ability.
     if (
       updates.status === "done" &&
       previousStatus !== "done" &&
@@ -382,17 +322,13 @@ async function updateTask(req, res, next) {
       return res.status(403).json({
         message: "Only this task's creator or assignee can mark it complete",
       });
-<<<<<<< HEAD
     }
 
-    // Only stamp completedBy/completedAt on the FIRST transition into
-    // "done" — guarded by previousStatus !== "done" so re-saving an
-    // already-done task (e.g. editing its description later) doesn't
-    // keep overwriting the original completion timestamp.
     if (updates.status === "done" && previousStatus !== "done") {
       updates.completedBy = updates.completedBy || previousAssignedTo || null;
       updates.completedAt = new Date();
     }
+
     if (updates.assignedTo !== undefined && req.user.role !== "admin") {
       const canAssign = await hasPermission(
         req.user.id,
@@ -422,56 +358,12 @@ async function updateTask(req, res, next) {
       completedBy: "completed_by",
       completedAt: "completed_at",
     };
-=======
-    }
-
-    // Only stamp completedBy/completedAt on the FIRST transition into
-    // "done" — guarded by previousStatus !== "done" so re-saving an
-    // already-done task (e.g. editing its description later) doesn't
-    // keep overwriting the original completion timestamp.
-    if (updates.status === "done" && previousStatus !== "done") {
-      updates.completedBy = updates.completedBy || previousAssignedTo || null;
-      updates.completedAt = new Date();
-    }
-    if (updates.assignedTo !== undefined && req.user.role !== "admin") {
-      const canAssign = await hasPermission(
-        req.user.id,
-        req.user.role,
-        "tasks",
-        "assign",
-      );
-      if (!canAssign) {
-        return res
-          .status(403)
-          .json({ message: "You're not allowed to reassign tasks" });
-      }
-    }
-
-   const fieldMap = {
-     title: "title",
-     description: "description",
-     priority: "priority",
-     status: "status",
-     dueDate: "due_date",
-     assignedTo: "assigned_to",
-     projectId: "project_id",
-     pinned: "pinned",
-     color: "color",
-     zoomLink: "zoom_link",
-     githubLink: "github_link",
-     completedBy: "completed_by",
-     completedAt: "completed_at",
-     progress: "progress",
-   };
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
 
     const request = pool.request().input("id", sql.Int, id);
     const setClauses = [];
 
     for (const [key, column] of Object.entries(fieldMap)) {
       if (updates[key] !== undefined) {
-        // Empty string ("" from a blank date input) isn't a valid SQL DATE —
-        // normalize to null so SQL Server doesn't choke on the conversion.
         const value = updates[key] === "" ? null : updates[key];
         if (key === "dueDate") {
           request.input(key, sql.Date, value);
@@ -502,14 +394,13 @@ async function updateTask(req, res, next) {
 
     const task = await fetchTaskWithJoins(pool, result.recordset[0].id);
 
-    // Any change to status or project_id can shift a project's % done,
-    // so recalc both the project it's on now and the one it left (if any).
     if (previousProjectId && previousProjectId !== task.projectId) {
       await recalcProjectProgress(pool, previousProjectId);
     }
     if (task.projectId) {
       await recalcProjectProgress(pool, task.projectId);
     }
+
     if (
       updates.status === "done" &&
       previousStatus !== "done" &&
@@ -548,12 +439,6 @@ async function updateTask(req, res, next) {
       });
     }
 
-    // Self-logged edit trail for Box 1 / Action Activity. Every field
-    // touched by a single PUT (due date, assignment, status, priority,
-    // title, ...) is collected into one `changes` list and logged as a
-    // single "task_edited" activity, instead of a separate activity row
-    // per field — the Activity page shows one "Edited by <user>" card with
-    // the individual field changes tucked inside an expandable dropdown.
     if (
       updates.dueDate !== undefined ||
       updates.assignedTo !== undefined ||
@@ -596,9 +481,6 @@ async function updateTask(req, res, next) {
         });
       }
 
-      // "done" is intentionally excluded here — that transition is already
-      // covered by the task_completed activity above, so this only fires
-      // for the other status changes (backlog/in progress/review/etc).
       if (updates.status !== undefined && updates.status !== "done") {
         changes.push({
           field: "Status",
@@ -686,10 +568,6 @@ async function deleteTask(req, res, next) {
   try {
     const pool = await getPool();
 
-    // tms_notifications.task_id has a FK to tms_tasks(id) with no cascade
-    // action, so a hard delete would otherwise throw FK_notifications_task.
-    // Notification history is kept — only the now-dangling task pointer is
-    // cleared.
     await pool.request().input("id", sql.Int, req.params.id).query(`
       UPDATE tms_notifications SET task_id = NULL WHERE task_id = @id
     `);
@@ -711,10 +589,6 @@ async function deleteTask(req, res, next) {
       await recalcProjectProgress(pool, deletedProjectId);
     }
 
-    // taskId/projectId are intentionally omitted here — both FK columns
-    // on tms_notifications reference rows that either no longer exist
-    // (the task) or aren't guaranteed still relevant, so the task name
-    // is embedded directly in the message instead.
     await logActivity({
       userId: req.user.id,
       type: "task_deleted",
@@ -752,9 +626,6 @@ async function getCompletionStats(req, res, next) {
   }
 }
 
-// Formats a SQL DATE column (comes back as a JS Date object) down to a
-// plain "YYYY-MM-DD" string — the calendar view compares dueDate strings
-// directly, and a full ISO datetime string would never match.
 function formatDate(value) {
   if (!value) return null;
   return new Date(value).toISOString().split("T")[0];
@@ -776,10 +647,6 @@ function mapTask(row) {
     projectName: row.projectName || null,
     projectColor: row.projectColor || null,
     pinned: row.pinned,
-<<<<<<< HEAD
-=======
-    progress: row.progress ?? 0,
->>>>>>> 2d756372ed8b89d5a594bec420b9388e7b28e8cc
     color: row.color || null,
     zoomLink: row.zoom_link,
     githubLink: row.github_link,
@@ -790,10 +657,7 @@ function mapTask(row) {
     updatedAt: row.updated_at,
   };
 }
-// GET /api/tasks/:id/progress-history — 7 fixed days starting from the
-// task's creation date (not a rolling window). Days with no logged
-// update carry forward the last known value, so the chart shows a
-// step trend instead of gaps/zeros between edits.
+
 async function getTaskProgressHistory(req, res, next) {
   try {
     const pool = await getPool();
