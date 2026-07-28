@@ -682,15 +682,48 @@ async function getTaskProgressHistory(req, res, next) {
       .request()
       .input("id", sql.Int, req.params.id)
       .query(
-        "SELECT created_at FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
+        "SELECT created_at, due_date FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
       );
     const taskRow = taskResult.recordset[0];
     if (!taskRow) return res.status(404).json({ message: "Task not found" });
 
+    // True last-resort: no creation date at all to anchor a range to
+    // (shouldn't happen in practice — every task gets one on insert).
+    if (!taskRow.created_at) {
+      const days = Array.from({ length: 5 }, (_, i) => ({
+        day: `dash-${i}`,
+        date: null,
+        progress: 0,
+      }));
+      return res.json(days);
+    }
+
     const startDate = new Date(taskRow.created_at);
     startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 6);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const rawDue = taskRow.due_date ? new Date(taskRow.due_date) : null;
+    if (rawDue) rawDue.setHours(0, 0, 0, 0);
+
+    // Real due date -> chart creation through the due date. No due date
+    // (the common case) -> chart creation through today instead, so real
+    // logged progress still shows up rather than being thrown away.
+    const hasValidDue = !!rawDue && rawDue >= startDate;
+    const endDate = hasValidDue
+      ? rawDue
+      : today >= startDate
+        ? today
+        : startDate;
+
+    // Cap how many bars we render so a due date months out doesn't produce
+    // an unreadable chart — 60 days is generous for a per-task trend view.
+    const MAX_DAYS = 60;
+    const totalDays = Math.min(
+      Math.round((endDate - startDate) / 86400000) + 1,
+      MAX_DAYS,
+    );
 
     const logResult = await pool
       .request()
@@ -709,12 +742,18 @@ async function getTaskProgressHistory(req, res, next) {
 
     let carry = 0;
     const days = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < totalDays; i++) {
       const d = new Date(startDate);
       d.setDate(d.getDate() + i);
       const key = d.toISOString().split("T")[0];
-      if (logMap[key] !== undefined) carry = logMap[key];
-      days.push({ day: `Day ${i + 1}`, date: key, progress: carry });
+      const cumulative = logMap[key] !== undefined ? logMap[key] : carry;
+      const added = Math.max(0, cumulative - carry);
+      carry = cumulative;
+      days.push({
+        day: String(d.getDate()),
+        date: key,
+        progress: added,
+      });
     }
 
     res.json(days);
@@ -722,7 +761,6 @@ async function getTaskProgressHistory(req, res, next) {
     next(err);
   }
 }
-
 module.exports = {
   getAllTasks,
   getTaskById,

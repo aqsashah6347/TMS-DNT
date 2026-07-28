@@ -60,6 +60,24 @@ const statusBadgeMap = {
 
 const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
 
+// Builds the big month label shown under the progress chart, e.g. "July"
+// or "July – August" if the task's creation→due-date range crosses months.
+function getProgressChartMonthLabel(history) {
+  if (!history || history.length === 0) return "";
+  // Fallback bars (no valid due date) come back with date: null — show a
+  // dash instead of trying to derive a month from nothing.
+  if (!history[0].date) return "-";
+  const first = new Date(history[0].date);
+  const last = new Date(history[history.length - 1].date);
+  const firstMonthName = first.toLocaleDateString("en-US", { month: "long" });
+  const sameMonth =
+    first.getMonth() === last.getMonth() &&
+    first.getFullYear() === last.getFullYear();
+  if (sameMonth) return firstMonthName;
+  const lastMonthName = last.toLocaleDateString("en-US", { month: "long" });
+  return `${firstMonthName} – ${lastMonthName}`;
+}
+
 // Palette a user picks from when a task has no project (same rotating-swatch
 // pattern as PROJECT_COLORS / TEAM_COLORS elsewhere in the app).
 const TASK_COLORS = [
@@ -198,9 +216,14 @@ export default function TaskModal() {
     setProgressInput(pct);
     commitProgress(pct);
   }
-  // 7-day progress trend, starting from the task's creation date —
-  // fetched fresh whenever the modal opens in view mode for a task.
+
+  // Progress trend from creation date to due date — fetched fresh whenever
+  // the modal opens in view mode for a task.
   const [progressHistory, setProgressHistory] = useState([]);
+  const progressChartMonth = useMemo(
+    () => getProgressChartMonthLabel(progressHistory),
+    [progressHistory],
+  );
 
   useEffect(() => {
     if (!isTaskModalOpen || modalMode !== "view" || !editingTask?.id) return;
@@ -209,6 +232,12 @@ export default function TaskModal() {
       .then(setProgressHistory)
       .catch(() => setProgressHistory([]));
   }, [isTaskModalOpen, modalMode, editingTask?.id]);
+
+  const [syncedTaskId, setSyncedTaskId] = useState(editingTask?.id ?? null);
+  if (isTaskModalOpen && editingTask?.id !== syncedTaskId) {
+    setSyncedTaskId(editingTask?.id ?? null);
+    setProgressInput(editingTask?.progress ?? 0);
+  }
 
   useEffect(() => {
     if (!isTaskModalOpen) return;
@@ -719,45 +748,60 @@ export default function TaskModal() {
               </div>
             </div>
 
-            {/* Charts — 7-day trend from creation date, and a completion pie */}
+            {/* Charts — trend from creation date to due date, and a completion pie */}
             <div className="tvm-charts-row">
               <div className="tvm-chart-box tvm-chart-bar">
                 {progressHistory.length > 0 ? (
-                  <BarChart
-                    dataset={progressHistory}
-                    xAxis={[
-                      {
-                        dataKey: "day",
-                        scaleType: "band",
-                        tickLabelPlacement: "middle",
-                      },
-                    ]}
-                    yAxis={[{ min: 0, max: 100, width: 30 }]}
-                    series={[
-                      {
-                        dataKey: "progress",
-                        label: "Progress",
-                        color: accentColor,
-                        valueFormatter: (v) => `${v}%`,
-                      },
-                    ]}
-                    height={140}
-                    margin={{ left: 30, right: 8, top: 8, bottom: 24 }}
-                    slotProps={{ legend: { hidden: true } }}
-                    sx={{
-                      // Explicit fill on the bar elements themselves —
-                      // without this they were rendering solid black
-                      // instead of picking up the series `color`.
-                      "& .MuiBarElement-root": { fill: accentColor },
-                      "& .MuiChartsAxis-tickLabel": { fill: "#9ca3af" },
-                      "& .MuiChartsAxis-line": {
-                        stroke: "rgba(255,255,255,0.15)",
-                      },
-                      "& .MuiChartsAxis-tick": {
-                        stroke: "rgba(255,255,255,0.15)",
-                      },
-                    }}
-                  />
+                  <>
+                    <BarChart
+                      dataset={progressHistory}
+                      xAxis={[
+                        {
+                          dataKey: "day",
+                          scaleType: "band",
+                          tickLabelPlacement: "middle",
+                          valueFormatter: (v) =>
+                            typeof v === "string" && v.startsWith("dash-")
+                              ? "-"
+                              : v,
+                        },
+                      ]}
+                      yAxis={[{ min: 0, max: 100, width: 30 }]}
+                      series={[
+                        {
+                          dataKey: "progress",
+                          label: "Progress",
+                          color: accentColor,
+                          valueFormatter: (v) => `${v}%`,
+                        },
+                      ]}
+                      height={140}
+                      margin={{ left: 30, right: 8, top: 8, bottom: 24 }}
+                      slotProps={{ legend: { hidden: true } }}
+                      sx={{
+                        // Explicit fill on the bar elements themselves —
+                        // without this they were rendering solid black
+                        // instead of picking up the series `color`.
+                        "& .MuiBarElement-root": {
+                          fill: accentColor,
+                        },
+                        "& .MuiChartsAxis-tickLabel": {
+                          fill: "#9ca3af",
+                          fontSize: 11,
+                        },
+                        "& .MuiChartsAxis-line": {
+                          stroke: "rgba(255,255,255,0.45)",
+                          strokeWidth: 1.5,
+                        },
+                        "& .MuiChartsAxis-tick": {
+                          stroke: "rgba(255,255,255,0.45)",
+                        },
+                      }}
+                    />
+                    <p className="text-center text-sm font-semibold text-white/70 tracking-wide -mt-1">
+                      {progressChartMonth}
+                    </p>
+                  </>
                 ) : (
                   <p className="text-xs text-white/40 italic py-8 text-center">
                     No progress history yet.

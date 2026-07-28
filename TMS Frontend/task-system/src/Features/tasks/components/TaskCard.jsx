@@ -78,10 +78,9 @@ export default function TaskCard({ task }) {
     <div
       className="task-card-v2 w-full"
       style={{
-        // Thin neon outline in the task's own color — a crisp 1.5px
-        // ring plus a layered glow (tight + wide) for actual neon
-        // punch, layered under the card's normal drop shadow.
-        boxShadow: `0 0 0 1.5px ${hexToRgba(accentColor, 0.9)}, 0 0 8px ${hexToRgba(accentColor, 0.6)}, 0 0 20px ${hexToRgba(accentColor, 0.4)}, 0 16px 40px -14px rgba(0, 0, 0, 0.55)`,
+        // Clean 1.5px outline in the task's own color — no neon glow,
+        // just the outline plus the card's normal drop shadow.
+        boxShadow: `0 0 0 1.5px ${hexToRgba(accentColor, 0.7)}, 0 16px 40px -14px rgba(0, 0, 0, 0.55)`,
       }}
       onClick={() => openTaskView(task)}
       role="button"
