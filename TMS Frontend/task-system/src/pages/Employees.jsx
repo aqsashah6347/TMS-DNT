@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, User, ChevronDown, Check, LayoutGrid, List } from "lucide-react";
+import { Search, User, ChevronDown, Check, LayoutGrid, List, Filter } from "lucide-react";
 import { employeesApi } from "../api/employeesApi";
 
 function formatTime(iso) {
@@ -123,9 +123,18 @@ function EmployeeCard({ emp }) {
   );
 }
 
-// Custom-styled dropdown — a native <select>'s open menu can't be themed
-// via Tailwind, so this builds the popup ourselves to match the dark UI.
-function DepartmentDropdown({ departments, value, onChange }) {
+// Single "Filters" button that opens one panel containing both the
+// Department and Branch pickers. Replaces what used to be two separate
+// dropdown buttons sitting side-by-side in the toolbar — that extra
+// width was what pushed the card/list view toggle off screen.
+function FiltersMenu({
+  departments,
+  departmentValue,
+  onDepartmentChange,
+  branches,
+  branchValue,
+  onBranchChange,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
 
@@ -139,20 +148,24 @@ function DepartmentDropdown({ departments, value, onChange }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const label = value || "All Departments";
+  const activeCount =
+    (departmentValue ? 1 : 0) + (branchValue ? 1 : 0);
 
   return (
     <div ref={ref} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`flex items-center justify-between gap-2 min-w-[180px] px-4 py-2.5 rounded-xl bg-white/5 border text-sm text-white transition-colors ${
+        className={`flex items-center justify-between gap-2 min-w-[150px] px-4 py-2.5 rounded-xl bg-white/5 border text-sm text-white transition-colors ${
           isOpen
             ? "border-orange-500/40 ring-2 ring-orange-500/40"
             : "border-white/10 hover:border-white/20"
         }`}
       >
-        <span className="truncate">{label}</span>
+        <span className="flex items-center gap-2">
+          <Filter size={14} className="text-white/50" />
+          Filters{activeCount > 0 ? ` (${activeCount})` : ""}
+        </span>
         <ChevronDown
           size={15}
           className={`text-white/40 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
@@ -160,41 +173,93 @@ function DepartmentDropdown({ departments, value, onChange }) {
       </button>
 
       {isOpen && (
-        <div className="absolute z-30 mt-2 w-full min-w-[200px] rounded-xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden py-1">
-          <button
-            type="button"
-            onClick={() => {
-              onChange("");
-              setIsOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left transition-colors ${
-              value === ""
-                ? "text-orange-400 bg-orange-500/10"
-                : "text-white/70 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            All Departments
-            {value === "" && <Check size={14} />}
-          </button>
+        <div className="absolute z-30 mt-2 right-0 w-72 rounded-xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden p-3 space-y-4">
+          <div>
+            <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2 px-1">
+              Department
+            </p>
+            <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
+              <button
+                type="button"
+                onClick={() => onDepartmentChange("")}
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left transition-colors ${
+                  departmentValue === ""
+                    ? "text-orange-400 bg-orange-500/10"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                All Departments
+                {departmentValue === "" && <Check size={14} />}
+              </button>
+              {departments.map((dept) => (
+                <button
+                  key={dept}
+                  type="button"
+                  onClick={() => onDepartmentChange(dept)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left truncate transition-colors ${
+                    departmentValue === dept
+                      ? "text-orange-400 bg-orange-500/10"
+                      : "text-white/70 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span className="truncate">{dept}</span>
+                  {departmentValue === dept && (
+                    <Check size={14} className="shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {departments.map((dept) => (
+          <div>
+            <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2 px-1">
+              Branch
+            </p>
+            <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
+              <button
+                type="button"
+                onClick={() => onBranchChange("")}
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left transition-colors ${
+                  branchValue === ""
+                    ? "text-orange-400 bg-orange-500/10"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                All Branches
+                {branchValue === "" && <Check size={14} />}
+              </button>
+              {branches.map((branch) => (
+                <button
+                  key={branch}
+                  type="button"
+                  onClick={() => onBranchChange(branch)}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left truncate transition-colors ${
+                    branchValue === branch
+                      ? "text-orange-400 bg-orange-500/10"
+                      : "text-white/70 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span className="truncate">{branch}</span>
+                  {branchValue === branch && (
+                    <Check size={14} className="shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {activeCount > 0 && (
             <button
-              key={dept}
               type="button"
               onClick={() => {
-                onChange(dept);
-                setIsOpen(false);
+                onDepartmentChange("");
+                onBranchChange("");
               }}
-              className={`w-full flex items-center justify-between px-3.5 py-2 text-sm text-left truncate transition-colors ${
-                value === dept
-                  ? "text-orange-400 bg-orange-500/10"
-                  : "text-white/70 hover:bg-white/5 hover:text-white"
-              }`}
+              className="w-full text-center text-xs font-medium text-orange-400 hover:text-orange-300 pt-1 border-t border-white/10"
             >
-              <span className="truncate">{dept}</span>
-              {value === dept && <Check size={14} className="shrink-0" />}
+              Clear filters
             </button>
-          ))}
+          )}
         </div>
       )}
     </div>
@@ -207,6 +272,7 @@ export default function Employees() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
   const [viewMode, setViewMode] = useState("present"); // "present" | "all" — present is default
   const [viewLayout, setViewLayout] = useState("card"); // "card" | "list" — card is default
 
@@ -237,6 +303,11 @@ export default function Employees() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [employees]);
 
+  const branches = useMemo(() => {
+    const set = new Set(employees.map((e) => e.branch || "Unassigned"));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [employees]);
+
   const filtered = useMemo(() => {
     return employees.filter((emp) => {
       const matchesSearch =
@@ -245,10 +316,11 @@ export default function Employees() {
         emp.employeeCode.toLowerCase().includes(search.toLowerCase());
       const matchesDept =
         !departmentFilter || emp.department === departmentFilter;
+      const matchesBranch = !branchFilter || emp.branch === branchFilter;
       const matchesView = viewMode === "all" || emp.status === "present";
-      return matchesSearch && matchesDept && matchesView;
+      return matchesSearch && matchesDept && matchesBranch && matchesView;
     });
-  }, [employees, search, departmentFilter, viewMode]);
+  }, [employees, search, departmentFilter, branchFilter, viewMode]);
 
   const presentCount = useMemo(
     () => employees.filter((e) => e.status === "present").length,
@@ -285,10 +357,13 @@ export default function Employees() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 shrink-0">
-          <DepartmentDropdown
+          <FiltersMenu
             departments={departments}
-            value={departmentFilter}
-            onChange={setDepartmentFilter}
+            departmentValue={departmentFilter}
+            onDepartmentChange={setDepartmentFilter}
+            branches={branches}
+            branchValue={branchFilter}
+            onBranchChange={setBranchFilter}
           />
 
           <div className="flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">

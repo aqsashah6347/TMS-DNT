@@ -1,6 +1,7 @@
 const { getPool } = require("../config/db");
 const attendanceService = require("../services/attendanceService");
 const { fetchAllEmployees } = require("../services/zkEmployeeService");
+const { getEnrollNoToBranchMap } = require("../services/zkDeviceService");
 
 // GET /api/employees/directory — a lighter version of /roster for member
 // pickers (project members, task assignees, etc). Any authenticated user
@@ -68,6 +69,11 @@ async function getRoster(req, res, next) {
       getPool(),
     ]);
 
+    // Non-blocking — reads whatever's cached right now (or refreshes
+    // quietly in the background) instead of making the roster wait on
+    // the slow device API. See zkDeviceService.js for details.
+    const branchMap = getEnrollNoToBranchMap();
+
     const logByCode = new Map(logRanges.map((l) => [l.enrollNo, l]));
 
     const usersResult = await pool
@@ -91,6 +97,7 @@ async function getRoster(req, res, next) {
         name: emp.fullName,
         gender: emp.gender || null,
         department: emp.departmentName || "—",
+        branch: branchMap.get(code) || "Unassigned",
         status: log ? "present" : "absent",
         checkIn: log?.checkIn || null,
         checkOut: log?.checkOut || null,
