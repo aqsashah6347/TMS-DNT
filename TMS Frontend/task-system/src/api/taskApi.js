@@ -50,4 +50,8 @@ getAllTasks: async (filters = {}, page = 1, pageSize = 25) => {
     });
     return res.data;
   },
+  getProgressHistory: async (id) => {
+    const res = await axiosInstance.get(`/tasks/${id}/progress-history`);
+    return res.data;
+  },
 };

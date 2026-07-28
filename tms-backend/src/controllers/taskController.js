@@ -270,7 +270,7 @@ async function createTask(req, res, next) {
   }
 }
 
-const USER_EDITABLE_FIELDS = ["status", "pinned", "completedBy"];
+const USER_EDITABLE_FIELDS = ["status", "pinned", "completedBy", "progress"];
 
 async function updateTask(req, res, next) {
   try {
@@ -357,6 +357,7 @@ async function updateTask(req, res, next) {
       githubLink: "github_link",
       completedBy: "completed_by",
       completedAt: "completed_at",
+      progress: "progress",
     };
 
     const request = pool.request().input("id", sql.Int, id);
@@ -393,6 +394,21 @@ async function updateTask(req, res, next) {
     }
 
     const task = await fetchTaskWithJoins(pool, result.recordset[0].id);
+
+    if (updates.progress !== undefined) {
+      await pool
+        .request()
+        .input("taskId", sql.Int, id)
+        .input("progress", sql.Int, task.progress).query(`
+          MERGE tms_task_progress_log AS target
+          USING (SELECT @taskId AS task_id, CAST(SYSUTCDATETIME() AS DATE) AS log_date) AS src
+          ON target.task_id = src.task_id AND target.log_date = src.log_date
+          WHEN MATCHED THEN
+            UPDATE SET progress = @progress
+          WHEN NOT MATCHED THEN
+            INSERT (task_id, log_date, progress) VALUES (@taskId, src.log_date, @progress);
+        `);
+    }
 
     if (previousProjectId && previousProjectId !== task.projectId) {
       await recalcProjectProgress(pool, previousProjectId);
@@ -653,6 +669,7 @@ function mapTask(row) {
     completedBy: row.completed_by,
     completedByName: row.completedByName || null,
     completedAt: row.completed_at || null,
+    progress: row.progress ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
 import { Dropdown } from "../../../components/ui/Dropdown";
@@ -25,6 +25,8 @@ import {
   Flag,
   Folder,
   CheckCircle2,
+  Check,
+  Loader2,
 } from "lucide-react";
 
 const priorityOptions = ["low", "medium", "high", "critical"].map((v) => ({
@@ -158,7 +160,13 @@ export default function TaskModal() {
     editingTask?.progress ?? 0,
   );
 
-  function commitProgress(raw) {
+  // Save-feedback for the progress control: 'idle' the rest of the time,
+  // 'saving' while the request is in flight, 'saved' briefly after it
+  // succeeds (auto-reverts to 'idle'), 'error' if it fails.
+  const [progressSaveState, setProgressSaveState] = useState("idle");
+  const progressSaveTimeoutRef = useRef(null);
+
+  async function commitProgress(raw) {
     const num = clamp(
       Number.isNaN(parseInt(raw, 10)) ? 0 : parseInt(raw, 10),
       0,
@@ -166,10 +174,30 @@ export default function TaskModal() {
     );
     setProgressInput(num);
     if (editingTask && num !== editingTask.progress) {
-      updateTask(editingTask.id, { progress: num });
+      clearTimeout(progressSaveTimeoutRef.current);
+      setProgressSaveState("saving");
+      const ok = await updateTask(editingTask.id, { progress: num });
+      setProgressSaveState(ok ? "saved" : "error");
+      progressSaveTimeoutRef.current = setTimeout(
+        () => setProgressSaveState("idle"),
+        1500,
+      );
     }
   }
 
+  useEffect(() => {
+    return () => clearTimeout(progressSaveTimeoutRef.current);
+  }, []);
+
+  // Click (or drag) anywhere along the progress track to jump straight to
+  // that percentage, instead of only being able to type a number.
+  function handleProgressBarPointer(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    const pct = clamp(Math.round(ratio * 100), 0, 100);
+    setProgressInput(pct);
+    commitProgress(pct);
+  }
   // 7-day progress trend, starting from the task's creation date —
   // fetched fresh whenever the modal opens in view mode for a task.
   const [progressHistory, setProgressHistory] = useState([]);
@@ -623,11 +651,25 @@ export default function TaskModal() {
               <p className="tvm-label">Task Progress:</p>
               <div className="tvm-progress-row">
                 <div
-                  className="mask-progress-bar"
+                  className="mask-progress-bar tvm-progress-bar--clickable"
+                  role="slider"
+                  aria-label="Task progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progressInput || 0}
+                  tabIndex={0}
+                  title="Click to set progress"
                   style={{
                     flex: 1,
                     backgroundImage: `linear-gradient(${accentColor}, ${accentColor})`,
                     backgroundSize: `${progressInput}% 100%`,
+                  }}
+                  onClick={handleProgressBarPointer}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowRight")
+                      commitProgress((progressInput || 0) + 1);
+                    if (e.key === "ArrowLeft")
+                      commitProgress((progressInput || 0) - 1);
                   }}
                 />
                 <div className="tvm-progress-value">
@@ -649,9 +691,30 @@ export default function TaskModal() {
                       setProgressInput(num);
                     }}
                     onBlur={(e) => commitProgress(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                    }}
                     className="tvm-progress-input"
                   />
                   <span>%</span>
+                  <span
+                    className={`tvm-progress-status tvm-progress-status--${progressSaveState}`}
+                    aria-live="polite"
+                  >
+                    {progressSaveState === "saving" && (
+                      <Loader2
+                        size={14}
+                        className="tvm-progress-status__spin"
+                      />
+                    )}
+                    {progressSaveState === "saved" && (
+                      <>
+                        <Check size={14} />
+                        Saved
+                      </>
+                    )}
+                    {progressSaveState === "error" && "Couldn't save"}
+                  </span>
                 </div>
               </div>
             </div>

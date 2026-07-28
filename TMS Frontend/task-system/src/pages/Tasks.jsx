@@ -15,9 +15,7 @@ import TaskCalendarView from "../Features/tasks/components/TaskCalendarView";
 import TaskModal from "../Features/tasks/components/TaskModal";
 import TaskFiltersModal from "../Features/tasks/components/TaskFiltersModal";
 import CompletedLogPanel from "../Features/tasks/components/CompletedLogPanel";
-import Button from "../components/ui/Button";
-import { useEffect, useRef, useState } from "react";
-import TeamFluidCursor from "../Features/teams/components/TeamFluidCursor";
+import { useEffect, useState } from "react";
 import CompletionBubbleOverlay from "../Features/tasks/components/CompletionBubbleOverlay";
 
 const viewOptions = [
@@ -26,8 +24,18 @@ const viewOptions = [
   { key: "calendar", label: "Calendar View", icon: Calendar },
 ];
 
+// Shared squarish/solid button style — matches the Employees page toggles:
+// flat orange-tinted background when active, no glow/scale, backdrop-blur
+// so the translucent bg reads as solid rather than see-through.
+const toolbarBtn =
+  "flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium backdrop-blur-md border transition-colors";
+const toolbarBtnSecondary =
+  "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white";
+const toolbarBtnPrimary =
+  "bg-orange-500/20 border-orange-500/30 text-orange-400 hover:bg-orange-500/30";
+
 export default function Tasks() {
-const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
+  const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
     useTaskStore();
   const tasks = getFilteredTasks();
   // Kanban needs the raw, unfiltered list so its Done column isn't empty.
@@ -54,13 +62,9 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
-  const containerRef = useRef(null);
+
   return (
-    <div
-      ref={containerRef}
-      className="relative overflow-hidden min-h-screen w-full"
-    >
-      <TeamFluidCursor containerRef={containerRef} />
+    <div className="relative min-h-screen w-full">
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-6">
           <h2
@@ -75,7 +79,7 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
 
           <div className="flex items-center gap-5">
             {canManageTasks && (
-              <div className="flex bg-surface rounded-card p-1.5 gap-1">
+              <div className="flex rounded-xl bg-white/5 backdrop-blur-md border border-white/10 p-1 gap-1">
                 {[
                   { key: "myTasks", label: "My Tasks" },
                   { key: "assignedTasks", label: "Assigned Tasks" },
@@ -83,10 +87,10 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
                   <button
                     key={key}
                     onClick={() => setTaskScope(key)}
-                    className={`px-4 py-2.5 rounded-card text-sm font-medium cursor-pointer transition-all duration-300 ease-out ${
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       taskScope === key
-                        ? "bg-primary text-dark shadow-[0_0_18px_rgba(251,146,60,0.4)]"
-                        : "text-muted hover:text-orange-300 hover:bg-orange-500/10"
+                        ? "bg-orange-500/20 text-orange-400"
+                        : "text-white/50 hover:text-white/80 hover:bg-white/5"
                     }`}
                   >
                     {label}
@@ -95,53 +99,52 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
               </div>
             )}
 
-            <div className="flex bg-surface rounded-card p-2 gap-2">
+            <div className="flex rounded-xl bg-white/5 backdrop-blur-md border border-white/10 p-1 gap-1">
               {viewOptions.map(({ key, label, icon: Icon }) => (
                 <div key={key} className="relative group">
                   <button
                     onClick={() => setView(key)}
-                    className={`p-3 rounded-card cursor-pointer transition-all duration-300 ease-out ${
+                    className={`p-3 rounded-lg transition-colors ${
                       view === key
-                        ? "bg-primary text-dark shadow-[0_0_22px_rgba(251,146,60,0.45)] scale-105"
-                        : "text-muted hover:text-orange-300 hover:bg-orange-500/10 hover:shadow-[0_0_18px_rgba(251,146,60,0.35)] hover:scale-105 active:scale-95"
+                        ? "bg-orange-500/20 text-orange-400"
+                        : "text-white/50 hover:text-white/80 hover:bg-white/5"
                     }`}
                   >
                     <Icon size={22} />
                   </button>
 
-                  <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-zinc-900 border border-orange-400/30 px-3 py-1.5 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0 pointer-events-none z-50">
+                  <div className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-zinc-900 border border-white/10 px-3 py-1.5 text-sm font-medium text-white opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0 pointer-events-none z-50">
                     {label}
                   </div>
                 </div>
               ))}
             </div>
 
-            <Button
+            <button
               id="completed-log-btn"
-              variant="secondary"
               onClick={toggleCompletedLog}
-              className="text-base px-5 py-3"
+              className={`${toolbarBtn} ${toolbarBtnSecondary}`}
             >
-              <ClipboardCheck size={18} className="inline mr-1.5 -mt-0.5" />{" "}
+              <ClipboardCheck size={18} />
               Completed Log
-            </Button>
+            </button>
 
-            <Button
-              variant="secondary"
+            <button
               onClick={openFiltersModal}
-              className="text-base px-5 py-3"
+              className={`${toolbarBtn} ${toolbarBtnSecondary}`}
             >
-              <Filter size={18} className="inline mr-1.5 -mt-0.5" /> Filters
-            </Button>
+              <Filter size={18} />
+              Filters
+            </button>
 
             {canManageTasks && (
-              <Button
-                variant="primary"
+              <button
                 onClick={openCreateModal}
-                className="text-base px-5 py-3"
+                className={`${toolbarBtn} ${toolbarBtnPrimary}`}
               >
-                <Plus size={18} className="inline mr-1.5 -mt-0.5" /> New Task
-              </Button>
+                <Plus size={18} />
+                New Task
+              </button>
             )}
           </div>
         </div>
@@ -161,16 +164,15 @@ const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
 
         {view === "list" && allTasks.length < total && (
           <div className="flex justify-center mt-6">
-            <Button
-              variant="secondary"
+            <button
               onClick={loadMoreTasks}
               disabled={isLoading}
-              className="text-base px-5 py-3"
+              className={`${toolbarBtn} ${toolbarBtnSecondary} disabled:opacity-40 disabled:cursor-not-allowed`}
             >
               {isLoading
                 ? "Loading..."
                 : `Load more (${allTasks.length} of ${total})`}
-            </Button>
+            </button>
           </div>
         )}
 
