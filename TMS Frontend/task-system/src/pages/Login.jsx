@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { getRandomQuote } from "quote-lib";
 import LoginForm from "../Features/auth/LoginForm";
+import SideRays from "../components/ui/SideRays";
+import LightRays from "../components/ui/LightRays";
+import Particles from "../components/ui/Particles";
 import tms from "../assets/tms.png";
 
 // Loads a script tag once and resolves when it's actually ready.
@@ -67,7 +70,7 @@ export default function Login() {
     "https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"
   );
 }
-if (!window.VANTA) {
+if (!window.VANTA || typeof window.VANTA.NET !== "function") {
   await loadScript(
     "https://cdn.jsdelivr.net/npm/vanta@0.5.21/dist/vanta.net.min.js"
   );
@@ -186,6 +189,56 @@ if (!window.VANTA) {
 
       {/* Solid Black Background */}
       <div className="absolute inset-0 bg-black" />
+
+      {/* SideRays — ambient light-beam background effect (react bits) */}
+      <div className="absolute inset-0 pointer-events-none">
+        <SideRays
+          speed={1.5}
+          rayColor1="#e57d25"
+          rayColor2="#fb923c"
+          intensity={1.5}
+          spread={1.5}
+          origin="top-right"
+          tilt={0}
+          saturation={1.2}
+          blend={0.6}
+          falloff={1.8}
+          opacity={0.35}
+        />
+      </div>
+
+      {/* LightRays — softer second ambient layer, from the top, react bits */}
+      <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.35 }}>
+        <LightRays
+          raysOrigin="top-center"
+          raysColor="#fb923c"
+          raysSpeed={1}
+          lightSpread={0.6}
+          rayLength={1.3}
+          pulsating={false}
+          fadeDistance={0.8}
+          saturation={1}
+          followMouse={false}
+          mouseInfluence={0}
+          noiseAmount={0.05}
+          distortion={0.02}
+        />
+      </div>
+
+      {/* Particles — floating ember-like dots drifting across the background, react bits */}
+      <div className="absolute inset-0 pointer-events-none">
+        <Particles
+          particleColors={["#e57d25", "#fb923c", "#ffffff"]}
+          particleCount={140}
+          particleSpread={10}
+          speed={0.1}
+          particleBaseSize={80}
+          moveParticlesOnHover={false}
+          alphaParticles={true}
+          disableRotation={false}
+          pixelRatio={1}
+        />
+      </div>
       
       {/* Subtle Soft Highlights */}
       <div className="absolute -top-32 -left-32 w-[700px] h-[700px] bg-gradient-to-r from-transparent via-[#e57d25]/5 to-transparent rounded-full blur-[100px] rotate-45 pointer-events-none" />
@@ -216,7 +269,7 @@ if (!window.VANTA) {
       <div className="relative w-[676px] h-[450px] flex items-center">
         
         {/* Left Side: Form Card */}
-        <div className="absolute left-0 top-[45px] w-[580px] h-[360px] rounded-[32px] bg-[#e57d25]/05 backdrop-blur-md border border-[#e57d25]/25 pt-8 pb-8 pl-12 pr-44 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(229,125,37,0.15)] flex flex-col justify-center items-start z-10">
+        <div className="absolute left-0 top-[45px] w-[580px] h-[360px] rounded-[32px] bg-[#e57d25]/05 backdrop-blur-md border border-orange-400/50 pt-8 pb-8 pl-12 pr-44 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(229,125,37,0.15)] flex flex-col justify-center items-start z-10">
           
           <h2 className="text-2xl font-bold text-white text-left mb-6 tracking-wide w-full max-w-[280px]">
             TMS Login
@@ -227,7 +280,7 @@ if (!window.VANTA) {
         </div>
 
         {/* Right Side: Floating Image Card */}
-        <div className="absolute right-0 top-0 w-[330px] h-[450px] rounded-[38px] overflow-hidden bg-[#0d0c10] shadow-[0_25px_60px_rgba(0,0,0,0.9)] z-20 border border-[#e57d25]/30 flex items-center justify-center flex-shrink-0">
+        <div className="absolute right-0 top-0 w-[330px] h-[450px] rounded-[38px] overflow-hidden bg-[#0d0c10] shadow-[0_25px_60px_rgba(0,0,0,0.9)] z-20 border border-orange-400/50 flex items-center justify-center flex-shrink-0">
           <img
             src={tms}
             alt="tms-pic"
