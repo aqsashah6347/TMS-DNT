@@ -1,6 +1,32 @@
 const { sql, getPool } = require("../config/db");
-const { MODULES, ACTIONS, ROLE_PRESETS } = require("../middleware/permissions");
-
+const {
+  MODULES,
+  ACTIONS,
+  ROLE_PRESETS,
+  getEffectiveActions,
+} = require("../middleware/permissions");
+// GET /api/permissions/me
+// Any authenticated user can hit this (unlike everything else in this
+// controller, which is admin-only) — it returns *their own* effective
+// permissions, the same admin-override-else-role-preset logic
+// requirePermission() already enforces on every protected route. This
+// is what the frontend was missing: UI gating across the app (Projects,
+// Tasks, Teams...) was checking the raw `user.role` string instead of
+// this, so an admin customizing someone's permissions on the Access
+// page had no effect on what buttons that person actually saw — only
+// on whether the backend accepted the request.
+async function getMyPermissions(req, res, next) {
+  try {
+    const { id, role } = req.user;
+    const permissions = {};
+    for (const module of MODULES) {
+      permissions[module] = await getEffectiveActions(id, role, module);
+    }
+    res.json({ role, permissions });
+  } catch (err) {
+    next(err);
+  }
+}
 function capitalize(word) {
   return word ? word.charAt(0).toUpperCase() + word.slice(1) : word;
 }
@@ -366,6 +392,7 @@ function timeAgo(date) {
 
 module.exports = {
   getAllPermissions,
+  getMyPermissions,
   togglePermission,
   setRole,
   batchUpdate,

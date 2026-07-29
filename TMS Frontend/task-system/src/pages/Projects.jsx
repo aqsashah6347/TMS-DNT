@@ -7,6 +7,7 @@ import ProjectModal from "../Features/projects/components/ProjectModal";
 import ProjectFiltersModal from "../Features/projects/components/ProjectFiltersModal";
 import TaskModal from "../Features/tasks/components/TaskModal";
 import Button from "../components/ui/Button";
+import { usePermissionStore } from "../store/usePermissionStore";
 
 export default function Projects() {
   const {
@@ -22,6 +23,13 @@ export default function Projects() {
   } = useProjectStore();
   const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const allTasks = useTaskStore((s) => s.tasks);
+  // Previously ungated — every signed-in user saw this button
+  // regardless of role or any Access-page override, and only found out
+  // they couldn't actually create a project when the backend rejected
+  // the submit with a 403.
+  const canCreateProject = usePermissionStore((s) =>
+    s.can("projects", "create"),
+  );
 
   useEffect(() => {
     fetchProjects();
@@ -76,32 +84,26 @@ export default function Projects() {
             )}
           </Button>
 
-          <Button variant="primary" onClick={openCreateModal}>
-            <Plus size={14} className="inline mr-1.5 -mt-0.5" /> New Project
-          </Button>
+          {canCreateProject && (
+            <Button variant="primary" onClick={openCreateModal}>
+              <Plus size={14} className="inline mr-1.5 -mt-0.5" /> New Project
+            </Button>
+          )}
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-4">
           {error}
-        </div>
+        </p>
       )}
 
-      {isLoading && projects.length === 0 ? (
-        <p className="text-sm text-muted text-center py-12">
-          Loading projects…
-        </p>
-      ) : projects.length === 0 ? (
-        <p className="text-sm text-muted text-center py-12">
-          No projects yet. Create one to get started.
-        </p>
+      {isLoading ? (
+        <p className="text-white/50 text-sm">Loading projects…</p>
       ) : filteredProjects.length === 0 ? (
-        <p className="text-sm text-muted text-center py-12">
-          No projects match your search or filters.
-        </p>
+        <p className="text-white/50 text-sm">No projects match your filters.</p>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}

@@ -2,7 +2,7 @@ import { Pencil, Plus } from "lucide-react";
 import ProjectMembers from "./ProjectMembers";
 import { useProjectStore } from "../projectStore";
 import { useTaskStore } from "../../tasks/taskStore";
-import { useAuthStore } from "../../../store/useAuthStore";
+import { usePermissionStore } from "../../../store/usePermissionStore";
 import { useMemo } from "react";
 
 function colorGradient(hex) {
@@ -21,8 +21,14 @@ export default function ProjectCard({ project }) {
   const openCreateModalForProject = useTaskStore(
     (s) => s.openCreateModalForProject,
   );
-  const user = useAuthStore((s) => s.user);
-  const canManageTasks = user?.role === "admin" || user?.role === "manager";
+  const can = usePermissionStore((s) => s.can);
+  // "Add task to this project" is a tasks:create action, not a projects
+  // one — it was previously gated by a hardcoded role check that also
+  // happened to gate the edit pencil below (which had NO gate at all,
+  // so any signed-in user — including a plain "user" role — could open
+  // the edit form; the backend would only reject on submit).
+  const canAddTask = can("tasks", "create");
+  const canEditProject = can("projects", "edit");
 
   const allTasks = useTaskStore((s) => s.tasks);
   const tasks = useMemo(
@@ -60,13 +66,15 @@ export default function ProjectCard({ project }) {
           `,
         }}
       >
-        <button
-          onClick={handleEditClick}
-          className="taskello-card__edit-btn"
-          title="Edit project"
-        >
-          <Pencil size={12} />
-        </button>
+        {canEditProject && (
+          <button
+            onClick={handleEditClick}
+            className="taskello-card__edit-btn"
+            title="Edit project"
+          >
+            <Pencil size={12} />
+          </button>
+        )}
         <div className="taskello-card__photo-text capitalize">
           {project.status}
         </div>
@@ -110,7 +118,7 @@ export default function ProjectCard({ project }) {
             <ProjectMembers
               members={project.memberDetails || project.members}
             />
-            {canManageTasks && (
+            {canAddTask && (
               <button
                 onClick={handleAddTaskClick}
                 className="taskello-card__edit-btn !static"

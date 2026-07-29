@@ -6,7 +6,7 @@ import { Dropdown } from "../../../components/ui/Dropdown";
 import Button from "../../../components/ui/Button";
 import { useProjectStore } from "../projectStore";
 import { useTaskStore } from "../../tasks/taskStore";
-import { useAuthStore } from "../../../store/useAuthStore";
+import { usePermissionStore } from "../../../store/usePermissionStore";
 import { usersApi } from "../../../api/usersApi";
 import { teamApi } from "../../../api/teamApi";
 import { PROJECT_COLORS } from "../../../utils/projectColors";
@@ -16,6 +16,7 @@ const statusOptions = ["planning", "active", "completed"].map((v) => ({
   value: v,
   label: v,
 }));
+
 const emptyForm = {
   name: "",
   description: "",
@@ -51,6 +52,9 @@ function ProjectForm({
   const [form, setForm] = useState(() => getInitialForm(editingProject));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
+
+  const can = usePermissionStore((s) => s.can);
+  const canDeleteProject = can("projects", "delete");
 
   const isNew = !editingProject.id;
 
@@ -177,7 +181,7 @@ function ProjectForm({
       )}
 
       <div className="flex items-center justify-between pt-2">
-        {!isNew ? (
+        {!isNew && canDeleteProject ? (
           <Button
             variant="danger"
             type="button"
@@ -227,8 +231,8 @@ export default function ProjectModal() {
   } = useProjectStore();
   const { getTasksByProject, openTaskView, openCreateModalForProject } =
     useTaskStore();
-  const { user } = useAuthStore();
-  const canManageTasks = user?.role === "admin" || user?.role === "manager";
+  const can = usePermissionStore((s) => s.can);
+  const canAddTask = can("tasks", "create");
 
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -325,7 +329,7 @@ export default function ProjectModal() {
                   ({doneCount}/{projectTasks.length} done)
                 </span>
               </h4>
-              {canManageTasks && (
+              {canAddTask && (
                 <Button
                   variant="secondary"
                   onClick={() => openCreateModalForProject(editingProject.id)}
@@ -376,7 +380,8 @@ export default function ProjectModal() {
               variant="primary"
               onClick={() => useProjectStore.setState({ modalMode: "edit" })}
             >
-              <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit Project
+              <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
+              Project
             </Button>
           </div>
         </div>

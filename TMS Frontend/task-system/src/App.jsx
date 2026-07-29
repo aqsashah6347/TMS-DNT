@@ -5,6 +5,7 @@ import Header from "./components/layout/Header";
 import Scene from "./components/layout/Scene";
 import AppRoutes from "./routes/AppRoutes";
 import { useAuthStore } from "./store/useAuthStore";
+import { usePermissionStore } from "./store/usePermissionStore";
 //import ConfettiOverlay from "./Features/tasks/components/ConfettiOverlay";
 import { connectSocket, getSocket } from "./lib/socket";
 import { useChatStore } from "./Features/chat/chatStore";
@@ -32,6 +33,18 @@ export default function App() {
     useChatStore.getState().initSocketListeners();
     useActivityStore.getState().initSocketListeners();
     requestNotificationPermission();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      usePermissionStore.getState().reset();
+      return;
+    }
+    if (!getSocket()) connectSocket();
+    useChatStore.getState().initSocketListeners();
+    useActivityStore.getState().initSocketListeners();
+    requestNotificationPermission();
+    usePermissionStore.getState().loadPermissions();
   }, [user]);
 
   // App-wide, independent of login state: clears the tab title/favicon

@@ -1,6 +1,16 @@
 import axiosInstance from "./axiosInstance";
 
 export const accessApi = {
+  // GET /api/permissions/me
+  // -> { role, permissions: { module: [actions] } } — the CURRENT user's
+  // own effective permissions (admin override if one exists, else their
+  // role's preset). Any authenticated user can call this, unlike every
+  // other function here which is admin-only.
+  getMine: async () => {
+    const res = await axiosInstance.get("/permissions/me");
+    return res.data;
+  },
+
   // GET /api/permissions
   // -> { modules, actions, permissions: [{ userId, userName, role, overrides }] }
   getAll: async () => {
@@ -38,7 +48,10 @@ export const accessApi = {
   // Saves the role preset (if changed) and every module's action list in
   // one request. -> { userId, userName, role, changes: [string, ...] }
   batchUpdate: async (userId, payload) => {
-    const res = await axiosInstance.put(`/permissions/${userId}/batch`, payload);
+    const res = await axiosInstance.put(
+      `/permissions/${userId}/batch`,
+      payload,
+    );
     return res.data;
   },
 };
