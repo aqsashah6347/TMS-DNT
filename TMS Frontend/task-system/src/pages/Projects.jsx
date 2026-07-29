@@ -156,7 +156,7 @@ export default function Projects() {
       ) : (
         // Everyone else: plain grid of whatever projects the backend
         // decided this user can see (their own + any team they manage).
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
           {filteredProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}

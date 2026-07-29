@@ -36,16 +36,46 @@
   --color-accent-lime: #a8f08a;
   --color-accent-danger: #f87171;
 
-  /* Spacing System */
-  --spacing-2xs: 4px;
-  --spacing-xs: 8px;
-  --spacing-sm: 12px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
+  /* Spacing System
+     NOTE: these keys are named --spacing-gap-* rather than plain
+     --spacing-2xs/xs/sm/md/lg/xl/2xl on purpose. Tailwind v4 resolves
+     max-w-{name} utilities by checking the spacing theme scale for a
+     same-named key first, before falling back to the dedicated
+     --container-{name} scale. Because "2xs/xs/sm/md/lg/xl/2xl" are
+     exactly the names Tailwind's own container/breakpoint scale uses,
+     our old --spacing-2xl (etc.) tokens were silently shadowing it —
+     every named max-w-* modal (ProfileMenu max-w-sm, UserModal/filter
+     modals max-w-md, TeamModal max-w-lg, ProjectModal's max-w-2xl edit
+     width) was resolving to this pixel spacing value instead of a real
+     container width, collapsing them to a 12–48px sliver. Giving these
+     keys a suffix Tailwind's container scale doesn't have (gap-2xl
+     instead of 2xl) removes the collision entirely — verified by
+     rebuilding the utility CSS and confirming max-w-2xl compiles back
+     to var(--container-2xl). Update any var(--spacing-gap-2xl) etc.
+     references elsewhere in this file to var(--spacing-gap-2xl). */
+  --spacing-gap-2xs: 4px;
+  --spacing-gap-xs: 8px;
+  --spacing-gap-sm: 12px;
+  --spacing-gap-md: 16px;
+  --spacing-gap-lg: 24px;
+  --spacing-gap-xl: 32px;
+  --spacing-gap-2xl: 48px;
 
+  /* Full container scale, explicitly defined so every max-w-{name}
+     modal width resolves to a real container size. */
+  --container-3xs: 16rem;
+  --container-2xs: 18rem;
+  --container-xs: 20rem;
+  --container-sm: 24rem;
+  --container-md: 28rem;
   --container-lg: 32rem;
+  --container-xl: 36rem;
+  --container-2xl: 42rem;
+  --container-3xl: 48rem;
+  --container-4xl: 56rem;
+  --container-5xl: 64rem;
+  --container-6xl: 72rem;
+  --container-7xl: 80rem;
 
   /* Typography Sizing */
   --text-2xs: 0.68rem;
@@ -537,7 +567,7 @@
   /* Cards */
   .glass-card {
     border-radius: var(--radius-xl);
-    padding: var(--spacing-xl);
+    padding: var(--spacing-gap-xl);
     transition:
       transform var(--dur-mid) var(--ease-glass),
       box-shadow var(--dur-mid) var(--ease-glass),
@@ -560,7 +590,7 @@
     position: relative;
     overflow: hidden;
     border-radius: var(--radius-xl);
-    padding: var(--spacing-xl);
+    padding: var(--spacing-gap-xl);
     border: 1px solid rgba(251, 146, 60, 0.12);
     box-shadow: var(--shadow-glass);
     /* Grout/mortar color — shows through in the gaps between bricks */
@@ -738,7 +768,7 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     opacity: 0.55;
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: var(--spacing-gap-xs);
   }
 
   .glass-card__title {
@@ -746,7 +776,7 @@
     font-weight: 600;
     font-size: clamp(1.2rem, 2vw, 1.6rem);
     line-height: 1.2;
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-gap-sm);
   }
 
   .glass-card__body {
@@ -758,8 +788,8 @@
   .glass-btn {
     display: inline-flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-lg);
+    gap: var(--spacing-gap-xs);
+    padding: var(--spacing-gap-sm) var(--spacing-gap-lg);
     border-radius: var(--radius-lg);
     border: none;
     cursor: pointer;
@@ -822,7 +852,7 @@
   }
 
   .glass-btn--sm {
-    padding: var(--spacing-2xs) var(--spacing-md);
+    padding: var(--spacing-gap-2xs) var(--spacing-gap-md);
     font-size: var(--text-xs);
   }
 
@@ -882,7 +912,7 @@
   .glass-textarea,
   .glass-select {
     width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-gap-sm) var(--spacing-gap-md);
     border-radius: var(--radius-md);
     border: 1px solid var(--color-glass-border-subtle);
     background: var(--color-glass-white);
@@ -917,7 +947,7 @@
   /* Dropdown Menus */
   .glass-dropdown-menu {
     border-radius: var(--radius-lg);
-    padding: var(--spacing-2xs);
+    padding: var(--spacing-gap-2xs);
     background: #17171a;
     border: 1px solid var(--color-glass-border);
     box-shadow: var(--shadow-float);
@@ -928,8 +958,8 @@
   .glass-dropdown-item {
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var(--spacing-gap-xs);
+    padding: var(--spacing-gap-sm) var(--spacing-gap-md);
     border-radius: var(--radius-sm);
     font-size: var(--text-sm);
     cursor: pointer;
@@ -1003,13 +1033,12 @@
     align-items: center;
     justify-content: center;
     z-index: var(--z-index-modal);
-    padding: var(--spacing-md);
+    padding: var(--spacing-gap-md);
   }
 
   .glass-modal {
     border-radius: var(--radius-2xl);
     width: 100%;
-    max-width: 32rem; /* fallback in case Tailwind's max-w-* isn't compiling */
     margin: 0 16px; /* fallback in case Tailwind's mx-4 isn't compiling */
     max-height: 90vh;
     overflow-y: auto;
@@ -1043,7 +1072,7 @@
     padding: 14px 18px;
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var(--spacing-gap-md);
     transition:
       transform var(--dur-fast) var(--ease-liquid),
       background var(--dur-fast);
@@ -1068,7 +1097,7 @@
   }
 
   .glass-table thead th {
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-gap-sm) var(--spacing-gap-md);
     text-align: left;
     font-size: var(--text-2xs);
     font-weight: 500;
@@ -1088,7 +1117,7 @@
   }
 
   .glass-table tbody td {
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-gap-sm) var(--spacing-gap-md);
     border-bottom: 1px solid var(--color-glass-border-subtle);
     vertical-align: middle;
   }
@@ -1749,7 +1778,7 @@
     z-index: 2;
     height: 100%;
     overflow-y: auto;
-    padding: var(--spacing-md);
+    padding: var(--spacing-gap-md);
     padding-right: 64px; /* keeps the last member row clear of the manager badge */
     display: flex;
     flex-direction: column;
@@ -1786,7 +1815,7 @@
     font-size: var(--text-xs);
     color: var(--color-text-subtle);
     font-style: italic;
-    padding: var(--spacing-md);
+    padding: var(--spacing-gap-md);
   }
 
   /* manager badge — sits inside the card, no negative offsets to escape on */
@@ -1807,7 +1836,7 @@
   }
 
   .team-card__content {
-    padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+    padding: var(--spacing-gap-md) var(--spacing-gap-lg) var(--spacing-gap-lg);
     border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
@@ -1816,7 +1845,7 @@
     font-size: var(--text-lg);
     font-weight: 600;
     color: var(--color-dark);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-gap-sm);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1833,7 +1862,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-gap-sm);
   }
 
   .team-card__manager-name {
@@ -1843,7 +1872,7 @@
 
   .team-card__tags {
     list-style: none;
-    margin: var(--spacing-xs) 0 var(--spacing-md);
+    margin: var(--spacing-gap-xs) 0 var(--spacing-gap-md);
     padding: 0;
     display: flex;
     flex-wrap: wrap;
@@ -1863,32 +1892,7 @@
     font-size: var(--text-2xs);
     color: var(--color-text-subtle);
   }
-  /* Taskello-style task cards */
-  .taskello-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
-  }
-
-  .taskello-card {
-    width: 100%;
-    border-radius: 34px;
-    background: #151515;
-    padding: 8px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
-    transition:
-      transform var(--dur-mid) var(--ease-glass),
-      box-shadow var(--dur-mid);
-  }
-
-  .taskello-card:hover {
-    transform: translateY(-4px);
-    box-shadow:
-      0 24px 50px rgba(0, 0, 0, 0.55),
-      0 0 24px rgba(251, 146, 60, 0.15);
-  }
-
-  .taskello-card__photo {
+.taskello-card__photo {
     position: relative;
     height: 150px;
     border-radius: 26px;
@@ -1902,20 +1906,19 @@
     color: #a8f08a;
   }
 
-  .taskello-card__photo-text {
+  .taskello-card__title {
     position: absolute;
-    top: 14px;
-    right: 16px;
-    color: #fff;
-    font-weight: 700;
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    background: rgba(0, 0, 0, 0.35);
-    padding: 4px 10px;
-    border-radius: 999px;
-    display: flex;
-    align-items: center;
+    top: 18px;
+    right: 20px;
+    left: 56px;
+    color: rgb(243, 243, 248);
+    font-weight: 300;
+    font-size: 1.3rem;
+    line-height: 1.15;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .taskello-card__panel {
@@ -1923,8 +1926,8 @@
     margin-top: -22px;
     background: #1c1c1c;
     border-radius: 22px;
-    padding: 20px 18px 16px;
-    min-height: 170px;
+    padding: 20px 18px 14px;
+    min-height: 132px;
   }
 
   .taskello-card__tab {
@@ -1940,36 +1943,78 @@
 
   .taskello-card__tab-title {
     color: #fff;
-    font-weight: 700;
-    font-size: 0.92rem;
+    font-weight: 300;
+    font-size: 1rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
-  .taskello-card__tab-sub {
-    color: #8a8a8a;
-    font-size: 0.75rem;
-    margin-top: 2px;
+.taskello-card__desc-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    margin-bottom: 10px;
   }
 
   .taskello-card__desc {
     color: #c9c9c9;
     font-size: 0.8rem;
     line-height: 1.5;
-    margin-top: 26px;
-    margin-bottom: 14px;
+    margin: 0;
+    flex: 1;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .taskello-card__bottom {
+  .taskello-card__status {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.08);
+    color: #a3a3a3;
+    font-weight: 600;
+    font-size: 0.66rem;
+    letter-spacing: 0.03em;
+    padding: 5px 14px;
+    border-radius: 999px;
+    margin-top: 1px;
+  }
+
+  .taskello-card__progress-row {
     display: flex;
     align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .taskello-card__progress-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .taskello-card__progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width var(--dur-mid);
+  }
+
+  .taskello-card__progress-pct {
+    flex-shrink: 0;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  .taskello-card__bottom {
+    display: flex;
+    align-items: flex-end;
     justify-content: space-between;
-    margin-top: 12px;
+    margin-top: 4px;
   }
 
   .taskello-card__links {
@@ -1977,7 +2022,20 @@
     align-items: center;
     gap: 10px;
     color: #9a9a9a;
-    font-size: 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+
+  .taskello-card__members {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .taskello-card__members-count {
+    color: #8a8a8a;
+    font-size: 0.64rem;
   }
 
   .taskello-card__assignee {
@@ -1987,12 +2045,35 @@
     display: flex;
     align-items: center;
   }
+
   .taskello-card__edit-btn {
     position: absolute;
     top: 14px;
     left: 14px;
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: #18181b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition:
+      background 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .taskello-card__edit-btn:hover {
+    background: #fff;
+    transform: scale(1.06);
+  }
+
+  .taskello-card__add-btn {
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.35);
     color: #fff;
@@ -2004,63 +2085,8 @@
     transition: background 0.2s ease;
   }
 
-  .taskello-card__edit-btn:hover {
+  .taskello-card__add-btn:hover {
     background: rgba(251, 146, 60, 0.5);
-  }
-
-  .taskello-card__edit-btn.\!static {
-    position: static;
-    width: 24px;
-    height: 24px;
-  }
-}
-.tms-loader {
-  --color: #f97316;
-  --size-dot: 10px;
-  --travel: 26px;
-
-  display: inline-block;
-  position: relative;
-  width: calc(var(--travel) * 2 + var(--size-dot));
-  height: var(--size-dot);
-}
-
-.tms-loader::before,
-.tms-loader::after {
-  content: "";
-  box-sizing: border-box;
-  position: absolute;
-  top: 0;
-  width: var(--size-dot);
-  height: var(--size-dot);
-  background-color: var(--color);
-  border-radius: 50%;
-  opacity: 0;
-  animation: tms-loader-dots 0.8s cubic-bezier(0.2, 0.32, 0, 0.87) infinite;
-}
-
-.tms-loader::after {
-  animation-delay: 0.3s;
-}
-
-@keyframes tms-loader-dots {
-  0%,
-  80%,
-  100% {
-    opacity: 0;
-  }
-
-  33% {
-    opacity: 1;
-  }
-
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-
-  90% {
-    transform: translateX(var(--travel));
   }
 }
 /* Underline Input Styling */
@@ -2464,4 +2490,337 @@
 }
 .tvm-chart-bar {
   max-width: 260px;
+}
+/* ===== Project View Modal — exact match to mockup ===== */
+.tvm-pv-card {
+  --tvm-accent: #d98c3d;
+  color: #f5f5f5;
+  min-height: 600px;
+}
+
+.tvm-pv-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.tvm-pv-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin: 0;
+}
+
+.tvm-pv-header-right {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.tvm-pv-header-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.tvm-pv-header-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #e5e5e5;
+  white-space: nowrap;
+}
+
+.tvm-pv-hr {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 16px 0;
+}
+
+.tvm-pv-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.tvm-pv-desc {
+  flex: 1;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #e5e5e5;
+  margin: 0;
+}
+
+.tvm-pv-desc-label {
+  color: #e5e5e5;
+}
+
+.tvm-pv-desc-empty {
+  color: #6b7280;
+  font-style: italic;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.tvm-pv-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 0.92rem;
+  color: #e5e5e5;
+  white-space: nowrap;
+}
+
+.tvm-pv-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+.tvm-pv-dot--active {
+  background: #4ade80;
+}
+.tvm-pv-dot--planning {
+  background: #9ca3af;
+}
+.tvm-pv-dot--completed {
+  background: #60a5fa;
+}
+
+.tvm-pv-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+.tvm-pv-box {
+  border: 1.5px solid var(--tvm-accent);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.tvm-pv-box-title {
+  color: #e5e5e5;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.tvm-pv-tasks {
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.tvm-pv-tasks-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 6px;
+}
+.tvm-pv-tasks-header .tvm-pv-box-title {
+  flex-shrink: 0;
+}
+
+.tvm-pv-add-task {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--tvm-accent);
+  background: transparent;
+  color: var(--tvm-accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.tvm-pv-add-task:hover {
+  background: rgba(217, 140, 61, 0.12);
+}
+
+.tvm-pv-group {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.tvm-pv-group:first-child {
+  border-top: none;
+  margin-top: 4px;
+  padding-top: 0;
+}
+
+.tvm-pv-group-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.9rem;
+  color: #e5e5e5;
+  padding: 6px 0;
+}
+.tvm-pv-group-name {
+  flex-shrink: 0;
+}
+.tvm-pv-group-count {
+  color: #9ca3af;
+  font-size: 0.82rem;
+}
+
+.tvm-pv-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 4px 6px 20px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.tvm-pv-task:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tvm-pv-check {
+  color: var(--tvm-accent);
+  flex-shrink: 0;
+}
+.tvm-pv-check--done {
+  color: var(--tvm-accent);
+}
+
+.tvm-pv-task-title {
+  font-size: 0.87rem;
+  color: #e5e5e5;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tvm-pv-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  min-width: 90px;
+}
+
+.tvm-pv-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--tvm-accent);
+  transition: width 0.3s ease;
+}
+
+.tvm-pv-pct {
+  font-size: 0.8rem;
+  color: #d1d5db;
+  width: 34px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.tvm-pv-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.tvm-pv-team-list {
+  list-style: disc;
+  padding-left: 18px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.9rem;
+  color: #e5e5e5;
+}
+
+.tvm-pv-icons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.tvm-pv-icon {
+  color: var(--tvm-accent);
+}
+
+/* Functional charts that replace the placeholder pie/bar icons — same
+   look-and-feel as the charts in TaskModal (tvm-chart-box). */
+.tvm-pv-charts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0 4px;
+}
+
+.tvm-pv-chart-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+}
+.tvm-pv-chart-wrap svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.tvm-pv-chart-caption {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  margin: 0;
+  text-align: center;
+}
+
+.tvm-pv-edit {
+  align-self: center;
+  /* Fallback value added: this button is also used inside the modal's
+     headerRight slot (ProjectModal.jsx), which renders as a sibling of
+     .tvm-pv-card in the DOM — outside the element that defines
+     --tvm-accent. Without the fallback the custom property resolved to
+     nothing there, so the background silently failed to apply and the
+     button rendered as bare grey text instead of the solid pill button. */
+  background: var(--tvm-accent, #d98c3d);
+  color: #1c1c1e;
+  border: none;
+  padding: 9px 40px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.tvm-pv-edit:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.tvm-pv-edit:active {
+  transform: translateY(0);
+}
+
+.tvm-pv-edit--header {
+  padding: 6px 20px;
+  font-size: 0.85rem;
 }

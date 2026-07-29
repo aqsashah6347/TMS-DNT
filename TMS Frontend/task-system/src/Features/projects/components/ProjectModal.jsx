@@ -1,14 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-  Plus,
-  Pencil,
-  CheckCircle2,
-  Circle,
-  Folder,
-  Users,
-  ListChecks,
-  User,
-} from "lucide-react";
+import { Plus, CheckCircle2 } from "lucide-react";
 import { BarChart } from "@mui/x-charts/BarChart";
 import { PieChart } from "@mui/x-charts/PieChart";
 import Modal from "../../../components/ui/Modal";
@@ -20,26 +11,15 @@ import { useTaskStore } from "../../tasks/taskStore";
 import { usePermissionStore } from "../../../store/usePermissionStore";
 import { usersApi } from "../../../api/usersApi";
 import { teamApi } from "../../../api/teamApi";
+import { taskApi } from "../../../api/taskApi";
 import { PROJECT_COLORS } from "../../../utils/projectColors";
 import ProjectMemberPicker from "./ProjectMemberPicker";
-import ProjectMembers from "./ProjectMembers";
 
-// Same idea as TaskModal's statusBadgeMap, but for a project's own
-// planning/active/completed lifecycle instead of a task's.
-const projectStatusBadgeMap = {
-  planning: "glass-badge--primary",
-  active: "glass-badge--violet",
-  completed: "glass-badge--rose",
-};
-
-// Hex fills for the task-status pie chart in view mode — kept visually in
-// step with the glass-badge colors used elsewhere for the same statuses.
-const statusColorHex = {
-  backlog: "#8ea8d0",
-  "in progress": "#b490f5",
-  review: "#ffd27f",
-  done: "#4ade80",
-};
+// Matches the --tvm-accent value hard-coded in .tvm-pv-card (index.css) —
+// this used to be the project view card's *fixed* accent regardless of
+// the project's own color swatch. Kept as the fallback for projects that
+// don't have a color set yet.
+const PV_ACCENT = "#d98c3d";
 
 const statusOptions = ["planning", "active", "completed"].map((v) => ({
   value: v,
@@ -87,9 +67,6 @@ function ProjectForm({
 
   const isNew = !editingProject.id;
 
-  // Full team record (with memberDetails) for whichever team is currently
-  // selected in the dropdown — used to show that team's roster right
-  // below it, so picking a team shows who's actually in it.
   const selectedTeam = useMemo(
     () =>
       form.teamId
@@ -162,7 +139,7 @@ function ProjectForm({
         placeholder="Optional details..."
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Dropdown
           label="Team"
           value={form.teamId}
@@ -258,7 +235,7 @@ export default function ProjectModal() {
     updateProject,
     deleteProject,
   } = useProjectStore();
-  const { getTasksByProject, openTaskView, openCreateModalForProject } =
+  const { openTaskView, openCreateModalForProject, isTaskModalOpen } =
     useTaskStore();
   const can = usePermissionStore((s) => s.can);
   const canAddTask = can("tasks", "create");
@@ -266,6 +243,7 @@ export default function ProjectModal() {
 
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [projectTasks, setProjectTasks] = useState([]);
 
   useEffect(() => {
     if (!isModalOpen) return;
@@ -281,30 +259,91 @@ export default function ProjectModal() {
       .catch(() => setTeams([]));
   }, [isModalOpen]);
 
-  const projectTasks = editingProject?.id
-    ? getTasksByProject(editingProject.id)
-    : [];
-  const doneCount = projectTasks.filter((t) => t.status === "done").length;
+  const projectId = editingProject?.id;
 
-  // Real task-status split, driving the pie chart below — recomputed
-  // straight from the live task list every render, so the chart always
-  // matches what's actually sitting in the Tasks list underneath it.
-  const statusCounts = useMemo(() => {
-    const counts = { backlog: 0, "in progress": 0, review: 0, done: 0 };
-    projectTasks.forEach((t) => {
-      if (counts[t.status] !== undefined) counts[t.status] += 1;
-    });
-    return counts;
-  }, [projectTasks]);
+  // The project's own color swatch (picked in the edit form) drives every
+  // accent in the view card — box borders, check icons, progress bars, and
+  // both charts — instead of a fixed orange. Falls back to PV_ACCENT for
+  // older projects that don't have a color saved yet.
+  const accentColor = editingProject?.color || PV_ACCENT;
 
-  // Same idea for priority — drives the bar chart.
-  const priorityCounts = useMemo(() => {
-    const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+  // Pulls this project's tasks straight from the API (filtered server-side
+  // by projectId), instead of reading useTaskStore's `tasks` array — that
+  // array is whatever page/filter the Tasks list last loaded, which often
+  // doesn't include every task for this specific project at all.
+  useEffect(() => {
+    if (!isModalOpen || !projectId) {
+      setProjectTasks([]);
+      return;
+    }
+
+    let cancelled = false;
+    taskApi
+      .getAllTasks({ projectId }, 1, 100)
+      .then(({ tasks }) => {
+        if (!cancelled) setProjectTasks(tasks);
+      })
+      .catch(() => {
+        if (!cancelled) setProjectTasks([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // Re-run whenever the task modal (add/edit task) just closed, too —
+    // that's how tasks get created or edited from inside this project view,
+    // so this is what makes newly added tasks show up without a full reopen.
+  }, [isModalOpen, projectId, isTaskModalOpen]);
+
+  // Groups the task list by assignee for the "Project Tasks" box — each
+  // group gets its own done-count and an average-progress bar, on top of
+  // the per-task bars underneath it. Every member assigned to the project
+  // gets a group, even ones with zero tasks yet, so the full team always
+  // shows up here (not just whoever already has work assigned).
+  const taskGroups = useMemo(() => {
+    const byAssignee = new Map();
+
     projectTasks.forEach((t) => {
-      if (counts[t.priority] !== undefined) counts[t.priority] += 1;
+      const key = t.assignedTo != null ? `id:${t.assignedTo}` : "unassigned";
+      const name = t.assignedToName || "Unassigned";
+      if (!byAssignee.has(key)) byAssignee.set(key, { name, tasks: [] });
+      byAssignee.get(key).tasks.push(t);
     });
-    return counts;
-  }, [projectTasks]);
+
+    (editingProject?.memberDetails || []).forEach((m) => {
+      const key = `id:${m.id}`;
+      if (!byAssignee.has(key)) {
+        byAssignee.set(key, { name: m.name, tasks: [] });
+      }
+    });
+
+    return Array.from(byAssignee.values()).map(({ name, tasks }) => ({
+      name,
+      tasks,
+      doneCount: tasks.filter((t) => t.status === "done").length,
+      avgProgress: tasks.length
+        ? Math.round(
+            tasks.reduce((sum, t) => sum + (t.progress || 0), 0) / tasks.length,
+          )
+        : 0,
+    }));
+  }, [projectTasks, editingProject?.memberDetails]);
+
+  // Data for the two functional charts that replace the placeholder icons —
+  // an overall completion pie, and a per-member progress bar chart, styled
+  // the same way as the charts in TaskModal.
+  const completionPieData = useMemo(() => {
+    const pct = editingProject?.progress || 0;
+    return [
+      { id: 0, value: pct, label: "Completed", color: accentColor },
+      { id: 1, value: 100 - pct, label: "Remaining", color: "#3a3a3a" },
+    ];
+  }, [editingProject?.progress, accentColor]);
+
+  const memberBarData = useMemo(
+    () => taskGroups.map((g) => ({ name: g.name, avgProgress: g.avgProgress })),
+    [taskGroups],
+  );
 
   if (!editingProject) return null;
 
@@ -313,37 +352,51 @@ export default function ProjectModal() {
     ...teams.map((t) => ({ value: String(t.id), label: t.name })),
   ];
 
+  const createdOnLabel = editingProject.created_at
+    ? new Date(editingProject.created_at).toLocaleDateString(undefined, {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
+
   const isEditing = modalMode === "edit";
   const isNew = !editingProject.id;
-  const accentColor = editingProject.color || "#fb923c";
   const memberCount = (editingProject.memberDetails || []).length;
-
-  const pieData = Object.entries(statusCounts)
-    .filter(([, value]) => value > 0)
-    .map(([status, value], i) => ({
-      id: i,
-      value,
-      label: status,
-      color: statusColorHex[status],
-    }));
-
-  const priorityChartData = [
-    { priority: "critical", count: priorityCounts.critical },
-    { priority: "high", count: priorityCounts.high },
-    { priority: "medium", count: priorityCounts.medium },
-    { priority: "low", count: priorityCounts.low },
-  ];
 
   return (
     <Modal
       isOpen={isModalOpen}
       onClose={closeModal}
       title={
-        isNew ? "New Project" : isEditing ? "Edit Project" : editingProject.name
+        isNew ? (
+          "New Project"
+        ) : isEditing ? (
+          "Edit Project"
+        ) : (
+          <span className="tvm-pv-title">{editingProject.name}</span>
+        )
       }
-      // View mode gets the big, wide layout the two-column chart/task
-      // spread needs; the edit form keeps its original, tighter width.
-      width={isEditing ? "max-w-2xl" : "max-w-6xl"}
+      headerRight={
+        !isEditing && (
+          <div className="tvm-pv-header-right">
+            <div className="tvm-pv-header-meta">
+              <span>Assigned by: {editingProject.createdByName || "—"}</span>
+              <span>Created On: {createdOnLabel}</span>
+            </div>
+            <div className="tvm-pv-header-divider" />
+            {canEditProject && (
+              <button
+                className="tvm-pv-edit tvm-pv-edit--header"
+                onClick={() => useProjectStore.setState({ modalMode: "edit" })}
+              >
+                Edit
+              </button>
+            )}
+          </div>
+        )
+      }
+      width={isEditing ? "max-w-2xl" : "max-w-[90rem]"}
     >
       {isEditing ? (
         <ProjectForm
@@ -359,236 +412,184 @@ export default function ProjectModal() {
           taskCount={projectTasks.length}
         />
       ) : (
-        <div className="tvm-body">
-          {/* Team + status, right under the modal's own title bar —
-              same slot TaskModal uses for project name + pin. */}
-          <div className="tvm-top-row">
-            <span className="tvm-project-name">
-              <Folder size={13} className="tvm-project-icon" />
-              {editingProject.teamName || "No team"}
-            </span>
-            <span
-              className={`glass-badge ${
-                projectStatusBadgeMap[editingProject.status] ||
-                "glass-badge--primary"
-              } tvm-pill`}
-            >
-              {editingProject.status}
-            </span>
+        <div className="tvm-pv-card" style={{ "--tvm-accent": accentColor }}>
+          {/* Description left, status dot right */}
+          <div className="tvm-pv-status-row">
+            <p className="tvm-pv-desc">
+              <span className="tvm-pv-desc-label">Description: </span>
+              {editingProject.description || "No description yet."}
+            </p>
+            <div className="tvm-pv-status">
+              <span
+                className={`tvm-pv-dot tvm-pv-dot--${editingProject.status}`}
+              />
+              Status: {editingProject.status[0].toUpperCase()}
+              {editingProject.status.slice(1)}
+            </div>
           </div>
 
-          <div className="tvm-divider" />
-
-          {/* Wide two-column layout so the big rectangular modal actually
-              gets used instead of leaving one long narrow column. */}
-          <div className="grid grid-cols-[1.3fr_1fr] gap-10">
-            {/* Left column — description, meta, task list */}
-            <div className="flex flex-col">
-              <p className="tvm-label">Description:</p>
-              {editingProject.description ? (
-                <p className="tvm-desc-text">{editingProject.description}</p>
-              ) : (
-                <p className="tvm-desc-text tvm-desc-empty">
-                  No description yet.
-                </p>
-              )}
-
-              <div className="tvm-meta-row">
-                <span className="tvm-meta-item">
-                  <Users size={13} /> {memberCount} member
-                  {memberCount === 1 ? "" : "s"}
+          {/* Project Tasks box (left) + Team Assigned box + pie/bar icons
+              + Edit button (right) */}
+          <div className="tvm-pv-grid">
+            <div className="tvm-pv-box tvm-pv-tasks">
+              <div className="tvm-pv-tasks-header">
+                <span className="tvm-pv-box-title">Project Tasks:</span>
+                <div className="tvm-pv-bar">
+                  <div
+                    className="tvm-pv-bar-fill"
+                    style={{ width: `${editingProject.progress || 0}%` }}
+                  />
+                </div>
+                <span className="tvm-pv-pct">
+                  {editingProject.progress || 0}%
                 </span>
-                <span className="tvm-meta-item">
-                  <ListChecks size={13} /> {projectTasks.length} task
-                  {projectTasks.length === 1 ? "" : "s"}
-                </span>
-                {editingProject.createdByName && (
-                  <span className="tvm-meta-item">
-                    <User size={13} /> Created by {editingProject.createdByName}
-                  </span>
+                {canAddTask && (
+                  <button
+                    className="tvm-pv-add-task"
+                    onClick={() => openCreateModalForProject(editingProject.id)}
+                  >
+                    <Plus size={13} />
+                  </button>
                 )}
               </div>
 
-              <div style={{ marginTop: 20 }}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="tvm-label" style={{ margin: 0 }}>
-                    Tasks{" "}
-                    <span style={{ color: "#6b7280" }}>
-                      ({doneCount}/{projectTasks.length} done)
-                    </span>
-                  </p>
-                  {canAddTask && (
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        openCreateModalForProject(editingProject.id)
-                      }
-                    >
-                      <Plus size={14} className="inline mr-1.5 -mt-0.5" /> Add
-                      Task
-                    </Button>
-                  )}
-                </div>
+              {taskGroups.length === 0 ? (
+                <p className="text-xs text-white/40 italic text-center py-6">
+                  No tasks yet for this project.
+                </p>
+              ) : (
+                taskGroups.map((group) => (
+                  <div className="tvm-pv-group" key={group.name}>
+                    <div className="tvm-pv-group-header">
+                      <span className="tvm-pv-group-name">
+                        {group.name}{" "}
+                        <span className="tvm-pv-group-count">
+                          ({group.doneCount}/{group.tasks.length})
+                        </span>
+                      </span>
+                      <div className="tvm-pv-bar">
+                        <div
+                          className="tvm-pv-bar-fill"
+                          style={{ width: `${group.avgProgress}%` }}
+                        />
+                      </div>
+                      <span className="tvm-pv-pct">{group.avgProgress}%</span>
+                    </div>
 
-                {projectTasks.length === 0 ? (
-                  <p className="text-xs text-white/40 italic text-center py-4">
-                    No tasks yet for this project.
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-                    {projectTasks.map((task) => (
+                    {group.tasks.map((task) => (
                       <button
                         key={task.id}
                         onClick={() => openTaskView(task)}
-                        className="glass-row w-full text-left"
+                        className="tvm-pv-task"
                       >
-                        {task.status === "done" ? (
-                          <CheckCircle2
-                            size={16}
-                            className="text-success-text shrink-0"
-                          />
-                        ) : (
-                          <Circle
-                            size={16}
-                            className="shrink-0"
-                            style={{ color: "#9ca3af" }}
-                          />
-                        )}
-                        <span className="text-sm flex-1 truncate">
-                          {task.title}
+                        <CheckCircle2
+                          size={16}
+                          className={`tvm-pv-check ${
+                            task.status === "done" ? "tvm-pv-check--done" : ""
+                          }`}
+                        />
+                        <span className="tvm-pv-task-title">
+                          Task: {task.title}
                         </span>
-                        {task.status === "done" && task.completedBy && (
-                          <span
-                            className="text-[11px] shrink-0"
-                            style={{ color: "#9ca3af" }}
-                          >
-                            by {task.completedBy}
-                          </span>
-                        )}
+                        <div className="tvm-pv-bar">
+                          <div
+                            className="tvm-pv-bar-fill"
+                            style={{ width: `${task.progress || 0}%` }}
+                          />
+                        </div>
+                        <span className="tvm-pv-pct">
+                          {task.progress || 0}%
+                        </span>
                       </button>
                     ))}
                   </div>
+                ))
+              )}
+            </div>
+
+            <div className="tvm-pv-right">
+              <div className="tvm-pv-box tvm-pv-team">
+                <span className="tvm-pv-box-title">Team Assigned:</span>
+                {memberCount > 0 ? (
+                  <ul className="tvm-pv-team-list">
+                    {editingProject.memberDetails.map((m) => (
+                      <li key={m.id}>{m.name}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="tvm-pv-desc-empty">No members assigned yet.</p>
                 )}
               </div>
-            </div>
 
-            {/* Right column — members, progress, charts */}
-            <div className="flex flex-col">
-              <p className="tvm-label">Members:</p>
-              {memberCount > 0 ? (
-                <ProjectMembers
-                  members={editingProject.memberDetails}
-                  max={8}
-                />
-              ) : (
-                <p className="tvm-desc-text tvm-desc-empty">
-                  No members assigned yet.
-                </p>
-              )}
+              <div className="tvm-pv-charts">
+                <div className="tvm-pv-chart-wrap">
+                  <PieChart
+                    series={[
+                      {
+                        data: completionPieData,
+                        innerRadius: 46,
+                        outerRadius: 92,
+                        paddingAngle: 2,
+                      },
+                    ]}
+                    width={300}
+                    height={260}
+                    slotProps={{ legend: { hidden: true } }}
+                  />
+                  <p className="tvm-pv-chart-caption">
+                    {editingProject.progress || 0}% Complete
+                  </p>
+                </div>
 
-              <div className="tvm-progress-block">
-                <p className="tvm-label">Project Progress:</p>
-                <div className="tvm-progress-row">
-                  <div
-                    className="mask-progress-bar"
-                    style={{
-                      flex: 1,
-                      backgroundImage: `linear-gradient(${accentColor}, ${accentColor})`,
-                      backgroundSize: `${editingProject.progress || 0}% 100%`,
+                <div className="tvm-pv-chart-wrap">
+                  <BarChart
+                    dataset={memberBarData}
+                    grid={{ horizontal: true }}
+                    colors={[accentColor]}
+                    xAxis={[
+                      {
+                        dataKey: "name",
+                        scaleType: "band",
+                        tickLabelPlacement: "middle",
+                        valueFormatter: (v) =>
+                          v.length > 10 ? `${v.slice(0, 10)}…` : v,
+                      },
+                    ]}
+                    yAxis={[{ min: 0, max: 100, width: 34 }]}
+                    series={[
+                      {
+                        dataKey: "avgProgress",
+                        label: "Progress",
+                        color: accentColor,
+                        valueFormatter: (v) => `${v}%`,
+                      },
+                    ]}
+                    width={300}
+                    height={260}
+                    margin={{ left: 34, right: 12, top: 12, bottom: 36 }}
+                    slotProps={{ legend: { hidden: true } }}
+                    sx={{
+                      "& .MuiBarElement-root": { fill: accentColor },
+                      "& .MuiChartsAxis-tickLabel": {
+                        fill: "#9ca3af",
+                        fontSize: 11,
+                      },
+                      "& .MuiChartsAxis-line": {
+                        stroke: "rgba(255,255,255,0.45)",
+                        strokeWidth: 1.5,
+                      },
+                      "& .MuiChartsGrid-line": {
+                        stroke: "rgba(255,255,255,0.1)",
+                      },
+                      "& .MuiChartsAxis-tick": {
+                        stroke: "rgba(255,255,255,0.45)",
+                      },
                     }}
                   />
-                  <div className="tvm-progress-value">
-                    {editingProject.progress || 0}%
-                  </div>
-                </div>
-              </div>
-
-              <div className="tvm-charts-row">
-                <div className="tvm-chart-box">
-                  <p className="tvm-label" style={{ textAlign: "center" }}>
-                    By status
-                  </p>
-                  {pieData.length > 0 ? (
-                    <PieChart
-                      series={[
-                        { data: pieData, innerRadius: 0, outerRadius: 40 },
-                      ]}
-                      width={140}
-                      height={120}
-                      slotProps={{ legend: { hidden: true } }}
-                    />
-                  ) : (
-                    <p className="text-xs text-white/40 italic py-8 text-center">
-                      No tasks yet.
-                    </p>
-                  )}
-                </div>
-                <div className="tvm-chart-box tvm-chart-bar">
-                  <p className="tvm-label" style={{ textAlign: "center" }}>
-                    By priority
-                  </p>
-                  {projectTasks.length > 0 ? (
-                    <BarChart
-                      dataset={priorityChartData}
-                      colors={[accentColor]}
-                      xAxis={[
-                        {
-                          dataKey: "priority",
-                          scaleType: "band",
-                          tickLabelPlacement: "middle",
-                        },
-                      ]}
-                      yAxis={[{ width: 24 }]}
-                      series={[
-                        {
-                          dataKey: "count",
-                          label: "Tasks",
-                          color: accentColor,
-                        },
-                      ]}
-                      height={140}
-                      margin={{ left: 24, right: 8, top: 8, bottom: 24 }}
-                      slotProps={{ legend: { hidden: true } }}
-                      sx={{
-                        "& .MuiBarElement-root": { fill: accentColor },
-                        "& .MuiChartsAxis-tickLabel": {
-                          fill: "#9ca3af",
-                          fontSize: 10,
-                        },
-                        "& .MuiChartsAxis-line": {
-                          stroke: "rgba(255,255,255,0.45)",
-                          strokeWidth: 1.5,
-                        },
-                        "& .MuiChartsAxis-tick": {
-                          stroke: "rgba(255,255,255,0.45)",
-                        },
-                      }}
-                    />
-                  ) : (
-                    <p className="text-xs text-white/40 italic py-8 text-center">
-                      No tasks yet.
-                    </p>
-                  )}
+                  <p className="tvm-pv-chart-caption">Team Progress</p>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="tvm-divider" />
-
-          {/* Footer — Edit lives here, matching TaskModal's footer slot. */}
-          <div className="tvm-footer">
-            <span />
-            {canEditProject ? (
-              <button
-                className="tvm-btn-edit"
-                onClick={() => useProjectStore.setState({ modalMode: "edit" })}
-              >
-                <Pencil size={14} className="tvm-pill-icon" /> Edit Project
-              </button>
-            ) : (
-              <span />
-            )}
           </div>
         </div>
       )}

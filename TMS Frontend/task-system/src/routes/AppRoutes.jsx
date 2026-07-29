@@ -15,6 +15,7 @@ const Chat = lazy(() => import("../pages/Chat"));
 const Access = lazy(() => import("../pages/Access"));
 const Settings = lazy(() => import("../pages/Settings"));
 const Employees = lazy(() => import("../pages/Employees"));
+const Communications = lazy(() => import("../pages/Communications"));
 
 function PageLoader() {
   return (
@@ -28,6 +29,14 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        <Route
+          path="/communications"
+          element={
+            <ProtectedRoute adminOnly>
+              <Communications />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/login" element={<Login />} />
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

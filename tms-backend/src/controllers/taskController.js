@@ -1,7 +1,9 @@
 const { sql, getPool } = require("../config/db");
 const { hasPermission } = require("../middleware/permissions");
 const { logActivity } = require("../services/activityService");
-
+const {
+  sendTaskAssignedNotification,
+} = require("../services/notificationService");
 const JOIN_QUERY = `
   SELECT t.*, u1.name AS assignedToName, u2.name AS assignedByName, u3.name AS completedByName,
          p.color AS projectColor, p.name AS projectName
@@ -248,7 +250,21 @@ async function createTask(req, res, next) {
       taskId: task.id,
       projectId: task.projectId,
     });
-
+if (task.assignedTo && task.assignedTo !== req.user.id) {
+  const projectName = createProjectName;
+  await logActivity({
+    userId: task.assignedTo,
+    type: "task_assigned",
+    title: "New task assigned",
+    message: `${task.assignedByName || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+    taskId: task.id,
+    projectId: task.projectId,
+  });
+  await sendTaskAssignedNotification({
+    task,
+    assignedByName: task.assignedByName,
+  });
+}
     if (task.assignedTo && task.assignedTo !== req.user.id) {
       const projectName = createProjectName;
       await logActivity({
@@ -433,6 +449,28 @@ async function updateTask(req, res, next) {
         message: `${task.completedByName || task.assignedToName || "Someone"} completed "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
         taskId: task.id,
         projectId: task.projectId,
+      });
+    }
+    if (
+      updates.assignedTo !== undefined &&
+      task.assignedTo &&
+      task.assignedTo !== previousAssignedTo &&
+      task.assignedTo !== req.user.id
+    ) {
+      const projectName = task.projectId
+        ? await getProjectName(pool, task.projectId)
+        : null;
+      await logActivity({
+        userId: task.assignedTo,
+        type: "task_assigned",
+        title: "New task assigned",
+        message: `${req.user.name || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+        taskId: task.id,
+        projectId: task.projectId,
+      });
+      await sendTaskAssignedNotification({
+        task,
+        assignedByName: req.user.name,
       });
     }
 

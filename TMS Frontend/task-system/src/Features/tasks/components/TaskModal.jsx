@@ -447,7 +447,7 @@ export default function TaskModal() {
             placeholder="Optional details..."
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Dropdown
               label="Priority"
               value={form.priority}
@@ -462,7 +462,7 @@ export default function TaskModal() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Due Date"
               type="date"
@@ -523,7 +523,7 @@ export default function TaskModal() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Zoom link"
               value={form.zoomLink}

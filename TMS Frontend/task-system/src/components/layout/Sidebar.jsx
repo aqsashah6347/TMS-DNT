@@ -4,7 +4,7 @@ import {
   CheckSquare,
   FolderKanban,
   Users,
-  Bell, // was: Inbox
+  Bell,
   MessageCircle,
   BarChart3,
   KeyRound,
@@ -12,8 +12,8 @@ import {
   Settings,
   ChevronRight,
   TrendingUp,
+  MailCheck,
 } from "lucide-react";
-import Logo from "./Logo";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,6 +29,7 @@ const adminItems = [
   { to: "/performance", label: "Performance", icon: TrendingUp },
   { to: "/access", label: "Manage Access", icon: KeyRound },
   { to: "/employees", label: "Employees", icon: IdCard },
+  { to: "/communications", label: "Communications", icon: MailCheck }, // add this
 ];
 
 export default function Sidebar({ isAdmin = false, expanded, onToggle }) {

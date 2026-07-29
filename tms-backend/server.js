@@ -7,7 +7,7 @@ const { initSocket } = require("./src/config/socket");
 const path = require("path");
 const fs = require("fs");
 const uploadRoutes = require("./src/routes/uploadRoutes");
-
+const notificationSettingsRoutes = require("./src/routes/notificationSettingsRoutes");
 const authRoutes = require("./src/routes/authRoutes");
 const taskRoutes = require("./src/routes/taskRoutes");
 const projectRoutes = require("./src/routes/projectRoutes");
@@ -16,6 +16,12 @@ const activityRoutes = require("./src/routes/activityRoutes");
 const {
   startMissedDeadlineChecker,
 } = require("./src/utils/missedDeadlineChecker");
+const {
+  startDeadlineReminderChecker,
+} = require("./src/utils/deadlineReminderChecker");
+const {
+  startProgressReminderChecker,
+} = require("./src/utils/progressReminderChecker");
 
 const userRoutes = require("./src/routes/userRoutes");
 const permissionRoutes = require("./src/routes/permissionRoutes");
@@ -25,6 +31,7 @@ const attendanceRoutes = require("./src/routes/attendanceRoutes");
 const employeesRoutes = require("./src/routes/employeesRoutes");
 const { checkZkTokenExpiry } = require("./src/utils/checkZkTokenExpiry");
 const { startEmployeeSync } = require("./src/services/userProvisioningService");
+const { startContactSync } = require("./src/services/contactSyncService");
 const app = express();
 
 // Allows your React app (running on a different port) to call this API.
@@ -32,7 +39,6 @@ fs.mkdirSync(path.join(__dirname, "uploads", "chat"), { recursive: true });
 
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 
 app.use(express.json());
 app.use("/api/permissions", permissionRoutes);
@@ -51,6 +57,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/employees", employeesRoutes);
+app.use("/api/notification-settings", notificationSettingsRoutes);
 
 // Must be registered LAST — Express only reaches this if nothing above
 // handled the request or something threw an error.
@@ -61,6 +68,10 @@ app.use(errorHandler);
 const httpServer = http.createServer(app);
 initSocket(httpServer);
 startEmployeeSync();
+startContactSync();
+startMissedDeadlineChecker();
+startDeadlineReminderChecker();
+startProgressReminderChecker();
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {

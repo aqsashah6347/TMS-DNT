@@ -6,6 +6,7 @@ export default function Modal({
   isOpen,
   onClose,
   title,
+  headerRight,
   children,
   width = "max-w-[32rem]",
 }) {
@@ -22,15 +23,20 @@ export default function Modal({
   return createPortal(
     <div className="glass-modal-backdrop">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="glass-modal relative mx-4 flex-shrink-0">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-white/50 hover:text-white transition-colors"
-          >
-            <X size={20} />
-          </button>
+      <div className={`glass-modal relative mx-4 flex-shrink-0 ${width}`}>
+        <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-white/10">
+          <h3 className="text-lg font-semibold text-white min-w-0 truncate">
+            {title}
+          </h3>
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {headerRight}
+            <button
+              onClick={onClose}
+              className="text-white/50 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
         <div className="p-6">{children}</div>
       </div>

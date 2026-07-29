@@ -133,7 +133,8 @@ async function getAllUsers(req, res, next) {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-        SELECT id, name, email, role, status, enroll_no, avatar_color AS avatarColor
+        SELECT id, name, email, role, status, enroll_no, avatar_color AS avatarColor,
+               phone, contact_email AS contactEmail
         FROM tms_users ORDER BY name ASC
       `);
 
@@ -142,7 +143,6 @@ async function getAllUsers(req, res, next) {
     next(err);
   }
 }
-
 // PUT /api/users/me/avatar-color — self-service only. Any logged-in user can
 // change their own profile icon color (not anyone else's). Storing it here
 // instead of localStorage means it follows them to any device and shows up
@@ -180,7 +180,7 @@ async function updateMyAvatarColor(req, res, next) {
 
 async function updateUser(req, res, next) {
   try {
-    const { name, role, status, enroll_no } = req.body;
+    const { name, role, status, enroll_no, phone, contactEmail } = req.body;
     const pool = await getPool();
     const request = pool.request().input("id", sql.Int, req.params.id);
     const setClauses = [];
@@ -201,13 +201,22 @@ async function updateUser(req, res, next) {
       request.input("enrollNo", sql.NVarChar, enroll_no);
       setClauses.push("enroll_no = @enrollNo");
     }
+    if (phone !== undefined) {
+      request.input("phone", sql.NVarChar, phone);
+      setClauses.push("phone = @phone");
+    }
+    if (contactEmail !== undefined) {
+      request.input("contactEmail", sql.NVarChar, contactEmail);
+      setClauses.push("contact_email = @contactEmail");
+    }
 
     if (setClauses.length === 0)
       return res.status(400).json({ message: "No fields to update" });
 
     const result = await request.query(`
       UPDATE tms_users SET ${setClauses.join(", ")}
-      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.status, INSERTED.enroll_no
+      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.status,
+             INSERTED.enroll_no, INSERTED.phone, INSERTED.contact_email AS contactEmail
       WHERE id = @id
     `);
 

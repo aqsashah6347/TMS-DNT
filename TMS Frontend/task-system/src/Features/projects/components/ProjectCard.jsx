@@ -22,11 +22,6 @@ export default function ProjectCard({ project }) {
     (s) => s.openCreateModalForProject,
   );
   const can = usePermissionStore((s) => s.can);
-  // "Add task to this project" is a tasks:create action, not a projects
-  // one — it was previously gated by a hardcoded role check that also
-  // happened to gate the edit pencil below (which had NO gate at all,
-  // so any signed-in user — including a plain "user" role — could open
-  // the edit form; the backend would only reject on submit).
   const canAddTask = can("tasks", "create");
   const canEditProject = can("projects", "edit");
 
@@ -39,7 +34,6 @@ export default function ProjectCard({ project }) {
 
   function handleEditClick(e) {
     e.stopPropagation();
-    // Pencil icon = direct shortcut straight into edit mode.
     openEditModal(project);
   }
 
@@ -75,58 +69,64 @@ export default function ProjectCard({ project }) {
             <Pencil size={12} />
           </button>
         )}
-        <div className="taskello-card__photo-text capitalize">
-          {project.status}
-        </div>
+        <div className="taskello-card__title">{project.name}</div>
       </div>
 
       <div className="taskello-card__panel">
         <div className="taskello-card__tab">
-          <div className="taskello-card__tab-title">{project.name}</div>
-          <div className="taskello-card__tab-sub">{project.teamName}</div>
+          <div className="taskello-card__tab-title">{project.teamName}</div>
         </div>
 
-        {project.description ? (
-          <p className="taskello-card__desc">{project.description}</p>
-        ) : (
-          <p className="taskello-card__desc italic opacity-60">
-            No description yet.
-          </p>
-        )}
+        <div className="taskello-card__desc-row">
+          {project.description ? (
+            <p className="taskello-card__desc">{project.description}</p>
+          ) : (
+            <p className="taskello-card__desc italic opacity-60">
+              No description yet.
+            </p>
+          )}
+          <span className="taskello-card__status capitalize">
+            {project.status}
+          </span>
+        </div>
 
-        <div className="mb-3">
-          <div className="flex justify-between text-[11px] text-white/60 mb-1">
-            <span>Progress</span>
-            <span>{project.progress}%</span>
-          </div>
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div className="taskello-card__progress-row">
+          <div className="taskello-card__progress-track">
             <div
-              className="h-full rounded-full transition-all"
+              className="taskello-card__progress-fill"
               style={{
                 width: `${project.progress}%`,
                 backgroundImage: colorGradient(color),
               }}
             />
           </div>
+          <span className="taskello-card__progress-pct">
+            {project.progress}%
+          </span>
         </div>
 
         <div className="taskello-card__bottom">
           <div className="taskello-card__links">
-            {doneCount}/{tasks.length} tasks
+            {doneCount}/{tasks.length} Tasks
           </div>
-          <div className="flex items-center gap-2">
-            <ProjectMembers
-              members={project.memberDetails || project.members}
-            />
-            {canAddTask && (
-              <button
-                onClick={handleAddTaskClick}
-                className="taskello-card__edit-btn !static"
-                title="Add task to this project"
-              >
-                <Plus size={13} />
-              </button>
-            )}
+          <div className="taskello-card__members">
+            <div className="flex items-center gap-2">
+              <ProjectMembers
+                members={project.memberDetails || project.members}
+              />
+              {canAddTask && (
+                <button
+                  onClick={handleAddTaskClick}
+                  className="taskello-card__add-btn"
+                  title="Add task to this project"
+                >
+                  <Plus size={13} />
+                </button>
+              )}
+            </div>
+            <span className="taskello-card__members-count">
+              {(project.memberDetails || project.members || []).length} Members
+            </span>
           </div>
         </div>
       </div>
