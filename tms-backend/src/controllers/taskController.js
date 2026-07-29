@@ -698,14 +698,18 @@ async function getTaskProgressHistory(req, res, next) {
       return res.json(days);
     }
 
+    // Anchored to UTC calendar days throughout — matches how log_date is
+    // written below (CAST(SYSUTCDATETIME() AS DATE)), so bars line up with
+    // the day the progress update actually landed on instead of being off
+    // by one whenever the server isn't running in UTC.
     const startDate = new Date(taskRow.created_at);
-    startDate.setHours(0, 0, 0, 0);
+    startDate.setUTCHours(0, 0, 0, 0);
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const rawDue = taskRow.due_date ? new Date(taskRow.due_date) : null;
-    if (rawDue) rawDue.setHours(0, 0, 0, 0);
+    if (rawDue) rawDue.setUTCHours(0, 0, 0, 0);
 
     // Real due date -> chart creation through the due date. No due date
     // (the common case) -> chart creation through today instead, so real
@@ -744,13 +748,13 @@ async function getTaskProgressHistory(req, res, next) {
     const days = [];
     for (let i = 0; i < totalDays; i++) {
       const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
+      d.setUTCDate(d.getUTCDate() + i);
       const key = d.toISOString().split("T")[0];
       const cumulative = logMap[key] !== undefined ? logMap[key] : carry;
       const added = Math.max(0, cumulative - carry);
       carry = cumulative;
       days.push({
-        day: String(d.getDate()),
+        day: String(d.getUTCDate()),
         date: key,
         progress: added,
       });

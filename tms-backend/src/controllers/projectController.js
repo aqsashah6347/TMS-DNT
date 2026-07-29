@@ -4,11 +4,31 @@ const { logActivity } = require("../services/activityService");
 async function getAllProjects(req, res, next) {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
+    const request = pool.request();
+
+    // Admins see every project. Everyone else only sees a project if
+    // they're personally on it (tms_project_members) or they manage the
+    // team it belongs to (tms_teams.manager_id) — being a plain member of
+    // the team isn't enough on its own, they need to actually be assigned
+    // or be the one managing it.
+    let visibilityClause = "1 = 1";
+    if (req.user.role !== "admin") {
+      visibilityClause = `(
+        EXISTS (
+          SELECT 1 FROM tms_project_members pm
+          WHERE pm.project_id = p.id AND pm.user_id = @userId
+        )
+        OR t.manager_id = @userId
+      )`;
+      request.input("userId", sql.Int, req.user.id);
+    }
+
+    const result = await request.query(`
       SELECT p.*, t.name AS teamName, cu.name AS createdByName
       FROM tms_projects p
       LEFT JOIN tms_teams t ON p.team_id = t.id
       LEFT JOIN tms_users cu ON p.created_by = cu.id
+      WHERE ${visibilityClause}
       ORDER BY p.created_at DESC
     `);
 

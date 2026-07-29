@@ -51,10 +51,6 @@ export default function TaskCard({ task }) {
   const openTaskView = useTaskStore((s) => s.openTaskView);
   const projects = useProjectStore((s) => s.projects);
 
-  // Color precedence stays exactly as before: a project always wins if
-  // the task belongs to one (and that project actually has a real color
-  // set), otherwise fall back to the task's own saved color, and only
-  // fall back to the flat priority color if neither exists.
   const rawProjectColor = getProjectColor(task.projectId, projects);
   const hasValidProjectColor =
     rawProjectColor &&
@@ -78,8 +74,6 @@ export default function TaskCard({ task }) {
     <div
       className="task-card-v2 w-full"
       style={{
-        // Clean 1.5px outline in the task's own color — no neon glow,
-        // just the outline plus the card's normal drop shadow.
         boxShadow: `0 0 0 1.5px ${hexToRgba(accentColor, 0.7)}, 0 16px 40px -14px rgba(0, 0, 0, 0.55)`,
       }}
       onClick={() => openTaskView(task)}
@@ -104,14 +98,14 @@ export default function TaskCard({ task }) {
               aria-label="Pinned"
             />
           )}
-          <h4 className="text-white font-bold text-lg leading-snug line-clamp-1">
+          <h4 className="text-white font-bold text-base leading-snug line-clamp-1">
             {task.title || "Untitled task"}
           </h4>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <span
-            className={`glass-badge ${priorityBadge[task.priority] || "glass-badge--primary"} !py-1 !px-2.5 whitespace-nowrap capitalize`}
+            className={`glass-badge ${priorityBadge[task.priority] || "glass-badge--primary"} !py-0.5 !px-2 whitespace-nowrap capitalize`}
           >
             {task.priority || "—"}
           </span>
@@ -120,7 +114,7 @@ export default function TaskCard({ task }) {
             style={{ color: accentColor }}
             title={task.assignedToName || "Unassigned"}
           >
-            <User size={16} />
+            <User size={13} />
           </div>
         </div>
       </div>
@@ -128,7 +122,7 @@ export default function TaskCard({ task }) {
       <div className="task-card-v2__divider" />
 
       {/* Status */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <span className="text-xs uppercase tracking-wider text-white/40">
           Status
         </span>
@@ -138,12 +132,12 @@ export default function TaskCard({ task }) {
       </div>
 
       {/* Description */}
-      <div className="mb-4">
+      <div className="mb-3">
         <span className="text-xs uppercase tracking-wider text-white/40">
           Description:
         </span>
         {task.description ? (
-          <p className="text-sm text-white/70 leading-relaxed line-clamp-2 mt-1">
+          <p className="text-sm text-white/70 leading-relaxed line-clamp-1 mt-1">
             {task.description}
           </p>
         ) : (
@@ -154,7 +148,7 @@ export default function TaskCard({ task }) {
       </div>
 
       {/* Progress bar */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-3">
         <div
           className="mask-progress-bar flex-1"
           style={{
@@ -168,7 +162,7 @@ export default function TaskCard({ task }) {
       </div>
 
       {/* Footer: created by / date assigned, assigned to / due date */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 pt-3 border-t border-white/10 mt-auto">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2.5 border-t border-white/10 mt-auto">
         <div className="min-w-0">
           <span className="text-xs text-white/40 block">Created by:</span>
           <span className="text-sm text-white/80 truncate block">

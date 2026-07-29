@@ -684,12 +684,12 @@
      priority fallback), a flat solid treatment (no blur/reflection),
      tinted per task instead of neutral gray. Background/border colors
      are set inline in TaskCard.jsx. */
-  .task-card-v2 {
+.task-card-v2 {
     position: relative;
     display: flex;
     flex-direction: column;
     border-radius: 5px;
-    padding: 20px 22px;
+    padding: 14px 16px;
     overflow: hidden;
     background: #202023;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -705,8 +705,8 @@
 
   .task-card-v2__edit {
     position: absolute;
-    top: 16px;
-    right: 16px;
+    top: 12px;
+    right: 12px;
     z-index: 3;
     opacity: 0;
     transition: opacity var(--dur-mid, 0.35s) var(--ease-glass, ease);
@@ -717,8 +717,8 @@
   }
 
   .task-card-v2__avatar {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -730,7 +730,7 @@
   .task-card-v2__divider {
     height: 1px;
     background: rgba(255, 255, 255, 0.12);
-    margin: 14px 0;
+    margin: 10px 0;
   }
 
   .glass-card__label {

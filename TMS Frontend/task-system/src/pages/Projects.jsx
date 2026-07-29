@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Plus, Search, X, SlidersHorizontal } from "lucide-react";
 import { useProjectStore } from "../Features/projects/projectStore";
 import { useTaskStore } from "../Features/tasks/taskStore";
@@ -8,6 +8,7 @@ import ProjectFiltersModal from "../Features/projects/components/ProjectFiltersM
 import TaskModal from "../Features/tasks/components/TaskModal";
 import Button from "../components/ui/Button";
 import { usePermissionStore } from "../store/usePermissionStore";
+import { useAuthStore } from "../store/useAuthStore";
 
 export default function Projects() {
   const {
@@ -23,13 +24,11 @@ export default function Projects() {
   } = useProjectStore();
   const fetchTasks = useTaskStore((s) => s.fetchTasks);
   const allTasks = useTaskStore((s) => s.tasks);
-  // Previously ungated — every signed-in user saw this button
-  // regardless of role or any Access-page override, and only found out
-  // they couldn't actually create a project when the backend rejected
-  // the submit with a 403.
   const canCreateProject = usePermissionStore((s) =>
     s.can("projects", "create"),
   );
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
 
   useEffect(() => {
     fetchProjects();
@@ -38,6 +37,33 @@ export default function Projects() {
 
   const filteredProjects = getFilteredProjects();
   const hasStructuredFilters = Boolean(filters.status || filters.teamId);
+
+  // One row per team — projects with no team (teamId null) fall into their
+  // own "No Team" row at the end instead of being dropped. Rows are built
+  // fresh from filteredProjects on every render so search/status/team
+  // filters, and whichever projects the backend decided this user can see,
+  // stay in sync automatically.
+  const teamRows = useMemo(() => {
+    if (!isAdmin) return null;
+    const groups = new Map();
+    for (const project of filteredProjects) {
+      const key = project.teamId ?? "none";
+      if (!groups.has(key)) {
+        groups.set(key, {
+          teamId: project.teamId ?? null,
+          teamName: project.teamName || "No Team",
+          projects: [],
+        });
+      }
+      groups.get(key).projects.push(project);
+    }
+    // Named teams first (alphabetical), "No Team" always last.
+    return [...groups.values()].sort((a, b) => {
+      if (a.teamId === null) return 1;
+      if (b.teamId === null) return -1;
+      return a.teamName.localeCompare(b.teamName);
+    });
+  }, [filteredProjects, isAdmin]);
 
   return (
     <div>
@@ -102,7 +128,34 @@ export default function Projects() {
         <p className="text-white/50 text-sm">Loading projects…</p>
       ) : filteredProjects.length === 0 ? (
         <p className="text-white/50 text-sm">No projects match your filters.</p>
+      ) : isAdmin ? (
+        // Admin-only view: every visible project, split into a
+        // horizontally-scrolling row per team.
+        <div className="flex flex-col gap-8">
+          {teamRows.map((row) => (
+            <div key={row.teamId ?? "none"}>
+              <div className="flex items-center gap-3 mb-3">
+                <h3 className="text-lg font-semibold text-white">
+                  {row.teamName}
+                </h3>
+                <span className="text-xs font-medium text-white/40 bg-white/5 border border-white/10 rounded-full px-2.5 py-0.5">
+                  {row.projects.length} project
+                  {row.projects.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="flex gap-6 overflow-x-auto pb-2 -mx-1 px-1">
+                {row.projects.map((project) => (
+                  <div key={project.id} className="w-80 shrink-0">
+                    <ProjectCard project={project} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
+        // Everyone else: plain grid of whatever projects the backend
+        // decided this user can see (their own + any team they manage).
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />

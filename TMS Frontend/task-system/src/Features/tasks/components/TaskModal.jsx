@@ -154,8 +154,8 @@ export default function TaskModal() {
     ? editingTask.projectId
       ? hasValidProjectColor
         ? rawProjectColor
-        : priorityColorHex[editingTask.priority]
-      : editingTask.color || priorityColorHex[editingTask.priority]
+        : priorityColorHex[editingTask.priority] || "#fb923c"
+      : editingTask.color || priorityColorHex[editingTask.priority] || "#fb923c"
     : "#fb923c";
 
   // Assignable users — usersApi.getAssignableUsers() already returns just
@@ -233,11 +233,23 @@ export default function TaskModal() {
       .catch(() => setProgressHistory([]));
   }, [isTaskModalOpen, modalMode, editingTask?.id]);
 
+  // FIX: this used to sync state directly in the render body
+  // (`if (...) { setSyncedTaskId(...); setProgressInput(...); }` with no
+  // useEffect wrapper). Because `editingTask` is a fresh object reference
+  // from the Zustand store on every render, that pattern could re-trigger
+  // the setState calls on every single render and never let React settle,
+  // which is exactly what threw "Too many re-renders" in TaskModal.
+  // Moving it into a useEffect runs it after commit instead of during
+  // render, so it can't cause this loop.
   const [syncedTaskId, setSyncedTaskId] = useState(editingTask?.id ?? null);
-  if (isTaskModalOpen && editingTask?.id !== syncedTaskId) {
-    setSyncedTaskId(editingTask?.id ?? null);
-    setProgressInput(editingTask?.progress ?? 0);
-  }
+  useEffect(() => {
+    if (!isTaskModalOpen) return;
+    const currentId = editingTask?.id ?? null;
+    if (currentId !== syncedTaskId) {
+      setSyncedTaskId(currentId);
+      setProgressInput(editingTask?.progress ?? 0);
+    }
+  }, [isTaskModalOpen, editingTask?.id, editingTask?.progress, syncedTaskId]);
 
   useEffect(() => {
     if (!isTaskModalOpen) return;
@@ -755,6 +767,7 @@ export default function TaskModal() {
                   <>
                     <BarChart
                       dataset={progressHistory}
+                      colors={[accentColor]}
                       xAxis={[
                         {
                           dataKey: "day",
