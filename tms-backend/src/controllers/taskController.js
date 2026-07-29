@@ -168,6 +168,7 @@ async function getCompletedLog(req, res, next) {
 
     let query = `
       SELECT t.id, t.title, t.completed_at, t.assigned_to, t.assigned_by,
+             t.previous_status,
              u1.name AS assignedToName, u2.name AS assignedByName
       FROM tms_tasks t
       LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
@@ -192,6 +193,7 @@ async function getCompletedLog(req, res, next) {
         assignedBy: r.assigned_by,
         assignedToName: r.assignedToName,
         assignedByName: r.assignedByName,
+        previousStatus: r.previous_status || null,
       })),
     );
   } catch (err) {
@@ -343,6 +345,19 @@ async function updateTask(req, res, next) {
     if (updates.status === "done" && previousStatus !== "done") {
       updates.completedBy = updates.completedBy || previousAssignedTo || null;
       updates.completedAt = new Date();
+      // Remember what the status was right before completion so the
+      // Completed Log's Undo button can restore it exactly.
+      updates.previousStatus = previousStatus || "backlog";
+    }
+
+    // Undo: moving a task off "done" clears the stashed previous_status
+    // so a future completion doesn't resurrect a stale value.
+    if (
+      updates.status !== undefined &&
+      updates.status !== "done" &&
+      previousStatus === "done"
+    ) {
+      updates.previousStatus = null;
     }
 
     if (updates.assignedTo !== undefined && req.user.role !== "admin") {
@@ -374,6 +389,7 @@ async function updateTask(req, res, next) {
       completedBy: "completed_by",
       completedAt: "completed_at",
       progress: "progress",
+      previousStatus: "previous_status",
     };
 
     const request = pool.request().input("id", sql.Int, id);
@@ -707,6 +723,7 @@ function mapTask(row) {
     completedBy: row.completed_by,
     completedByName: row.completedByName || null,
     completedAt: row.completed_at || null,
+    previousStatus: row.previous_status || null,
     progress: row.progress ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

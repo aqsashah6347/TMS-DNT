@@ -185,6 +185,23 @@ loadMoreTasks: async () => {
 
   completeTask: async (id) => get().updateTask(id, { status: "done" }),
 
+  // Reverts an accidentally-completed task back to whatever status it had
+  // right before it was marked done (stashed server-side as
+  // previous_status). Falls back to "in progress" for older completions
+  // that predate that column. Always re-syncs the log afterwards since
+  // updateTask only auto-refetches it on the done -> * transition, not *
+  // -> not-done.
+  undoCompletedTask: async (id, fallbackStatus = "in progress") => {
+    const entry = get().completedLog.find((t) => t.id === id);
+    const restoreStatus = entry?.previousStatus || fallbackStatus;
+    const ok = await get().updateTask(id, { status: restoreStatus });
+    if (ok) {
+      await get().fetchCompletedLog();
+      await get().fetchTasks();
+    }
+    return ok;
+  },
+
   getTasksByProject: (projectId) =>
     get().tasks.filter((t) => t.projectId === projectId),
 

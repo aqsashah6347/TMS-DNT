@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, CheckCircle2, Clock } from "lucide-react";
+import { X, CheckCircle2, Clock, Undo2 } from "lucide-react";
 import { useUIStore } from "../../../store/useUIStore";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useTaskStore } from "../taskStore";
@@ -10,14 +10,29 @@ export default function CompletedLogPanel() {
   const closeCompletedLog = useUIStore((s) => s.closeCompletedLog);
   const completedLog = useTaskStore((s) => s.completedLog);
   const fetchCompletedLog = useTaskStore((s) => s.fetchCompletedLog);
+  const undoCompletedTask = useTaskStore((s) => s.undoCompletedTask);
   const { user } = useAuthStore();
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
 
   const [logScope, setLogScope] = useState("myTasks");
+  // Tracks which row's Undo is mid-flight so we can disable just that
+  // button (and show a spinner) instead of locking the whole panel.
+  const [undoingId, setUndoingId] = useState(null);
 
   useEffect(() => {
     if (isOpen) fetchCompletedLog();
   }, [isOpen, fetchCompletedLog]);
+
+  async function handleUndo(e, taskId) {
+    e.stopPropagation();
+    if (undoingId) return; // already undoing something, ignore extra clicks
+    setUndoingId(taskId);
+    try {
+      await undoCompletedTask(taskId);
+    } finally {
+      setUndoingId(null);
+    }
+  }
 
   if (!isOpen) return null;
 
@@ -81,6 +96,7 @@ export default function CompletedLogPanel() {
           )}
           {visibleLog.map((t) => {
             const completed = new Date(t.completedAt);
+            const isUndoing = undoingId === t.id;
             return (
               <div
                 key={t.id}
@@ -111,6 +127,19 @@ export default function CompletedLogPanel() {
                     })}
                   </p>
                 </div>
+
+                <button
+                  onClick={(e) => handleUndo(e, t.id)}
+                  disabled={isUndoing}
+                  title="Undo — restore this task to its previous status"
+                  className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-orange-300/90 bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 hover:text-orange-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Undo2
+                    size={13}
+                    className={isUndoing ? "animate-spin" : ""}
+                  />
+                  {isUndoing ? "Undoing…" : "Undo"}
+                </button>
               </div>
             );
           })}

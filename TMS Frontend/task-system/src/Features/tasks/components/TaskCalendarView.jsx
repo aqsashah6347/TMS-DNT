@@ -2,6 +2,30 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTaskStore } from "../taskStore";
 
+// Same fallback chain as TaskCard.jsx / TaskKanbanView.jsx: project color
+// wins when the task belongs to a project, then the task's own saved
+// color, then a color derived from priority.
+const priorityColorHex = {
+  critical: "#f87171",
+  high: "#ffd27f",
+  medium: "#b490f5",
+  low: "#a1a1aa",
+};
+
+function effectiveColor(task) {
+  if (task.projectId && task.projectColor) return task.projectColor;
+  return task.color || priorityColorHex[task.priority] || "#fb923c";
+}
+
+function hexToRgba(hex, alpha) {
+  const safe = (hex || "#fb923c").replace("#", "");
+  const num = parseInt(safe, 16);
+  const r = (num >> 16) & 0xff;
+  const g = (num >> 8) & 0xff;
+  const b = num & 0xff;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export default function TaskCalendarView({ tasks }) {
   const [current, setCurrent] = useState(new Date());
   const openTaskView = useTaskStore((s) => s.openTaskView);
@@ -81,6 +105,10 @@ export default function TaskCalendarView({ tasks }) {
           const isToday = isCurrentMonth && day === today.getDate();
           const visibleTasks = dayTasks.slice(0, 2);
           const extraCount = dayTasks.length - visibleTasks.length;
+          // The box itself is tinted with the first (soonest-added) task's
+          // color so days read at a glance; individual task labels below
+          // still get their own dot in case a day mixes colors.
+          const dayColor = hasTasks ? effectiveColor(dayTasks[0]) : null;
 
           if (!day) {
             return (
@@ -95,44 +123,79 @@ export default function TaskCalendarView({ tasks }) {
             <div
               key={i}
               onClick={() => hasTasks && openTaskView(dayTasks[0])}
-              className={`aspect-square sm:aspect-auto sm:min-h-[100px] rounded-xl p-1.5 sm:p-2 flex flex-col transition-colors ${
+              className={`aspect-square sm:aspect-auto sm:min-h-[100px] rounded-xl p-1.5 sm:p-2 flex flex-col transition-colors border ${
                 hasTasks
-                  ? "bg-orange-400/12 border border-orange-400/40 shadow-[0_0_14px_rgba(251,146,60,0.15)] cursor-pointer hover:bg-orange-400/20"
-                  : "bg-white/[0.03] border border-white/[0.06]"
+                  ? "cursor-pointer"
+                  : "bg-white/[0.03] border-white/[0.06]"
               }`}
+              style={
+                hasTasks
+                  ? {
+                      backgroundColor: hexToRgba(dayColor, 0.12),
+                      borderColor: hexToRgba(dayColor, 0.4),
+                      boxShadow: `0 0 14px ${hexToRgba(dayColor, 0.15)}`,
+                    }
+                  : undefined
+              }
+              onMouseEnter={(e) => {
+                if (hasTasks)
+                  e.currentTarget.style.backgroundColor = hexToRgba(
+                    dayColor,
+                    0.2,
+                  );
+              }}
+              onMouseLeave={(e) => {
+                if (hasTasks)
+                  e.currentTarget.style.backgroundColor = hexToRgba(
+                    dayColor,
+                    0.12,
+                  );
+              }}
             >
               <span
                 className={`text-sm sm:text-lg font-bold leading-none ${
                   isToday
                     ? "inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-400 text-[#18181b]"
-                    : hasTasks
-                      ? "text-orange-300"
-                      : "text-white/80"
+                    : !hasTasks && "text-white/80"
                 }`}
+                style={!isToday && hasTasks ? { color: dayColor } : undefined}
               >
                 {day}
               </span>
 
               <div className="flex flex-col gap-0.5 sm:gap-1 mt-1 sm:mt-2 overflow-hidden text-left">
-                {visibleTasks.map((t) => (
-                  <span
-                    key={t.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openTaskView(t);
-                    }}
-                    className={`text-[10px] sm:text-sm font-semibold truncate transition-colors ${
-                      t.status === "done"
-                        ? "text-white/30 line-through hover:text-white/50"
-                        : "text-white/90 hover:text-orange-300"
-                    }`}
-                    title={t.title}
-                  >
-                    {t.title}
-                  </span>
-                ))}
+                {visibleTasks.map((t) => {
+                  const taskColor = effectiveColor(t);
+                  return (
+                    <span
+                      key={t.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openTaskView(t);
+                      }}
+                      className={`flex items-center gap-1 text-[10px] sm:text-sm font-semibold truncate transition-colors ${
+                        t.status === "done"
+                          ? "text-white/30 line-through hover:text-white/50"
+                          : "text-white/90"
+                      }`}
+                      title={t.title}
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{
+                          backgroundColor:
+                            t.status === "done" ? "#ffffff4d" : taskColor,
+                        }}
+                      />
+                      <span className="truncate">{t.title}</span>
+                    </span>
+                  );
+                })}
                 {extraCount > 0 && (
-                  <span className="text-[10px] sm:text-xs font-semibold text-orange-300/80">
+                  <span
+                    className="text-[10px] sm:text-xs font-semibold"
+                    style={{ color: hexToRgba(dayColor, 0.85) }}
+                  >
                     +{extraCount} more
                   </span>
                 )}
