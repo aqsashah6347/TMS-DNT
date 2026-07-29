@@ -733,6 +733,9 @@ export default function Chat() {
                   draft={draft}
                   onDraftChange={handleTyping}
                   onSend={handleSendTeam}
+                  pendingFile={pendingFile}
+                  onFileSelect={setPendingFile}
+                  onRemoveFile={() => setPendingFile(null)}
                 />
               </>
             ) : !activeUser ? (
@@ -825,6 +828,9 @@ export default function Chat() {
                   draft={draft}
                   onDraftChange={handleTyping}
                   onSend={handleSend}
+                  pendingFile={pendingFile}
+                  onFileSelect={setPendingFile}
+                  onRemoveFile={() => setPendingFile(null)}
                 />
               </>
             )}
