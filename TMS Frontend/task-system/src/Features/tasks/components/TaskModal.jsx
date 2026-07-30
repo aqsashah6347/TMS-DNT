@@ -47,8 +47,6 @@ const ALL_STATUS_OPTIONS = ["backlog", "in progress", "review", "done"].map(
     label: v,
   }),
 );
-const [actualHoursInput, setActualHoursInput] = useState("");
-const [qualityRatingInput, setQualityRatingInput] = useState("");
 
 const priorityBadgeMap = {
   critical: "glass-badge--danger",
@@ -100,6 +98,7 @@ const TASK_COLORS = [
   "#f2c6a0", // apricot
   "#f87171", // coral
 ];
+
 const emptyForm = {
   title: "",
   description: "",
@@ -180,6 +179,10 @@ export default function TaskModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [formError, setFormError] = useState(null);
+
+  // Moved hooks inside component body
+  const [actualHoursInput, setActualHoursInput] = useState("");
+  const [qualityRatingInput, setQualityRatingInput] = useState("");
 
   // Local mirror of editingTask.progress so the number field feels
   // instant to type in, while the actual save still goes through
@@ -262,14 +265,6 @@ export default function TaskModal() {
       .catch(() => setProgressHistory([]));
   }, [isTaskModalOpen, modalMode, editingTask?.id]);
 
-  // FIX: this used to sync state directly in the render body
-  // (`if (...) { setSyncedTaskId(...); setProgressInput(...); }` with no
-  // useEffect wrapper). Because `editingTask` is a fresh object reference
-  // from the Zustand store on every render, that pattern could re-trigger
-  // the setState calls on every single render and never let React settle,
-  // which is exactly what threw "Too many re-renders" in TaskModal.
-  // Moving it into a useEffect runs it after commit instead of during
-  // render, so it can't cause this loop.
   const [syncedTaskId, setSyncedTaskId] = useState(editingTask?.id ?? null);
   useEffect(() => {
     if (!isTaskModalOpen) return;
@@ -314,28 +309,29 @@ export default function TaskModal() {
       ? ALL_STATUS_OPTIONS
       : ALL_STATUS_OPTIONS.filter((o) => o.value !== "done");
 
- const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
+  const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
 
- function buildInitialForm() {
-   return editingTask
-     ? {
-         ...editingTask,
-         assignedTo: editingTask.assignedTo
-           ? String(editingTask.assignedTo)
-           : "",
-         color: editingTask.color || TASK_COLORS[0],
-       }
-     : { ...emptyForm, projectId: pendingProjectId || null };
- }
+  function buildInitialForm() {
+    return editingTask
+      ? {
+          ...editingTask,
+          assignedTo: editingTask.assignedTo
+            ? String(editingTask.assignedTo)
+            : "",
+          color: editingTask.color || TASK_COLORS[0],
+        }
+      : { ...emptyForm, projectId: pendingProjectId || null };
+  }
 
- const [form, setForm] = useState(buildInitialForm);
+  const [form, setForm] = useState(buildInitialForm);
 
- useEffect(() => {
-   if (isTaskModalOpen) {
-     setForm(buildInitialForm());
-   }
-   // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [isTaskModalOpen, formKey]);
+  useEffect(() => {
+    if (isTaskModalOpen) {
+      setForm(buildInitialForm());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTaskModalOpen, formKey]);
+
   // employee.userId links a roster row to its real tms_users account —
   // only those rows are relevant for tagging an assignable user's department.
   const departmentByUserId = useMemo(() => {
@@ -424,20 +420,6 @@ export default function TaskModal() {
 
   async function handleDelete() {
     if (editingTask) await deleteTask(editingTask.id);
-    closeTaskModal();
-  }
-
-  async function handleComplete(e) {
-    if (!editingTask) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    useUIStore.getState().fireCompletionBubble({
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-      color: accentColor,
-    });
-    setIsCompleting(true);
-    await completeTask(editingTask.id);
-    setIsCompleting(false);
     closeTaskModal();
   }
 
@@ -788,9 +770,6 @@ export default function TaskModal() {
                     value={progressInput}
                     onChange={(e) => {
                       const raw = e.target.value;
-                      // Let the field go empty while the user is
-                      // clearing it to retype, but never let a typed
-                      // number sit outside 0-100 even before blur.
                       if (raw === "") {
                         setProgressInput("");
                         return;
@@ -859,9 +838,6 @@ export default function TaskModal() {
                       margin={{ left: 30, right: 8, top: 8, bottom: 24 }}
                       slotProps={{ legend: { hidden: true } }}
                       sx={{
-                        // Explicit fill on the bar elements themselves —
-                        // without this they were rendering solid black
-                        // instead of picking up the series `color`.
                         "& .MuiBarElement-root": {
                           fill: accentColor,
                         },

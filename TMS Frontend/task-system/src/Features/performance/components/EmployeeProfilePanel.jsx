@@ -69,12 +69,13 @@ export default function EmployeeProfilePanel({ employee }) {
   const rating = ratingFor(scores.final);
   const hasData = employee.assigned > 0;
 
-  const radarData = [
-    { metric: "Achievement", value: scores.achievement ?? 0 },
-    { metric: "Difficulty", value: scores.difficulty ?? 0 },
-    { metric: "Efficiency", value: scores.timeEfficiency ?? 0 },
-    { metric: "Quality", value: scores.quality ?? 0 },
-  ];
+ const radarData = [
+   { metric: "Completion", value: scores.achievement ?? 0 },
+   { metric: "Task Amount", value: scores.taskAmount ?? 0 },
+   { metric: "Task Weight", value: scores.difficulty ?? 0 },
+   { metric: "Efficiency", value: scores.timeEfficiency ?? 0 },
+   { metric: "Quality", value: scores.quality ?? 0 },
+ ];
 
   const statusData = Object.entries(employee.statusCounts)
     .map(([status, value]) => ({ status, value }))
@@ -157,15 +158,22 @@ export default function EmployeeProfilePanel({ employee }) {
                   score={scores.achievement}
                   size={76}
                   thickness={7}
-                  label="Achievement"
+                  label="Completion"
                   caption="30% weight"
+                />
+                <ScoreGauge
+                  score={scores.taskAmount}
+                  size={76}
+                  thickness={7}
+                  label="Task Amount"
+                  caption="15% weight"
                 />
                 <ScoreGauge
                   score={scores.difficulty}
                   size={76}
                   thickness={7}
-                  label="Difficulty"
-                  caption="30% weight"
+                  label="Task Weight"
+                  caption="25% weight"
                 />
                 <ScoreGauge
                   score={scores.timeEfficiency}
@@ -179,7 +187,7 @@ export default function EmployeeProfilePanel({ employee }) {
                   size={76}
                   thickness={7}
                   label="Quality"
-                  caption="20% weight"
+                  caption="10% weight"
                 />
               </div>
             </div>
