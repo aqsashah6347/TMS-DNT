@@ -40,11 +40,6 @@ export default function TeamCard({ team, onClick }) {
               members.map((m) => (
                 <div key={m.id} className="team-card__member-row">
                   <span className="team-card__member-name">{m.name}</span>
-                  {m.enrollNo && (
-                    <span className="team-card__member-enroll">
-                      #{m.enrollNo}
-                    </span>
-                  )}
                 </div>
               ))
             )}

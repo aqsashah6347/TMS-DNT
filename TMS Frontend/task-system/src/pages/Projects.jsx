@@ -1,14 +1,22 @@
 import { useEffect, useMemo } from "react";
-import { Plus, Search, X, SlidersHorizontal } from "lucide-react";
+import {
+  Plus,
+  Search,
+  X,
+  SlidersHorizontal,
+  ClipboardCheck,
+} from "lucide-react";
 import { useProjectStore } from "../Features/projects/projectStore";
 import { useTaskStore } from "../Features/tasks/taskStore";
 import ProjectCard from "../Features/projects/components/ProjectCard";
 import ProjectModal from "../Features/projects/components/ProjectModal";
 import ProjectFiltersModal from "../Features/projects/components/ProjectFiltersModal";
+import CompletedProjectsLogPanel from "../Features/projects/components/CompletedProjectsLogPanel";
 import TaskModal from "../Features/tasks/components/TaskModal";
 import Button from "../components/ui/Button";
 import { usePermissionStore } from "../store/usePermissionStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useUIStore } from "../store/useUIStore";
 
 export default function Projects() {
   const {
@@ -29,6 +37,9 @@ export default function Projects() {
   );
   const { user } = useAuthStore();
   const isAdmin = user?.role === "admin";
+  const toggleCompletedProjectsLog = useUIStore(
+    (s) => s.toggleCompletedProjectsLog,
+  );
 
   useEffect(() => {
     fetchProjects();
@@ -102,6 +113,15 @@ export default function Projects() {
             )}
           </div>
 
+          <Button
+            id="completed-projects-log-btn"
+            variant="secondary"
+            onClick={toggleCompletedProjectsLog}
+          >
+            <ClipboardCheck size={14} className="inline mr-1.5 -mt-0.5" />
+            Completed Log
+          </Button>
+
           <Button variant="secondary" onClick={openFiltersModal}>
             <SlidersHorizontal size={14} className="inline mr-1.5 -mt-0.5" />
             Filters
@@ -156,7 +176,7 @@ export default function Projects() {
       ) : (
         // Everyone else: plain grid of whatever projects the backend
         // decided this user can see (their own + any team they manage).
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {filteredProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
@@ -165,6 +185,7 @@ export default function Projects() {
 
       <ProjectModal />
       <ProjectFiltersModal />
+      <CompletedProjectsLogPanel />
       <TaskModal />
     </div>
   );

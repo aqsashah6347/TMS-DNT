@@ -87,13 +87,13 @@ export default function Header() {
         user?.role === "admin" || user?.role === "manager"
           ? teamApi.getAllTeams()
           : teamApi.getMyTeam().then((r) => (r.team ? [r.team] : []));
+const [taskResult, allProjects, allTeams] = await Promise.all([
+  taskApi.getAllTasks({ search: q }),
+  projectApi.getAllProjects(),
+  teamsPromise,
+]);
 
-      const [tasks, allProjects, allTeams] = await Promise.all([
-        taskApi.getAllTasks({ search: q }),
-        projectApi.getAllProjects(),
-        teamsPromise,
-      ]);
-
+const tasks = taskResult.tasks ?? [];
       const projects = allProjects
         .filter(
           (p) =>

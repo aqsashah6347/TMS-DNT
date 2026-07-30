@@ -1720,16 +1720,14 @@
   }
 }
 @layer components {
-  .team-card {
+/* AFTER (fixed) */
+.team-card {
     position: relative;
     border-radius: var(--radius-xl);
     overflow: hidden;
     background: var(--color-bg);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1.5px solid rgba(255, 255, 255, 0.16);
     box-shadow: var(--shadow-glass);
-    transition:
-      transform var(--dur-mid) var(--ease-glass),
-      box-shadow var(--dur-mid);
   }
 
   .team-card--clickable {
@@ -1773,42 +1771,43 @@
     );
   }
 
-  .team-card__members-scroll {
+.team-card__members-scroll {
     position: relative;
     z-index: 2;
     height: 100%;
-    overflow-y: auto;
+    overflow: hidden;
     padding: var(--spacing-gap-md);
     padding-right: 64px; /* keeps the last member row clear of the manager badge */
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 6px 10px;
   }
 
   .team-card__member-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    flex-wrap: nowrap;
     gap: 8px;
     padding: 5px 10px;
     background: rgba(0, 0, 0, 0.22);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-full);
+    /* two side-by-side columns instead of one long scrolling list */
+    flex: 0 0 auto;
+    width: calc(50% - 5px);
+    max-width: calc(50% - 5px);
   }
-
-  .team-card__member-name {
-    font-size: var(--text-xs);
+/* AFTER (fixed) */
+.team-card__member-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--text-sm);
     color: var(--color-dark);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .team-card__member-enroll {
-    font-size: var(--text-2xs);
-    color: var(--color-text-subtle);
-    font-family: monospace;
-    flex-shrink: 0;
   }
 
   .team-card__members-empty {
@@ -1840,19 +1839,24 @@
     border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+.team-card__content {
+    padding: var(--spacing-gap-sm) var(--spacing-gap-lg) var(--spacing-gap-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
   .team-card__title {
     font-family: var(--font-display);
-    font-size: var(--text-lg);
+    font-size: var(--text-xl);
     font-weight: 600;
     color: var(--color-dark);
-    margin-bottom: var(--spacing-gap-sm);
+    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .team-card__label {
-    font-size: var(--text-2xs);
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--color-text-subtle);
@@ -1862,17 +1866,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--spacing-gap-sm);
+    margin-bottom: 4px;
   }
 
   .team-card__manager-name {
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     color: var(--color-text-muted);
   }
 
   .team-card__tags {
     list-style: none;
-    margin: var(--spacing-gap-xs) 0 var(--spacing-gap-md);
+    margin: var(--spacing-gap-xs) 0 var(--spacing-gap-sm);
     padding: 0;
     display: flex;
     flex-wrap: wrap;
@@ -1882,14 +1886,14 @@
   .team-card__tag--empty,
   .team-card__tag--more {
     padding: 3px 8px;
-    font-size: var(--text-2xs);
+    font-size: var(--text-xs);
     border-radius: var(--radius-full);
     background: var(--color-glass-white);
     color: var(--color-text-subtle);
   }
 
   .team-card__made-by {
-    font-size: var(--text-2xs);
+    font-size: var(--text-xs);
     color: var(--color-text-subtle);
   }
 .taskello-card__photo {
@@ -1921,9 +1925,9 @@
     text-overflow: ellipsis;
   }
 
-  .taskello-card__panel {
+ .taskello-card__panel {
     position: relative;
-    margin-top: -22px;
+    margin-top: -40px;
     background: #1c1c1c;
     border-radius: 22px;
     padding: 20px 18px 14px;
@@ -2823,4 +2827,378 @@
 .tvm-pv-edit--header {
   padding: 6px 20px;
   font-size: 0.85rem;
+}
+/* ==========================================================================
+   Team stats modal — bento layout, per-member progress rings
+   ========================================================================== */
+@layer components {
+  /* Reusable SVG ring (RadialProgress.jsx) */
+  .radial-progress {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .radial-progress__center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+  }
+
+  .team-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .team-stats__hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--color-glass-border-subtle);
+  }
+
+  .team-stats__hero-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .team-stats__dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+  }
+
+  .team-stats__eyebrow {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-subtle);
+  }
+
+  .team-stats__manager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+  }
+
+  .team-stats__manager-name {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-dark);
+  }
+
+  .team-stats__hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+  }
+
+  .team-stats__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .team-stats__stat-value {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--color-dark);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .team-stats__stat-label {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-subtle);
+  }
+
+  .team-stats__description {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-top: -8px;
+  }
+
+  .team-stats__cell {
+    background: var(--color-glass-white);
+    border: 1px solid var(--color-glass-border-subtle);
+    border-radius: var(--radius-2xl);
+    padding: 18px 20px;
+  }
+
+  .team-stats__cell-label {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-subtle);
+    margin-bottom: 12px;
+  }
+
+  .team-stats__bento-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr);
+    gap: 16px;
+  }
+
+  .team-stats__cell--pulse {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .team-stats__cell--pulse .team-stats__cell-label {
+    align-self: flex-start;
+  }
+
+  .team-stats__ring-pct {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--color-dark);
+  }
+
+  .team-stats__ring-caption {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-subtle);
+  }
+
+  .team-stats__pulse-footer {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+    margin-top: 12px;
+  }
+
+  .team-stats__cell--breakdown {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .team-stats__chart {
+    height: 132px;
+  }
+
+  .team-stats__section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .team-stats__section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .team-stats__section-count {
+    font-size: var(--text-2xs);
+    color: var(--color-text-subtle);
+    background: var(--color-glass-white-md);
+    padding: 2px 9px;
+    border-radius: var(--radius-full);
+  }
+
+  .team-stats__empty {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+    font-style: italic;
+    text-align: center;
+    padding: 22px 0;
+  }
+
+  .team-stats__member-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+  }
+
+  .team-stats__member-card {
+    background: var(--color-glass-white);
+    border: 1px solid var(--color-glass-border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition:
+      border-color var(--dur-fast),
+      transform var(--dur-fast);
+  }
+
+  .team-stats__member-card:hover {
+    border-color: var(--color-glass-border-bright);
+    transform: translateY(-2px);
+  }
+
+  .team-stats__member-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .team-stats__member-id {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .team-stats__member-name {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-stats__member-role {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-subtle);
+  }
+
+  .team-stats__member-ring-pct {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--color-dark);
+  }
+
+  .team-stats__member-metrics {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .team-stats__member-overdue {
+    color: var(--color-accent-danger);
+    font-weight: 500;
+  }
+
+  .team-stats__member-projects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .team-stats__chip {
+    font-size: 0.66rem;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    background: var(--color-glass-white-md);
+    color: var(--color-text-muted);
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-stats__chip--empty {
+    font-style: italic;
+    color: var(--color-text-subtle);
+  }
+
+  .team-stats__chip--more {
+    background: transparent;
+    border: 1px dashed var(--color-glass-border-subtle);
+    color: var(--color-text-subtle);
+  }
+
+  .team-stats__project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+  }
+
+  .team-stats__project-card {
+    background: var(--color-glass-white);
+    border: 1px solid var(--color-glass-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .team-stats__project-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .team-stats__project-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .team-stats__project-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--text-sm);
+    color: var(--color-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-stats__project-pct {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-text-subtle);
+    flex-shrink: 0;
+  }
+
+  .team-stats__project-track {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  .team-stats__project-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width var(--dur-mid);
+  }
+
+  .team-stats__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-glass-border-subtle);
+  }
+
+  .team-stats__footer-text {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+  }
+
+  @media (max-width: 640px) {
+    .team-stats__bento-row {
+      grid-template-columns: 1fr;
+    }
+  }
 }

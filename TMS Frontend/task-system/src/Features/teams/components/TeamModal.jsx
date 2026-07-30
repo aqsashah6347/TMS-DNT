@@ -1,6 +1,5 @@
 // src/Features/teams/components/TeamModal.jsx
 import { useState, useMemo } from "react";
-import { Pencil } from "lucide-react";
 import Modal from "../../../components/ui/Modal";
 import { Input, Textarea } from "../../../components/ui/Input";
 import Button from "../../../components/ui/Button";
@@ -9,7 +8,8 @@ import { useProjectStore } from "../../projects/projectStore";
 import { useAuthStore } from "../../../store/useAuthStore";
 import TeamMemberPicker from "./TeamMemberPicker";
 import TeamManagerPicker from "./TeamManagerPicker";
-import { TEAM_COLORS, DEFAULT_TEAM_COLOR } from "../../../utils/teamColors";
+import TeamStatsView from "./TeamStatsView";
+import { TEAM_COLORS } from "../../../utils/teamColors";
 
 const emptyForm = {
   name: "",
@@ -218,15 +218,12 @@ export default function TeamModal() {
   // Nothing to show a read-only view of yet (e.g. modal just closed).
   if (!isNew && !editingTeam) return null;
 
-  const color = editingTeam?.color || DEFAULT_TEAM_COLOR;
-  const members = editingTeam?.memberDetails || [];
-
   return (
     <Modal
       isOpen={isModalOpen}
       onClose={closeModal}
       title={isNew ? "New Team" : isEditing ? "Edit Team" : editingTeam.name}
-      width="max-w-lg"
+      width={isEditing ? "max-w-lg" : "max-w-5xl"}
     >
       {isEditing ? (
         <TeamForm
@@ -238,91 +235,12 @@ export default function TeamModal() {
           deleteTeam={deleteTeam}
         />
       ) : (
-        <div className="flex flex-col gap-5">
-          {/* Read-only info */}
-          <div className="flex items-center gap-2">
-            <span
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: color }}
-            />
-            <span className="text-sm text-muted">
-              Manager: {editingTeam.managerName || "Unassigned"}
-            </span>
-          </div>
-
-          {editingTeam.description && (
-            <p className="text-sm text-muted">{editingTeam.description}</p>
-          )}
-
-          <div>
-            <h4 className="text-sm font-semibold text-dark mb-2">
-              Members{" "}
-              <span className="text-muted font-normal">
-                ({members.length})
-              </span>
-            </h4>
-            {members.length === 0 ? (
-              <p className="text-xs text-muted text-center py-4">
-                No members yet.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
-                {members.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center justify-between bg-bg rounded-card px-3 py-1.5"
-                  >
-                    <span className="text-sm text-dark truncate">
-                      {m.name}
-                    </span>
-                    {m.enrollNo && (
-                      <span className="text-[11px] text-muted font-mono shrink-0">
-                        #{m.enrollNo}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-bg pt-4">
-            <h4 className="text-sm font-semibold text-dark mb-2">
-              Projects{" "}
-              <span className="text-muted font-normal">
-                ({teamProjects.length})
-              </span>
-            </h4>
-            {teamProjects.length === 0 ? (
-              <p className="text-xs text-muted text-center py-4">
-                No projects for this team yet.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
-                {teamProjects.map((p) => (
-                  <li
-                    key={p.id}
-                    className="text-sm text-dark bg-bg rounded-card px-3 py-1.5 truncate"
-                  >
-                    {p.name}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {canManageTeam && (
-            <div className="flex justify-end pt-2 border-t border-bg">
-              <Button
-                variant="primary"
-                onClick={() => useTeamStore.setState({ modalMode: "edit" })}
-              >
-                <Pencil size={14} className="inline mr-1.5 -mt-0.5" /> Edit
-                Team
-              </Button>
-            </div>
-          )}
-        </div>
+        <TeamStatsView
+          team={editingTeam}
+          teamProjects={teamProjects}
+          canManageTeam={canManageTeam}
+          onEdit={() => useTeamStore.setState({ modalMode: "edit" })}
+        />
       )}
     </Modal>
   );

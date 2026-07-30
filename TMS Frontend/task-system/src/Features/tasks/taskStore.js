@@ -10,6 +10,13 @@ export const useTaskStore = create((set, get) => ({
   isLoading: false,
   error: null,
 
+  // Complete, unpaginated set of every task matching the current filters
+  // (all statuses, every page at once) — used by Kanban and Calendar,
+  // which both need the full board rather than whatever "Load more" has
+  // paged into `tasks` so far.
+  allTasksFull: [],
+  isLoadingAll: false,
+
   completedLog: [],
   isCompletedLogLoading: false,
 
@@ -59,7 +66,7 @@ export const useTaskStore = create((set, get) => ({
       pendingProjectId: null,
     }),
 
- fetchTasks: async (page = 1) => {
+  fetchTasks: async (page = 1) => {
     const { filters, pageSize } = get();
     set({ isLoading: true, error: null });
     try {
@@ -68,9 +75,14 @@ export const useTaskStore = create((set, get) => ({
           priority: filters.priority || undefined,
           assignedTo: filters.assignedTo || undefined,
           search: filters.search || undefined,
+          // Done tasks never show on the List page, so they shouldn't
+          // count toward its pagination total either — otherwise "Load
+          // more (X of Y)" and the page count include tasks that are
+          // filtered out client-side and never actually appear.
+          excludeCompleted: true,
         },
         page,
-        pageSize
+        pageSize,
       );
       set({ tasks, total, page, isLoading: false });
     } catch (err) {
@@ -78,6 +90,33 @@ export const useTaskStore = create((set, get) => ({
         error: err.response?.data?.message || "Couldn't load tasks",
         isLoading: false,
       });
+    }
+    // Kanban/Calendar need every task regardless of List pagination —
+    // keep that set in sync whenever the main list refreshes.
+    get().fetchAllTasksFull();
+  },
+
+  // Fetches the complete, unpaginated task set (all statuses) for views
+  // that can't rely on "Load more" — Kanban's Done column and the
+  // Calendar both need to see tasks beyond whatever page the List view
+  // has loaded so far.
+  fetchAllTasksFull: async () => {
+    const { filters } = get();
+    set({ isLoadingAll: true });
+    try {
+      const { tasks } = await taskApi.getAllTasks(
+        {
+          priority: filters.priority || undefined,
+          assignedTo: filters.assignedTo || undefined,
+          search: filters.search || undefined,
+          all: true,
+        },
+        1,
+        get().pageSize,
+      );
+      set({ allTasksFull: tasks, isLoadingAll: false });
+    } catch (err) {
+      set({ isLoadingAll: false });
     }
   },
 
@@ -107,7 +146,7 @@ export const useTaskStore = create((set, get) => ({
       return false;
     }
   },
-loadMoreTasks: async () => {
+  loadMoreTasks: async () => {
     const { page, pageSize, total, tasks, isLoading } = get();
     if (isLoading || tasks.length >= total) return; // nothing more to load
 
@@ -120,9 +159,10 @@ loadMoreTasks: async () => {
           priority: filters.priority || undefined,
           assignedTo: filters.assignedTo || undefined,
           search: filters.search || undefined,
+          excludeCompleted: true,
         },
         nextPage,
-        pageSize
+        pageSize,
       );
       set({
         tasks: [...tasks, ...nextTasks],
@@ -152,7 +192,6 @@ loadMoreTasks: async () => {
         set({ editingTask: updated });
       }
 
-      
       if (patch.status === "done") {
         useUIStore.getState().fireConfetti(updated?.dueDate ?? null);
         get().fetchCompletedLog();
@@ -183,7 +222,9 @@ loadMoreTasks: async () => {
     await get().updateTask(id, { pinned: !task.pinned });
   },
 
-  completeTask: async (id) => get().updateTask(id, { status: "done" }),
+  // was: completeTask: async (id) => get().updateTask(id, { status: "done" }),
+  completeTask: async (id, extra = {}) =>
+    get().updateTask(id, { status: "done", ...extra }),
 
   // Reverts an accidentally-completed task back to whatever status it had
   // right before it was marked done (stashed server-side as
@@ -205,9 +246,15 @@ loadMoreTasks: async () => {
   getTasksByProject: (projectId) =>
     get().tasks.filter((t) => t.projectId === projectId),
 
-  // Excludes completed tasks so they drop off the main List/Calendar
-  // views once marked done — their record lives in completedLog instead.
-  // Kanban still gets the full unfiltered set (see Tasks.jsx) since its
-  // Done column is the intended place to see them mid-board.
+  // Excludes completed tasks so they drop off the main List view once
+  // marked done — their record lives in completedLog instead. Backed by
+  // the paginated `tasks` array (fetched with excludeCompleted already,
+  // this filter is just a safety net for any locally-stale status).
   getFilteredTasks: () => get().tasks.filter((t) => t.status !== "done"),
+
+  // Same "hide done" rule, but sourced from allTasksFull instead of the
+  // paginated `tasks` array — this is what Calendar should use, since it
+  // needs every non-done task, not just whatever "Load more" has fetched.
+  getFilteredAllTasks: () =>
+    get().allTasksFull.filter((t) => t.status !== "done"),
 }));

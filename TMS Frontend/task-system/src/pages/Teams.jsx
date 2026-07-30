@@ -64,7 +64,8 @@ export default function Teams() {
                   {filteredTeams.length !== 1 ? "s" : ""}
                 </span>
                 <span className="text-base font-medium text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-full px-3 py-1">
-                 {(allTasks?.length ?? 0)} task{(allTasks?.length ?? 0) !== 1 ? "s" : ""}
+                  {allTasks?.length ?? 0} task
+                  {(allTasks?.length ?? 0) !== 1 ? "s" : ""}
                 </span>
               </>
             )}
@@ -137,13 +138,14 @@ export default function Teams() {
                 No teams match your search or filters.
               </p>
             ) : (
-              <div className="grid grid-cols-3 gap-4">
-                {filteredTeams.map((team) => (
+              <div className="grid grid-cols-4 gap-4">
+              {filteredTeams.map((team) => (
                   <TeamCard
                     key={team.id}
                     team={team}
-                    onClick={isAdmin ? openTeamView : undefined}
+                    onClick={openTeamView}
                   />
+                
                 ))}
               </div>
             )}

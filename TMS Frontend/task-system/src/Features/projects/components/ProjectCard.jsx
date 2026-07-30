@@ -73,9 +73,11 @@ export default function ProjectCard({ project }) {
       </div>
 
       <div className="taskello-card__panel">
-        <div className="taskello-card__tab">
-          <div className="taskello-card__tab-title">{project.teamName}</div>
-        </div>
+        {project.teamName && (
+          <div className="taskello-card__tab">
+            <div className="taskello-card__tab-title">{project.teamName}</div>
+          </div>
+        )}
 
         <div className="taskello-card__desc-row">
           {project.description ? (

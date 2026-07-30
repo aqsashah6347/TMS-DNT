@@ -35,11 +35,19 @@ const toolbarBtnPrimary =
   "bg-orange-500/20 border-orange-500/30 text-orange-400 hover:bg-orange-500/30";
 
 export default function Tasks() {
-  const { view, setView, openCreateModal, openFiltersModal, getFilteredTasks } =
-    useTaskStore();
-  const tasks = getFilteredTasks();
-  // Kanban needs the raw, unfiltered list so its Done column isn't empty.
-  const allTasks = useTaskStore((s) => s.tasks);
+  const {
+    view,
+    setView,
+    openCreateModal,
+    openFiltersModal,
+    getFilteredTasks,
+    getFilteredAllTasks,
+  } = useTaskStore();
+  const tasks = getFilteredTasks(); // paginated, non-done — drives the List view + "Load more" count
+  const calendarTasks = getFilteredAllTasks(); // full set, non-done — Calendar needs every task, not just loaded pages
+  // Kanban needs the raw, unfiltered, full list so its Done column isn't
+  // empty and it doesn't miss tasks beyond whatever page "Load more" is at.
+  const allTasks = useTaskStore((s) => s.allTasksFull);
   const { fetchTasks, isLoading, error, total, loadMoreTasks } = useTaskStore();
   const { user } = useAuthStore();
   const canManageTasks = user?.role === "admin" || user?.role === "manager";
@@ -58,6 +66,9 @@ export default function Tasks() {
   const scopedAllTasks = canManageTasks
     ? allTasks.filter(scopeFilter)
     : allTasks;
+  const scopedCalendarTasks = canManageTasks
+    ? calendarTasks.filter(scopeFilter)
+    : calendarTasks;
 
   useEffect(() => {
     fetchTasks();
@@ -160,9 +171,11 @@ export default function Tasks() {
         )}
         {view === "list" && <TaskListView tasks={scopedTasks} />}
         {view === "kanban" && <TaskKanbanView tasks={scopedAllTasks} />}
-        {view === "calendar" && <TaskCalendarView tasks={scopedTasks} />}
+        {view === "calendar" && (
+          <TaskCalendarView tasks={scopedCalendarTasks} />
+        )}
 
-        {view === "list" && allTasks.length < total && (
+        {view === "list" && tasks.length < total && (
           <div className="flex justify-center mt-6">
             <button
               onClick={loadMoreTasks}
@@ -171,7 +184,7 @@ export default function Tasks() {
             >
               {isLoading
                 ? "Loading..."
-                : `Load more (${allTasks.length} of ${total})`}
+                : `Load more (${tasks.length} of ${total})`}
             </button>
           </div>
         )}

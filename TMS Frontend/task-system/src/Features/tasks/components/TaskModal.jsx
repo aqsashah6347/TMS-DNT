@@ -33,12 +33,22 @@ const priorityOptions = ["low", "medium", "high", "critical"].map((v) => ({
   value: v,
   label: v,
 }));
+
+const difficultyOptions = [
+  { value: "1", label: "1 — Low" },
+  { value: "2", label: "2 — Medium" },
+  { value: "3", label: "3 — High" },
+  { value: "4", label: "4 — Critical" },
+];
+
 const ALL_STATUS_OPTIONS = ["backlog", "in progress", "review", "done"].map(
   (v) => ({
     value: v,
     label: v,
   }),
 );
+const [actualHoursInput, setActualHoursInput] = useState("");
+const [qualityRatingInput, setQualityRatingInput] = useState("");
 
 const priorityBadgeMap = {
   critical: "glass-badge--danger",
@@ -90,7 +100,6 @@ const TASK_COLORS = [
   "#f2c6a0", // apricot
   "#f87171", // coral
 ];
-
 const emptyForm = {
   title: "",
   description: "",
@@ -102,6 +111,8 @@ const emptyForm = {
   githubLink: "",
   projectId: null,
   color: TASK_COLORS[0],
+  difficultyLevel: 2,
+  estimatedHours: "",
 };
 
 export default function TaskModal() {
@@ -183,6 +194,24 @@ export default function TaskModal() {
   // succeeds (auto-reverts to 'idle'), 'error' if it fails.
   const [progressSaveState, setProgressSaveState] = useState("idle");
   const progressSaveTimeoutRef = useRef(null);
+
+  async function handleComplete(e) {
+    if (!editingTask) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    useUIStore.getState().fireCompletionBubble({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+      color: accentColor,
+    });
+    setIsCompleting(true);
+    await completeTask(editingTask.id, {
+      actualHours: actualHoursInput === "" ? null : Number(actualHoursInput),
+      qualityRating:
+        qualityRatingInput === "" ? null : Number(qualityRatingInput),
+    });
+    setIsCompleting(false);
+    closeTaskModal();
+  }
 
   async function commitProgress(raw) {
     const num = clamp(
@@ -285,19 +314,28 @@ export default function TaskModal() {
       ? ALL_STATUS_OPTIONS
       : ALL_STATUS_OPTIONS.filter((o) => o.value !== "done");
 
-  const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
-  const [form, setForm] = useState(() =>
-    editingTask
-      ? {
-          ...editingTask,
-          assignedTo: editingTask.assignedTo
-            ? String(editingTask.assignedTo)
-            : "",
-          color: editingTask.color || TASK_COLORS[0],
-        }
-      : { ...emptyForm, projectId: pendingProjectId || null },
-  );
+ const formKey = editingTask?.id ?? `new-${pendingProjectId ?? "none"}`;
 
+ function buildInitialForm() {
+   return editingTask
+     ? {
+         ...editingTask,
+         assignedTo: editingTask.assignedTo
+           ? String(editingTask.assignedTo)
+           : "",
+         color: editingTask.color || TASK_COLORS[0],
+       }
+     : { ...emptyForm, projectId: pendingProjectId || null };
+ }
+
+ const [form, setForm] = useState(buildInitialForm);
+
+ useEffect(() => {
+   if (isTaskModalOpen) {
+     setForm(buildInitialForm());
+   }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [isTaskModalOpen, formKey]);
   // employee.userId links a roster row to its real tms_users account —
   // only those rows are relevant for tagging an assignable user's department.
   const departmentByUserId = useMemo(() => {
@@ -459,6 +497,25 @@ export default function TaskModal() {
               value={form.status}
               onChange={(v) => setForm({ ...form, status: v })}
               options={statusOptions}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Dropdown
+              label="Difficulty Level"
+              value={String(form.difficultyLevel ?? 2)}
+              onChange={(v) => setForm({ ...form, difficultyLevel: Number(v) })}
+              options={difficultyOptions}
+            />
+            <Input
+              label="Estimated Hours"
+              type="number"
+              min="0"
+              step="0.5"
+              value={form.estimatedHours ?? ""}
+              onChange={(e) =>
+                setForm({ ...form, estimatedHours: e.target.value })
+              }
+              placeholder="e.g. 8"
             />
           </div>
 
@@ -631,6 +688,16 @@ export default function TaskModal() {
                 >
                   {editingTask.status}
                 </span>
+                {editingTask.difficultyLevel && (
+                  <span className="glass-badge glass-badge--violet tvm-pill">
+                    Difficulty {editingTask.difficultyLevel}/4
+                  </span>
+                )}
+                {editingTask.estimatedHours && (
+                  <span className="glass-badge glass-badge--primary tvm-pill">
+                    Est. {editingTask.estimatedHours}h
+                  </span>
+                )}
               </div>
             </div>
 
@@ -838,7 +905,41 @@ export default function TaskModal() {
             </div>
 
             <div className="tvm-divider" />
-
+            {canCompleteTask && editingTask.status !== "done" && (
+              <div className="tvm-progress-block">
+                <p className="tvm-label">Completion Details:</p>
+                <div className="grid grid-cols-2 gap-3 mt-1">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-white/40">
+                      Actual Hours Spent
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={actualHoursInput}
+                      onChange={(e) => setActualHoursInput(e.target.value)}
+                      placeholder="e.g. 6.5"
+                      className="tvm-progress-input w-full"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-white/40">
+                      Quality Rating (0–100)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={qualityRatingInput}
+                      onChange={(e) => setQualityRatingInput(e.target.value)}
+                      placeholder="e.g. 90"
+                      className="tvm-progress-input w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Footer */}
             <div className="tvm-footer">
               {canManageTasks ? (

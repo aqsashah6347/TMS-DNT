@@ -6,6 +6,13 @@ const projectController = require("../controllers/projectController");
 
 router.use(requireAuth);
 
+// Static/specific endpoints MUST come before parameterized /:id routes
+router.get(
+  "/completed-log",
+  requirePermission("projects", "view"),
+  projectController.getCompletedLog,
+);
+
 router.get(
   "/",
   requirePermission("projects", "view"),

@@ -1,21 +1,18 @@
-import { useEffect, useMemo, useState, useRef } from "react";
-import {
-  Search,
-  User,
-  ChevronDown,
-  Check,
-  Trophy,
-  Users as UsersIcon,
-  LayoutGrid,
-  X,
-  Filter,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { LayoutDashboard, User, Users as UsersIcon } from "lucide-react";
 import { usersApi } from "../api/usersApi";
 import { taskApi } from "../api/taskApi";
 import { teamApi } from "../api/teamApi";
 import { employeesApi } from "../api/employeesApi";
-import EmployeeDetailModal from "../Features/performance/components/EmployeeDetailModal";
 import TeamsPerformanceView from "../Features/performance/components/TeamsPerformanceView";
+import PerformanceDashboardTab from "../Features/performance/components/PerformanceDashboardTab";
+import EmployeeDirectorySidebar from "../Features/performance/components/EmployeeDirectorySidebar";
+import EmployeeProfilePanel from "../Features/performance/components/EmployeeProfilePanel";
+import {
+  buildScoreBreakdown,
+  ratingFor,
+} from "../Features/performance/scoring";
+import { daysBetween } from "../Features/performance/utils";
 
 // Fetches every task page-by-page (the backend caps pageSize at 100) so
 // stats reflect the whole tms_tasks table, not just the first page.
@@ -34,12 +31,9 @@ async function fetchAllTasks() {
   return all;
 }
 
-function daysBetween(a, b) {
-  return (new Date(b).getTime() - new Date(a).getTime()) / 86400000;
-}
-
-// Combines users + tasks + roster + teams into one stats object per
-// employee, used both by the top-performers list and the searchable grid.
+// Combines users + tasks + roster + teams into one stats-and-score object
+// per employee, used by the dashboard, the directory, and the profile
+// panel — this is the single source of truth for the whole page.
 function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
   return users.map((u) => {
     const userTasks = tasks.filter((t) => t.assignedTo === u.id);
@@ -65,10 +59,37 @@ function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
     const onTimeRate = completed.length
       ? Math.round((onTimeCompleted.length / completed.length) * 100)
       : null;
-    const onTimeCount = onTimeCompleted.length;
 
     const roster = rosterByCode.get(u.enroll_no);
     const teamInfo = teamByUserId.get(u.id);
+    const scores = buildScoreBreakdown(userTasks);
+
+    const statusCounts = { backlog: 0, "in progress": 0, review: 0, done: 0 };
+    userTasks.forEach((t) => {
+      if (statusCounts[t.status] !== undefined) statusCounts[t.status] += 1;
+    });
+
+    const priorityCounts = { low: 0, medium: 0, high: 0, critical: 0 };
+    userTasks.forEach((t) => {
+      if (priorityCounts[t.priority] !== undefined)
+        priorityCounts[t.priority] += 1;
+    });
+
+    const projectMap = new Map();
+    userTasks.forEach((t) => {
+      if (!t.projectName) return;
+      if (!projectMap.has(t.projectName)) {
+        projectMap.set(t.projectName, {
+          name: t.projectName,
+          color: t.projectColor || "#fb923c",
+          total: 0,
+          done: 0,
+        });
+      }
+      const p = projectMap.get(t.projectName);
+      p.total += 1;
+      if (t.status === "done") p.done += 1;
+    });
 
     return {
       id: u.id,
@@ -88,8 +109,13 @@ function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
         ? Math.round((completed.length / userTasks.length) * 100)
         : 0,
       onTimeRate,
-      onTimeCount,
       avgCompletionDays,
+      statusCounts,
+      priorityCounts,
+      projects: Array.from(projectMap.values()).sort(
+        (a, b) => b.total - a.total,
+      ),
+      scores,
     };
   });
 }
@@ -143,392 +169,14 @@ function buildTeamStats(teams, employeeStatsById) {
     });
 }
 
-// Single "Filters" button holding both the Department and Branch pickers
-// in one panel — same pattern used on the Employees page.
-function FiltersMenu({
-  departments,
-  departmentValue,
-  onDepartmentChange,
-  branches,
-  branchValue,
-  onBranchChange,
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const activeCount = (departmentValue ? 1 : 0) + (branchValue ? 1 : 0);
-
-  return (
-    <div ref={ref} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={`flex items-center justify-between gap-2 min-w-[150px] px-4 py-2.5 rounded-xl bg-white/5 border text-sm text-white transition-colors ${
-          isOpen
-            ? "border-orange-500/40 ring-2 ring-orange-500/40"
-            : "border-white/10 hover:border-white/20"
-        }`}
-      >
-        <span className="flex items-center gap-2">
-          <Filter size={14} className="text-white/50" />
-          Filters{activeCount > 0 ? ` (${activeCount})` : ""}
-        </span>
-        <ChevronDown
-          size={15}
-          className={`text-white/40 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-30 mt-2 right-0 w-72 rounded-xl bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden p-3 space-y-4">
-          <div>
-            <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2 px-1">
-              Department
-            </p>
-            <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
-              <button
-                type="button"
-                onClick={() => onDepartmentChange("")}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left transition-colors ${
-                  departmentValue === ""
-                    ? "text-orange-400 bg-orange-500/10"
-                    : "text-white/70 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                All Departments
-                {departmentValue === "" && <Check size={14} />}
-              </button>
-              {departments.map((dept) => (
-                <button
-                  key={dept}
-                  type="button"
-                  onClick={() => onDepartmentChange(dept)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left truncate transition-colors ${
-                    departmentValue === dept
-                      ? "text-orange-400 bg-orange-500/10"
-                      : "text-white/70 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <span className="truncate">{dept}</span>
-                  {departmentValue === dept && (
-                    <Check size={14} className="shrink-0" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2 px-1">
-              Branch
-            </p>
-            <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
-              <button
-                type="button"
-                onClick={() => onBranchChange("")}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left transition-colors ${
-                  branchValue === ""
-                    ? "text-orange-400 bg-orange-500/10"
-                    : "text-white/70 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                All Branches
-                {branchValue === "" && <Check size={14} />}
-              </button>
-              {branches.map((branch) => (
-                <button
-                  key={branch}
-                  type="button"
-                  onClick={() => onBranchChange(branch)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-left truncate transition-colors ${
-                    branchValue === branch
-                      ? "text-orange-400 bg-orange-500/10"
-                      : "text-white/70 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <span className="truncate">{branch}</span>
-                  {branchValue === branch && (
-                    <Check size={14} className="shrink-0" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {activeCount > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                onDepartmentChange("");
-                onBranchChange("");
-              }}
-              className="w-full text-center text-xs font-medium text-orange-400 hover:text-orange-300 pt-1 border-t border-white/10"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function formatDuration(days) {
-  if (days === null || days === undefined || Number.isNaN(days)) return "—";
-  if (days < 1) return `${Math.round(days * 24)}h`;
-  return `${days.toFixed(1)}d`;
-}
-
-// Shared between the header row and every employee row so columns stay
-// aligned. Built with divs/grid instead of a real <table> so each row can
-// be its own independently rounded, independently glowing element (a real
-// <tr>/<td> would get its glow clipped by the table's own borders).
-const EMPLOYEE_TABLE_GRID =
-  "grid-cols-[3rem_minmax(0,1fr)_11rem_6rem_6rem_6rem_5.5rem_10rem]";
-
-function initials(name) {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] || "";
-  const second = parts[1]?.[0] || "";
-  return (first + second).toUpperCase();
-}
-
-// Deterministic color per department so the same department always gets
-// the same badge color, without needing to hardcode every department name.
-const DEPARTMENT_PALETTE = [
-  "#a78bfa", // violet
-  "#60a5fa", // blue
-  "#fb923c", // orange
-  "#34d399", // emerald
-  "#f472b6", // pink
-  "#facc15", // yellow
-  "#22d3ee", // cyan
+const TABS = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "employees", label: "Employees", icon: User },
+  { key: "teams", label: "Teams", icon: UsersIcon },
 ];
 
-function colorForDepartment(department) {
-  if (!department || department === "—") return "#94a3b8";
-  let hash = 0;
-  for (let i = 0; i < department.length; i++) {
-    hash = department.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return DEPARTMENT_PALETTE[Math.abs(hash) % DEPARTMENT_PALETTE.length];
-}
-
-// A simple blended score out of 100 — average of completion rate and
-// on-time rate — used to color the Score column and pick a Rating badge.
-// There's no historical snapshot data to compute a real week-over-week
-// trend, so unlike the reference design this doesn't show a fake up/down
-// arrow — just an honest rating based on current performance.
-function performanceScore(emp) {
-  if (!emp.assigned) return null;
-  const onTime = emp.onTimeRate ?? emp.completionRate;
-  return Math.round((emp.completionRate + onTime) / 2);
-}
-
-function scoreColorClass(score) {
-  if (score === null) return "text-white/40";
-  if (score >= 90) return "text-emerald-400";
-  if (score >= 75) return "text-blue-400";
-  if (score >= 60) return "text-orange-400";
-  return "text-red-400";
-}
-
-function ratingBadge(score) {
-  if (score === null)
-    return { label: "—", className: "text-white/40 bg-white/5 border-white/10" };
-  if (score >= 90)
-    return {
-      label: "Excellent",
-      className: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    };
-  if (score >= 75)
-    return {
-      label: "Good",
-      className: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-    };
-  if (score >= 60)
-    return {
-      label: "Average",
-      className: "text-orange-400 bg-orange-500/10 border-orange-500/20",
-    };
-  return {
-    label: "Needs Improvement",
-    className: "text-red-400 bg-red-500/10 border-red-500/20",
-  };
-}
-
-// Row for the full/searchable employee list — column layout modeled on
-// the reference design (#, Employee, Department, Tasks, On Time,
-// Overdue, Score, Trend), styled with the same glow accent as the Top
-// Performers cards above, in orange instead of green.
-function EmployeeTableRow({ emp, index, onClick }) {
-  const score = performanceScore(emp);
-  const rating = ratingBadge(score);
-  const deptColor = colorForDepartment(emp.department);
-  const hasDept = emp.department && emp.department !== "—";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`grid ${EMPLOYEE_TABLE_GRID} gap-3 items-center w-full text-left rounded-2xl border border-orange-400/50 bg-orange-400/5 hover:bg-orange-400/[0.1] transition-colors px-5 py-3`}
-    >
-      <span className="text-white/40 font-medium text-sm">
-        {String(index).padStart(2, "0")}
-      </span>
-
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border text-xs font-semibold"
-          style={{
-            background: `${emp.avatarColor || "#fb923c"}22`,
-            borderColor: `${emp.avatarColor || "#fb923c"}55`,
-            color: emp.avatarColor || "#fb923c",
-          }}
-        >
-          {initials(emp.name)}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm text-white font-medium truncate">
-            {emp.name}
-          </p>
-          <p className="text-xs text-white/40 truncate">
-            {emp.team || emp.role || "—"}
-          </p>
-        </div>
-      </div>
-
-      <div>
-        {hasDept ? (
-          <span
-            className="inline-flex px-2.5 py-1 rounded-lg text-xs font-medium border whitespace-nowrap"
-            style={{
-              color: deptColor,
-              background: `${deptColor}1a`,
-              borderColor: `${deptColor}40`,
-            }}
-          >
-            {emp.department}
-          </span>
-        ) : (
-          <span className="text-white/30 text-xs">—</span>
-        )}
-      </div>
-
-      <span className="text-center text-sm text-white font-medium whitespace-nowrap">
-        {emp.completed}/{emp.assigned}
-      </span>
-
-      <span className="text-center text-sm text-white/70">
-        {emp.assigned ? emp.onTimeCount : "—"}
-      </span>
-
-      <span
-        className={`text-center text-sm font-medium ${
-          emp.overdue > 0 ? "text-red-400" : "text-white/40"
-        }`}
-      >
-        {emp.overdue}
-      </span>
-
-      <span
-        className={`text-center text-sm font-semibold ${scoreColorClass(score)}`}
-      >
-        {score === null ? "—" : score}
-      </span>
-
-      <span className="flex justify-center">
-        <span
-          className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap ${rating.className}`}
-        >
-          {rating.label}
-        </span>
-      </span>
-    </button>
-  );
-}
-
-function EmployeeRow({ emp, rank, onClick }) {
-  const isTopThree = rank && rank <= 3;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full flex items-center gap-4 rounded-2xl border p-4 text-left transition-colors ${
-        isTopThree
-          ? "border-emerald-400/70 bg-amber-400/10 hover:bg-amber-400/[0.14] shadow-[0_0_18px_2px_rgba(52,211,153,0.45)]"
-          : "border-white/10 bg-white/5 hover:bg-white/[0.07]"
-      }`}
-    >
-      {rank && (
-        <div
-          className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border ${
-            isTopThree
-              ? "border-amber-400/50 bg-amber-400/15 text-amber-300"
-              : "border-white/10 bg-white/5 text-white/50"
-          }`}
-        >
-          {rank}
-        </div>
-      )}
-
-      <div
-        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border"
-        style={{
-          background: `${emp.avatarColor || "#fb923c"}22`,
-          borderColor: `${emp.avatarColor || "#fb923c"}55`,
-        }}
-      >
-        <User size={18} color={emp.avatarColor || "#fb923c"} />
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-white truncate">{emp.name}</p>
-        <p className="text-xs text-white/40 truncate">
-          {emp.department}
-          {emp.team ? ` · ${emp.team}` : ""}
-        </p>
-      </div>
-
-      <div className="hidden sm:flex items-center gap-5 shrink-0 text-sm">
-        <div className="text-center">
-          <p className="text-white font-semibold">
-            {emp.completed}/{emp.assigned}
-          </p>
-          <p className="text-[10px] text-white/40 uppercase tracking-wide">
-            Done
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-orange-400 font-semibold">{emp.completionRate}%</p>
-          <p className="text-[10px] text-white/40 uppercase tracking-wide">
-            Rate
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-white font-semibold">
-            {formatDuration(emp.avgCompletionDays)}
-          </p>
-          <p className="text-[10px] text-white/40 uppercase tracking-wide">
-            Avg Time
-          </p>
-        </div>
-      </div>
-    </button>
-  );
-}
-
 export default function Performance() {
-  const [view, setView] = useState("employees"); // "employees" | "teams"
+  const [tab, setTab] = useState("dashboard");
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -538,7 +186,6 @@ export default function Performance() {
 
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
-  const [branchFilter, setBranchFilter] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
   useEffect(() => {
@@ -613,13 +260,101 @@ export default function Performance() {
     return [...employeeStats]
       .filter((e) => e.assigned > 0)
       .sort((a, b) => {
-        if (b.completed !== a.completed) return b.completed - a.completed;
-        const aTime = a.avgCompletionDays ?? Infinity;
-        const bTime = b.avgCompletionDays ?? Infinity;
-        return aTime - bTime;
+        const bs = b.scores.final ?? -1;
+        const as = a.scores.final ?? -1;
+        if (bs !== as) return bs - as;
+        return b.completed - a.completed;
       })
       .slice(0, 10);
   }, [employeeStats]);
+
+  const orgStats = useMemo(() => {
+    const withTasks = employeeStats.filter((e) => e.assigned > 0);
+    const totalAssigned = employeeStats.reduce((s, e) => s + e.assigned, 0);
+    const totalCompleted = employeeStats.reduce((s, e) => s + e.completed, 0);
+    const totalOverdue = employeeStats.reduce((s, e) => s + e.overdue, 0);
+    const avgScore = withTasks.length
+      ? Math.round(
+          withTasks.reduce((s, e) => s + (e.scores.final ?? 0), 0) /
+            withTasks.length,
+        )
+      : null;
+    const avgOnTime = withTasks.length
+      ? Math.round(
+          withTasks.reduce((s, e) => s + (e.onTimeRate ?? 0), 0) /
+            withTasks.length,
+        )
+      : null;
+
+    const byDept = new Map();
+    employeeStats.forEach((e) => {
+      if (!e.department || e.department === "—") return;
+      if (!byDept.has(e.department)) {
+        byDept.set(e.department, {
+          department: e.department,
+          employees: 0,
+          scoreSum: 0,
+          scoredCount: 0,
+        });
+      }
+      const d = byDept.get(e.department);
+      d.employees += 1;
+      if (e.assigned > 0) {
+        d.scoreSum += e.scores.final ?? 0;
+        d.scoredCount += 1;
+      }
+    });
+    const departmentComparison = Array.from(byDept.values())
+      .map((d) => ({
+        department: d.department,
+        employees: d.employees,
+        avgScore: d.scoredCount ? Math.round(d.scoreSum / d.scoredCount) : 0,
+      }))
+      .sort((a, b) => b.avgScore - a.avgScore);
+
+    const ratingCounts = {
+      Excellent: 0,
+      Good: 0,
+      Average: 0,
+      "Needs Improvement": 0,
+    };
+    withTasks.forEach((e) => {
+      const r = ratingFor(e.scores.final).label;
+      if (ratingCounts[r] !== undefined) ratingCounts[r] += 1;
+    });
+
+    const monthMap = new Map();
+    tasks.forEach((t) => {
+      if (t.status !== "done" || !t.completedAt) return;
+      const d = new Date(t.completedAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthMap.set(key, (monthMap.get(key) || 0) + 1);
+    });
+    const monthlyTrend = Array.from(monthMap.entries())
+      .sort((a, b) => (a[0] > b[0] ? 1 : -1))
+      .slice(-6)
+      .map(([key, count]) => {
+        const [y, m] = key.split("-");
+        const label = new Date(Number(y), Number(m) - 1).toLocaleString(
+          "en-US",
+          { month: "short" },
+        );
+        return { month: label, completed: count };
+      });
+
+    return {
+      totalEmployees: employeeStats.length,
+      activeEmployees: withTasks.length,
+      totalAssigned,
+      totalCompleted,
+      totalOverdue,
+      avgScore,
+      avgOnTime,
+      departmentComparison,
+      ratingCounts,
+      monthlyTrend,
+    };
+  }, [employeeStats, tasks]);
 
   const departments = useMemo(() => {
     const set = new Set(
@@ -628,27 +363,28 @@ export default function Performance() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [employeeStats]);
 
-  const branches = useMemo(() => {
-    const set = new Set(employeeStats.map((e) => e.branch || "Unassigned"));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [employeeStats]);
-
   const filteredEmployees = useMemo(() => {
-    return employeeStats.filter((e) => {
-      const matchesSearch =
-        !search ||
-        e.name.toLowerCase().includes(search.toLowerCase()) ||
-        (e.employeeCode || "").toLowerCase().includes(search.toLowerCase());
-      const matchesDept =
-        !departmentFilter || e.department === departmentFilter;
-      const matchesBranch = !branchFilter || e.branch === branchFilter;
-      return matchesSearch && matchesDept && matchesBranch;
-    });
-  }, [employeeStats, search, departmentFilter, branchFilter]);
+    return employeeStats
+      .filter((e) => {
+        const matchesSearch =
+          !search ||
+          e.name.toLowerCase().includes(search.toLowerCase()) ||
+          (e.employeeCode || "").toLowerCase().includes(search.toLowerCase());
+        const matchesDept =
+          !departmentFilter || e.department === departmentFilter;
+        return matchesSearch && matchesDept;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [employeeStats, search, departmentFilter]);
 
   const selectedEmployee = selectedEmployeeId
     ? employeeStatsById.get(selectedEmployeeId)
     : null;
+
+  function goToEmployee(id) {
+    setSelectedEmployeeId(id);
+    setTab("employees");
+  }
 
   return (
     <div>
@@ -661,31 +397,25 @@ export default function Performance() {
             Performance
           </h2>
           <p className="text-sm text-white/50 mt-1">
-            Task throughput and completion speed, per employee and per team.
+            Task achievement, difficulty handling, efficiency, and quality — per
+            employee and per team.
           </p>
         </div>
 
         <div className="lg:ml-auto flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
-          <button
-            onClick={() => setView("employees")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              view === "employees"
-                ? "bg-orange-500/20 text-orange-400"
-                : "text-white/50 hover:text-white/80"
-            }`}
-          >
-            <LayoutGrid size={14} /> Employees
-          </button>
-          <button
-            onClick={() => setView("teams")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              view === "teams"
-                ? "bg-orange-500/20 text-orange-400"
-                : "text-white/50 hover:text-white/80"
-            }`}
-          >
-            <UsersIcon size={14} /> Teams
-          </button>
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                tab === key
+                  ? "bg-orange-500/20 text-orange-400"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+            >
+              <Icon size={14} /> {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -699,108 +429,29 @@ export default function Performance() {
         <p className="text-sm text-white/50 text-center py-16">
           Loading performance data…
         </p>
-      ) : view === "employees" ? (
-        <>
-          {/* Top performers */}
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy size={18} className="text-amber-400" />
-              <h3 className="text-lg font-semibold text-white">
-                Top Performers
-              </h3>
-              <span className="text-xs text-white/40">
-                Top {topPerformers.length}, ranked by tasks done & speed
-              </span>
-            </div>
-            {topPerformers.length === 0 ? (
-              <p className="text-sm text-white/50">No completed tasks yet.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {topPerformers.map((emp, i) => (
-                  <EmployeeRow
-                    key={emp.id}
-                    emp={emp}
-                    rank={i + 1}
-                    onClick={() => setSelectedEmployeeId(emp.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Search + filter */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
-            <div className="flex items-center gap-2 w-full sm:w-72 rounded-full border border-white/10 bg-[#2a2d34] px-4 py-2.5 transition-all duration-300 hover:border-orange-500/60 focus-within:border-orange-500 focus-within:shadow-[0_0_18px_rgba(249,115,22,0.25)]">
-              <Search size={16} className="text-orange-400 shrink-0" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search employee..."
-                className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder:text-white/40 outline-none"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="text-white/40 hover:text-white transition-colors shrink-0"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-            <FiltersMenu
-              departments={departments}
-              departmentValue={departmentFilter}
-              onDepartmentChange={setDepartmentFilter}
-              branches={branches}
-              branchValue={branchFilter}
-              onBranchChange={setBranchFilter}
-            />
-          </div>
-
-          {/* Full employee list */}
-          {filteredEmployees.length === 0 ? (
-            <p className="text-sm text-white/50 text-center py-12">
-              No employees match your search or filter.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <div className="min-w-[860px]">
-                <div
-                  className={`hidden sm:grid ${EMPLOYEE_TABLE_GRID} gap-3 px-5 py-2 mb-2 text-[11px] uppercase tracking-wider text-white/40`}
-                >
-                  <span>#</span>
-                  <span>Employee</span>
-                  <span>Department</span>
-                  <span className="text-center">Tasks</span>
-                  <span className="text-center">On Time</span>
-                  <span className="text-center">Overdue</span>
-                  <span className="text-center">Score</span>
-                  <span className="text-center">Trend</span>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  {filteredEmployees.map((emp, i) => (
-                    <EmployeeTableRow
-                      key={emp.id}
-                      emp={emp}
-                      index={i + 1}
-                      onClick={() => setSelectedEmployeeId(emp.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+      ) : tab === "dashboard" ? (
+        <PerformanceDashboardTab
+          orgStats={orgStats}
+          topPerformers={topPerformers}
+          onSelectEmployee={goToEmployee}
+        />
+      ) : tab === "employees" ? (
+        <div className="flex flex-col lg:flex-row gap-6">
+          <EmployeeDirectorySidebar
+            employees={filteredEmployees}
+            selectedId={selectedEmployeeId}
+            onSelect={setSelectedEmployeeId}
+            search={search}
+            onSearchChange={setSearch}
+            departments={departments}
+            departmentFilter={departmentFilter}
+            onDepartmentChange={setDepartmentFilter}
+          />
+          <EmployeeProfilePanel employee={selectedEmployee} />
+        </div>
       ) : (
         <TeamsPerformanceView teams={teamStats} />
       )}
-
-      <EmployeeDetailModal
-        employee={selectedEmployee}
-        onClose={() => setSelectedEmployeeId(null)}
-      />
     </div>
   );
 }

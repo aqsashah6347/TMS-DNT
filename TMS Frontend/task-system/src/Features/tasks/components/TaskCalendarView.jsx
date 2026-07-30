@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTaskStore } from "../taskStore";
+import Modal from "../../../components/ui/Modal";
 
 // Same fallback chain as TaskCard.jsx / TaskKanbanView.jsx: project color
 // wins when the task belongs to a project, then the task's own saved
@@ -29,6 +30,24 @@ function hexToRgba(hex, alpha) {
 export default function TaskCalendarView({ tasks }) {
   const [current, setCurrent] = useState(new Date());
   const openTaskView = useTaskStore((s) => s.openTaskView);
+
+  // Holds { dateStr, tasks } for the "all tasks that day" list modal —
+  // null when closed. Opened when a day has more than one task instead
+  // of jumping straight into the first task's TaskModal.
+  const [dayModal, setDayModal] = useState(null);
+
+  function openDay(dateStr, dayTasks) {
+    if (dayTasks.length === 1) {
+      openTaskView(dayTasks[0]);
+      return;
+    }
+    setDayModal({ dateStr, tasks: dayTasks });
+  }
+
+  function openTaskFromDayModal(task) {
+    setDayModal(null);
+    openTaskView(task);
+  }
 
   const year = current.getFullYear();
   const month = current.getMonth();
@@ -122,7 +141,7 @@ export default function TaskCalendarView({ tasks }) {
           return (
             <div
               key={i}
-              onClick={() => hasTasks && openTaskView(dayTasks[0])}
+              onClick={() => hasTasks && openDay(dateStr, dayTasks)}
               className={`aspect-square sm:aspect-auto sm:min-h-[100px] rounded-xl p-1.5 sm:p-2 flex flex-col transition-colors border ${
                 hasTasks
                   ? "cursor-pointer"
@@ -193,7 +212,11 @@ export default function TaskCalendarView({ tasks }) {
                 })}
                 {extraCount > 0 && (
                   <span
-                    className="text-[10px] sm:text-xs font-semibold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDay(dateStr, dayTasks);
+                    }}
+                    className="text-[10px] sm:text-xs font-semibold hover:underline"
                     style={{ color: hexToRgba(dayColor, 0.85) }}
                   >
                     +{extraCount} more
@@ -204,6 +227,55 @@ export default function TaskCalendarView({ tasks }) {
           );
         })}
       </div>
+
+      {/* ---- "All tasks this day" list modal ---- */}
+      <Modal
+        isOpen={!!dayModal}
+        onClose={() => setDayModal(null)}
+        title={
+          dayModal
+            ? new Date(`${dayModal.dateStr}T00:00:00`).toLocaleDateString(
+                "en-US",
+                { weekday: "long", month: "long", day: "numeric" },
+              )
+            : ""
+        }
+      >
+        <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto">
+          {dayModal?.tasks.map((t) => {
+            const taskColor = effectiveColor(t);
+            return (
+              <button
+                key={t.id}
+                onClick={() => openTaskFromDayModal(t)}
+                className="flex items-center gap-3 text-left px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{
+                    backgroundColor:
+                      t.status === "done" ? "#ffffff4d" : taskColor,
+                  }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block text-sm font-semibold truncate ${
+                      t.status === "done"
+                        ? "text-white/40 line-through"
+                        : "text-white/90"
+                    }`}
+                  >
+                    {t.title}
+                  </span>
+                  <span className="block text-xs text-white/40 capitalize">
+                    {t.status} · {t.priority}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Modal>
     </div>
   );
 }

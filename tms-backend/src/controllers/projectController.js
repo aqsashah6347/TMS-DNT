@@ -11,10 +11,16 @@ async function getAllProjects(req, res, next) {
     // team it belongs to (tms_teams.manager_id) — being a plain member of
     // the team isn't enough on its own, they need to actually be assigned
     // or be the one managing it.
+    // Admins see every project. Everyone else only sees a project if
+    // they created it, they're personally on it (tms_project_members), or
+    // they manage the team it belongs to (tms_teams.manager_id) — being a
+    // plain member of the team isn't enough on its own, they need to
+    // actually be assigned or be the one managing it.
     let visibilityClause = "1 = 1";
     if (req.user.role !== "admin") {
       visibilityClause = `(
-        EXISTS (
+        p.created_by = @userId
+        OR EXISTS (
           SELECT 1 FROM tms_project_members pm
           WHERE pm.project_id = p.id AND pm.user_id = @userId
         )
@@ -40,6 +46,59 @@ async function getAllProjects(req, res, next) {
     next(err);
   }
 }
+// GET /api/projects/completed-log
+// -> [{ id, name, completedAt, teamId, teamName, createdBy, createdByName,
+//       previousStatus }]
+// Mirrors taskController.getCompletedLog — same visibility rule as
+// getAllProjects (admins see everything, everyone else only what they
+// created / are a member of / manage the team for).
+async function getCompletedLog(req, res, next) {
+  try {
+    const pool = await getPool();
+    const request = pool.request();
+
+    let visibilityClause = "1 = 1";
+    if (req.user.role !== "admin") {
+      visibilityClause = `(
+        p.created_by = @userId
+        OR EXISTS (
+          SELECT 1 FROM tms_project_members pm
+          WHERE pm.project_id = p.id AND pm.user_id = @userId
+        )
+        OR t.manager_id = @userId
+      )`;
+      request.input("userId", sql.Int, req.user.id);
+    }
+
+    const result = await request.query(`
+      SELECT p.id, p.name, p.completed_at, p.previous_status,
+             p.team_id, t.name AS teamName,
+             p.created_by, cu.name AS createdByName
+      FROM tms_projects p
+      LEFT JOIN tms_teams t ON p.team_id = t.id
+      LEFT JOIN tms_users cu ON p.created_by = cu.id
+      WHERE ${visibilityClause}
+        AND p.status = 'completed' AND p.completed_at IS NOT NULL
+      ORDER BY p.completed_at DESC
+    `);
+
+    res.json(
+      result.recordset.map((r) => ({
+        id: r.id,
+        name: r.name,
+        completedAt: r.completed_at,
+        teamId: r.team_id,
+        teamName: r.teamName,
+        createdBy: r.created_by,
+        createdByName: r.createdByName,
+        previousStatus: r.previous_status || null,
+      })),
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function notifyTeamAssigned(
   pool,
   teamId,
@@ -160,8 +219,31 @@ async function updateProject(req, res, next) {
     const before = await pool
       .request()
       .input("id", sql.Int, id)
-      .query("SELECT team_id FROM tms_projects WHERE id = @id");
+      .query("SELECT team_id, status FROM tms_projects WHERE id = @id");
     const previousTeamId = before.recordset[0]?.team_id ?? null;
+    const previousProjectStatus = before.recordset[0]?.status ?? null;
+
+    // Completing: stash whatever status it was in right before, just like
+    // taskController does for tasks, so the Completed Log's Undo button
+    // can restore it exactly.
+    let completedAt;
+    let previousStatusToStore;
+    if (status !== undefined) {
+      if (status === "completed" && previousProjectStatus !== "completed") {
+        completedAt = new Date();
+        previousStatusToStore = previousProjectStatus || "planning";
+      } else if (
+        status !== "completed" &&
+        previousProjectStatus === "completed"
+      ) {
+        // Undo: moving a project off "completed" clears the stashed
+        // previous_status so a future completion doesn't resurrect a
+        // stale value.
+        completedAt = null;
+        previousStatusToStore = null;
+      }
+    }
+
     const request = pool.request().input("id", sql.Int, id);
     const setClauses = [];
 
@@ -180,6 +262,15 @@ async function updateProject(req, res, next) {
     if (status !== undefined) {
       request.input("status", sql.NVarChar, status);
       setClauses.push("status = @status");
+
+      if (completedAt !== undefined) {
+        request.input("completedAt", sql.DateTime2, completedAt);
+        setClauses.push("completed_at = @completedAt");
+      }
+      if (previousStatusToStore !== undefined) {
+        request.input("previousStatus", sql.NVarChar, previousStatusToStore);
+        setClauses.push("previous_status = @previousStatus");
+      }
     }
     if (progress !== undefined) {
       request.input("progress", sql.Int, progress);
@@ -326,6 +417,8 @@ function attachMembers(pool) {
       color: project.color,
       createdBy: project.created_by,
       createdByName,
+      completedAt: project.completed_at || null,
+      previousStatus: project.previous_status || null,
     };
   };
 }
@@ -336,4 +429,5 @@ module.exports = {
   createProject,
   updateProject,
   deleteProject,
+  getCompletedLog,
 };

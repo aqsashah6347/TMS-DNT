@@ -149,6 +149,7 @@ export default function TemplateEditor() {
   const settings = useCommunicationsStore((s) => s.settings);
   const fetchSettings = useCommunicationsStore((s) => s.fetchSettings);
   const isLoadingSettings = useCommunicationsStore((s) => s.isLoadingSettings);
+  const error = useCommunicationsStore((s) => s.error);
 
   useEffect(() => {
     fetchSettings();
@@ -158,7 +159,20 @@ export default function TemplateEditor() {
     return <div className="text-sm text-white/50 mt-4">Loading templates…</div>;
   }
 
+  if (error && settings.length === 0) {
+    return <div className="text-sm text-red-400 mt-4">{error}</div>;
+  }
+
   const types = Object.keys(TYPE_LABELS);
+
+  if (settings.length === 0) {
+    return (
+      <div className="text-sm text-white/50 mt-4">
+        No notification templates found. Make sure the notification settings
+        have been seeded on the server.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 mt-4">

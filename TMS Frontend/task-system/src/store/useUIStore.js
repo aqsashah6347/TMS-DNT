@@ -13,6 +13,7 @@ export const useUIStore = create((set) => ({
   // animation. null when the completed task had no due date.
   lastCompletedDueDate: null,
   isCompletedLogOpen: false,
+  isCompletedProjectsLogOpen: false,
   // completionBubble: null | { id, x, y, color }. Same "fresh object each
   // time" pattern as confettiTrigger being a counter — CompletionBubbleOverlay
   // compares the `id` (not the object reference) so firing it twice in a
@@ -31,4 +32,11 @@ export const useUIStore = create((set) => ({
   closeCompletedLog: () => set({ isCompletedLogOpen: false }),
   toggleCompletedLog: () =>
     set((s) => ({ isCompletedLogOpen: !s.isCompletedLogOpen })),
+
+  openCompletedProjectsLog: () => set({ isCompletedProjectsLogOpen: true }),
+  closeCompletedProjectsLog: () => set({ isCompletedProjectsLogOpen: false }),
+  toggleCompletedProjectsLog: () =>
+    set((s) => ({
+      isCompletedProjectsLogOpen: !s.isCompletedProjectsLogOpen,
+    })),
 }));

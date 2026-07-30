@@ -6,6 +6,9 @@ export const useProjectStore = create((set, get) => ({
   isLoading: false,
   error: null,
 
+  completedLog: [],
+  isCompletedLogLoading: false,
+
   isModalOpen: false,
   editingProject: null,
   modalMode: "view",
@@ -61,6 +64,17 @@ export const useProjectStore = create((set, get) => ({
     }
   },
 
+  // Plain-text completed log — feeds the CompletedProjectsLogPanel drawer.
+  fetchCompletedLog: async () => {
+    set({ isCompletedLogLoading: true });
+    try {
+      const completedLog = await projectApi.getCompletedLog();
+      set({ completedLog, isCompletedLogLoading: false });
+    } catch (err) {
+      set({ isCompletedLogLoading: false });
+    }
+  },
+
   addProject: async (project) => {
     set({ error: null });
     try {
@@ -81,11 +95,36 @@ export const useProjectStore = create((set, get) => ({
       if (get().editingProject?.id === id) {
         set({ editingProject: updated });
       }
+
+      if (updates.status === "completed") {
+        get().fetchCompletedLog();
+      }
+
       return true;
     } catch (err) {
       set({ error: err.response?.data?.message || "Couldn't update project" });
       return false;
     }
+  },
+
+  completeProject: async (id) =>
+    get().updateProject(id, { status: "completed" }),
+
+  // Reverts an accidentally-completed project back to whatever status it
+  // had right before it was marked completed (stashed server-side as
+  // previous_status). Falls back to "active" for older completions that
+  // predate that column. Always re-syncs the log afterwards since
+  // updateProject only auto-refetches it on the *->completed transition,
+  // not completed->*.
+  undoCompletedProject: async (id, fallbackStatus = "active") => {
+    const entry = get().completedLog.find((p) => p.id === id);
+    const restoreStatus = entry?.previousStatus || fallbackStatus;
+    const ok = await get().updateProject(id, { status: restoreStatus });
+    if (ok) {
+      await get().fetchCompletedLog();
+      await get().fetchProjects();
+    }
+    return ok;
   },
 
   deleteProject: async (id) => {

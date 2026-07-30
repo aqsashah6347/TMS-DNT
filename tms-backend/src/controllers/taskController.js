@@ -77,6 +77,15 @@ async function recalcProjectProgress(pool, projectId) {
 async function getAllTasks(req, res, next) {
   try {
     const { priority, assignedTo, search, status, projectId } = req.query;
+    // excludeCompleted: drop 'done' tasks from BOTH the data query and the
+    // count query, so `total`/pagination reflect only what the List view
+    // actually shows (previously `total` counted done tasks too, even
+    // though they never render on the page).
+    const excludeCompleted = req.query.excludeCompleted === "true";
+    // all: skip OFFSET/FETCH NEXT entirely and return every matching row.
+    // Used by views (Calendar, Kanban) that need the complete dataset up
+    // front instead of whatever's been paged in via "Load more".
+    const fetchAll = req.query.all === "true";
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(100, Number(req.query.pageSize) || 25);
     const offset = (page - 1) * pageSize;
@@ -96,6 +105,9 @@ async function getAllTasks(req, res, next) {
       whereClause += " AND t.status = @status";
       dataRequest.input("status", sql.NVarChar, status);
       countRequest.input("status", sql.NVarChar, status);
+    }
+    if (excludeCompleted) {
+      whereClause += " AND t.status <> 'done'";
     }
     if (req.user.role === "user") {
       whereClause += " AND t.assigned_to = @scopedAssignedTo";
@@ -120,7 +132,9 @@ async function getAllTasks(req, res, next) {
     dataRequest.input("offset", sql.Int, offset);
     dataRequest.input("pageSize", sql.Int, pageSize);
 
-    const dataQuery = `
+    const dataQuery = fetchAll
+      ? `${JOIN_QUERY} WHERE ${whereClause} ORDER BY t.pinned DESC, t.due_date ASC`
+      : `
       ${JOIN_QUERY} WHERE ${whereClause}
       ORDER BY t.pinned DESC, t.due_date ASC
       OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
@@ -214,6 +228,8 @@ async function createTask(req, res, next) {
       color = null,
       zoomLink = "",
       githubLink = "",
+      difficultyLevel = null,
+      estimatedHours = null,
     } = req.body;
 
     if (!title) return res.status(400).json({ message: "Title is required" });
@@ -231,12 +247,15 @@ async function createTask(req, res, next) {
       .input("projectId", sql.Int, projectId || null)
       .input("color", sql.NVarChar, color)
       .input("zoomLink", sql.NVarChar, zoomLink)
-      .input("githubLink", sql.NVarChar, githubLink).query(`
+      .input("githubLink", sql.NVarChar, githubLink)
+      .input("difficultyLevel", sql.Int, difficultyLevel || null)
+      .input("estimatedHours", sql.Decimal(6, 2), estimatedHours || null)
+      .query(`
         INSERT INTO tms_tasks
-          (title, description, priority, status, due_date, assigned_to, assigned_by, project_id, color, zoom_link, github_link)
+          (title, description, priority, status, due_date, assigned_to, assigned_by, project_id, color, zoom_link, github_link, difficulty_level, estimated_hours)
         OUTPUT INSERTED.id
         VALUES
-          (@title, @description, @priority, @status, @dueDate, @assignedTo, @assignedBy, @projectId, @color, @zoomLink, @githubLink)
+          (@title, @description, @priority, @status, @dueDate, @assignedTo, @assignedBy, @projectId, @color, @zoomLink, @githubLink, @difficultyLevel, @estimatedHours)
       `);
     const newId = result.recordset[0].id;
     const task = await fetchTaskWithJoins(pool, newId);
@@ -252,21 +271,21 @@ async function createTask(req, res, next) {
       taskId: task.id,
       projectId: task.projectId,
     });
-if (task.assignedTo && task.assignedTo !== req.user.id) {
-  const projectName = createProjectName;
-  await logActivity({
-    userId: task.assignedTo,
-    type: "task_assigned",
-    title: "New task assigned",
-    message: `${task.assignedByName || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
-    taskId: task.id,
-    projectId: task.projectId,
-  });
-  await sendTaskAssignedNotification({
-    task,
-    assignedByName: task.assignedByName,
-  });
-}
+    if (task.assignedTo && task.assignedTo !== req.user.id) {
+      const projectName = createProjectName;
+      await logActivity({
+        userId: task.assignedTo,
+        type: "task_assigned",
+        title: "New task assigned",
+        message: `${task.assignedByName || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+        taskId: task.id,
+        projectId: task.projectId,
+      });
+      await sendTaskAssignedNotification({
+        task,
+        assignedByName: task.assignedByName,
+      });
+    }
     if (task.assignedTo && task.assignedTo !== req.user.id) {
       const projectName = createProjectName;
       await logActivity({
@@ -288,8 +307,13 @@ if (task.assignedTo && task.assignedTo !== req.user.id) {
   }
 }
 
-const USER_EDITABLE_FIELDS = ["status", "pinned", "completedBy", "progress"];
-
+const USER_EDITABLE_FIELDS = [
+  "status",
+  "pinned",
+  "completedBy",
+  "progress",
+  "actualHours",
+];
 async function updateTask(req, res, next) {
   try {
     const id = req.params.id;
@@ -390,6 +414,10 @@ async function updateTask(req, res, next) {
       completedAt: "completed_at",
       progress: "progress",
       previousStatus: "previous_status",
+      difficultyLevel: "difficulty_level",
+      estimatedHours: "estimated_hours",
+      actualHours: "actual_hours",
+      qualityRating: "quality_rating",
     };
 
     const request = pool.request().input("id", sql.Int, id);
@@ -725,11 +753,14 @@ function mapTask(row) {
     completedAt: row.completed_at || null,
     previousStatus: row.previous_status || null,
     progress: row.progress ?? 0,
+    difficultyLevel: row.difficulty_level ?? null,
+    estimatedHours: row.estimated_hours ?? null,
+    actualHours: row.actual_hours ?? null,
+    qualityRating: row.quality_rating ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
-
 async function getTaskProgressHistory(req, res, next) {
   try {
     const pool = await getPool();

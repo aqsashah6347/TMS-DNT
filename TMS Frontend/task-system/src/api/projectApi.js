@@ -25,4 +25,9 @@ export const projectApi = {
     const res = await axiosInstance.delete(`/projects/${id}`);
     return res.data;
   },
+
+  getCompletedLog: async () => {
+    const res = await axiosInstance.get("/projects/completed-log");
+    return res.data;
+  },
 };

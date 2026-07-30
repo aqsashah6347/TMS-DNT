@@ -87,13 +87,12 @@ function AnalogClock({ onClick }) {
           className="clock-hand-minute"
         />
         <line
-          x1="100"
-          y1="112"
+          x1={point(secondDeg + 180, 14).x}
+          y1={point(secondDeg + 180, 14).y}
           x2={point(secondDeg, 70).x}
           y2={point(secondDeg, 70).y}
           className="clock-hand-second"
         />
-
         <circle cx="100" cy="100" r="5" className="clock-hub" />
       </svg>
     </div>
