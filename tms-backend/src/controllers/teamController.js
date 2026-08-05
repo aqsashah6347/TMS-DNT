@@ -293,4 +293,55 @@ async function getTeamProjectsAndTasks(pool, teamId) {
   return { projects, tasks };
 }
 
-module.exports = { getAllTeams, getMyTeam, createTeam, updateTeam, deleteTeam };
+// Scoped team list for the Performance page: admins see every team (same
+// query as getAllTeams), everyone else only sees teams where they're the
+// manager_id — which could be zero teams. Deliberately open to ANY
+// authenticated user (not gated by role like GET / is) because becoming a
+// team's manager doesn't change a person's tms_users.role — someone with
+// role "user" can still be set as a team's manager_id via the Teams page,
+// and this is how they get scoped access to that team's performance data.
+async function getManagedTeams(req, res, next) {
+  try {
+    const pool = await getPool();
+
+    if (req.user.role === "admin") {
+      const result = await pool.request().query(`
+        SELECT t.*, m.name AS managerName, m.id AS managerId, cu.name AS createdByName
+        FROM tms_teams t
+        LEFT JOIN tms_users m ON t.manager_id = m.id
+        LEFT JOIN tms_users cu ON t.created_by = cu.id
+        ORDER BY t.created_at DESC
+      `);
+      const teams = await Promise.all(
+        result.recordset.map(attachTeamDetails(pool)),
+      );
+      return res.json(teams);
+    }
+
+    const result = await pool
+      .request()
+      .input("managerId", sql.Int, req.user.id).query(`
+        SELECT t.*, m.name AS managerName, m.id AS managerId, cu.name AS createdByName
+        FROM tms_teams t
+        LEFT JOIN tms_users m ON t.manager_id = m.id
+        LEFT JOIN tms_users cu ON t.created_by = cu.id
+        WHERE t.manager_id = @managerId
+        ORDER BY t.created_at DESC
+      `);
+    const teams = await Promise.all(
+      result.recordset.map(attachTeamDetails(pool)),
+    );
+    res.json(teams);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  getAllTeams,
+  getMyTeam,
+  getManagedTeams,
+  createTeam,
+  updateTeam,
+  deleteTeam,
+};

@@ -1,3 +1,4 @@
+// tms-backend/src/controllers/taskController.js — replace the ENTIRE file with this
 const { sql, getPool } = require("../config/db");
 const { hasPermission } = require("../middleware/permissions");
 const { logActivity } = require("../services/activityService");
@@ -78,79 +79,107 @@ async function getAllTasks(req, res, next) {
   try {
     const { priority, assignedTo, search, status, projectId } = req.query;
     // excludeCompleted: drop 'done' tasks from BOTH the data query and the
-    // count query, so `total`/pagination reflect only what the List view
-    // actually shows (previously `total` counted done tasks too, even
-    // though they never render on the page).
+    // count query below, so the List page's pagination total matches what's
+    // actually shown once completed tasks move to the Completed Log.
     const excludeCompleted = req.query.excludeCompleted === "true";
-    // all: skip OFFSET/FETCH NEXT entirely and return every matching row.
-    // Used by views (Calendar, Kanban) that need the complete dataset up
-    // front instead of whatever's been paged in via "Load more".
-    const fetchAll = req.query.all === "true";
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(100, Number(req.query.pageSize) || 25);
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 25;
     const offset = (page - 1) * pageSize;
 
     const pool = await getPool();
-    const dataRequest = pool.request();
-    const countRequest = pool.request();
+    const request = pool.request();
 
-    let whereClause = "t.deleted_at IS NULL";
+    const conditions = ["t.deleted_at IS NULL"];
 
     if (priority) {
-      whereClause += " AND t.priority = @priority";
-      dataRequest.input("priority", sql.NVarChar, priority);
-      countRequest.input("priority", sql.NVarChar, priority);
+      request.input("priority", priority);
+      conditions.push("t.priority = @priority");
     }
-    if (status) {
-      whereClause += " AND t.status = @status";
-      dataRequest.input("status", sql.NVarChar, status);
-      countRequest.input("status", sql.NVarChar, status);
-    }
-    if (excludeCompleted) {
-      whereClause += " AND t.status <> 'done'";
-    }
-    if (req.user.role === "user") {
-      whereClause += " AND t.assigned_to = @scopedAssignedTo";
-      dataRequest.input("scopedAssignedTo", sql.Int, req.user.id);
-      countRequest.input("scopedAssignedTo", sql.Int, req.user.id);
-    } else if (assignedTo) {
-      whereClause += " AND t.assigned_to = @assignedTo";
-      dataRequest.input("assignedTo", sql.Int, Number(assignedTo));
-      countRequest.input("assignedTo", sql.Int, Number(assignedTo));
+    if (assignedTo) {
+      request.input("assignedTo", sql.Int, assignedTo);
+      conditions.push("t.assigned_to = @assignedTo");
     }
     if (projectId) {
-      whereClause += " AND t.project_id = @projectId";
-      dataRequest.input("projectId", sql.Int, Number(projectId));
-      countRequest.input("projectId", sql.Int, Number(projectId));
+      request.input("projectId", sql.Int, projectId);
+      conditions.push("t.project_id = @projectId");
+    }
+    if (status) {
+      request.input("status", status);
+      conditions.push("t.status = @status");
+    } else if (excludeCompleted) {
+      conditions.push("t.status <> 'done'");
     }
     if (search) {
-      whereClause += " AND t.title LIKE @search";
-      dataRequest.input("search", sql.NVarChar, `%${search}%`);
-      countRequest.input("search", sql.NVarChar, `%${search}%`);
+      request.input("search", `%${search}%`);
+      conditions.push("(t.title LIKE @search OR t.description LIKE @search)");
     }
 
-    dataRequest.input("offset", sql.Int, offset);
-    dataRequest.input("pageSize", sql.Int, pageSize);
+    if (req.user.role === "user") {
+      conditions.push(
+        "(t.assigned_to = @currentUserId OR t.assigned_by = @currentUserId)",
+      );
+      request.input("currentUserId", sql.Int, req.user.id);
+    } else if (req.user.role === "manager") {
+      conditions.push(`(
+        t.assigned_to = @currentUserId
+        OR t.assigned_by = @currentUserId
+        OR t.assigned_to IN (
+          SELECT id FROM tms_users WHERE team_id IN (
+            SELECT id FROM tms_teams WHERE manager_id = @currentUserId
+          )
+        )
+      )`);
+      request.input("currentUserId", sql.Int, req.user.id);
+    }
 
-    const dataQuery = fetchAll
-      ? `${JOIN_QUERY} WHERE ${whereClause} ORDER BY t.pinned DESC, t.due_date ASC`
-      : `
-      ${JOIN_QUERY} WHERE ${whereClause}
-      ORDER BY t.pinned DESC, t.due_date ASC
+    const whereClause = conditions.length
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
+
+    const countResult = await pool
+      .request()
+      .query(
+        request.parameters
+          ? Object.keys(request.parameters).reduce(
+              (r, key) => r,
+              pool.request(),
+            )
+          : pool.request(),
+      )
+      .catch(() => null);
+
+    // Rebuild a fresh request bound with the same params for the count
+    // query, since the request object above is single-use once .query()
+    // has been called against it.
+    const countRequest = pool.request();
+    if (priority) countRequest.input("priority", priority);
+    if (assignedTo) countRequest.input("assignedTo", sql.Int, assignedTo);
+    if (projectId) countRequest.input("projectId", sql.Int, projectId);
+    if (status) countRequest.input("status", status);
+    if (search) countRequest.input("search", `%${search}%`);
+    if (req.user.role === "user" || req.user.role === "manager") {
+      countRequest.input("currentUserId", sql.Int, req.user.id);
+    }
+    const totalResult = await countRequest.query(
+      `SELECT COUNT(*) AS total FROM tms_tasks t ${whereClause}`,
+    );
+    const total = totalResult.recordset[0].total;
+
+    request.input("offset", sql.Int, offset);
+    request.input("pageSize", sql.Int, pageSize);
+
+    const result = await request.query(`
+      ${JOIN_QUERY}
+      ${whereClause}
+      ORDER BY t.pinned DESC, t.created_at DESC
       OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
-    `;
-    const countQuery = `SELECT COUNT(*) AS total FROM tms_tasks t WHERE ${whereClause}`;
-
-    const [dataResult, countResult] = await Promise.all([
-      dataRequest.query(dataQuery),
-      countRequest.query(countQuery),
-    ]);
+    `);
 
     res.json({
-      tasks: dataResult.recordset.map(mapTask),
+      tasks: result.recordset.map(mapTask),
       page,
       pageSize,
-      total: countResult.recordset[0].total,
+      total,
     });
   } catch (err) {
     next(err);
@@ -162,13 +191,6 @@ async function getTaskById(req, res, next) {
     const pool = await getPool();
     const task = await fetchTaskWithJoins(pool, req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
-
-    if (req.user.role === "user" && task.assignedTo !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "You don't have access to this task" });
-    }
-
     res.json(task);
   } catch (err) {
     next(err);
@@ -179,37 +201,33 @@ async function getCompletedLog(req, res, next) {
   try {
     const pool = await getPool();
     const request = pool.request();
-
-    let query = `
-      SELECT t.id, t.title, t.completed_at, t.assigned_to, t.assigned_by,
-             t.previous_status,
-             u1.name AS assignedToName, u2.name AS assignedByName
-      FROM tms_tasks t
-      LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
-      LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
-      WHERE t.deleted_at IS NULL AND t.status = 'done' AND t.completed_at IS NOT NULL
-    `;
+    const conditions = ["t.deleted_at IS NULL", "t.status = 'done'"];
 
     if (req.user.role === "user") {
-      query += " AND t.assigned_to = @scopedAssignedTo";
-      request.input("scopedAssignedTo", sql.Int, req.user.id);
+      conditions.push(
+        "(t.assigned_to = @currentUserId OR t.assigned_by = @currentUserId)",
+      );
+      request.input("currentUserId", sql.Int, req.user.id);
+    } else if (req.user.role === "manager") {
+      conditions.push(`(
+        t.assigned_to = @currentUserId
+        OR t.assigned_by = @currentUserId
+        OR t.assigned_to IN (
+          SELECT id FROM tms_users WHERE team_id IN (
+            SELECT id FROM tms_teams WHERE manager_id = @currentUserId
+          )
+        )
+      )`);
+      request.input("currentUserId", sql.Int, req.user.id);
     }
 
-    query += " ORDER BY t.completed_at DESC";
+    const result = await request.query(`
+      ${JOIN_QUERY}
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY t.completed_at DESC
+    `);
 
-    const result = await request.query(query);
-    res.json(
-      result.recordset.map((r) => ({
-        id: r.id,
-        title: r.title,
-        completedAt: r.completed_at,
-        assignedTo: r.assigned_to,
-        assignedBy: r.assigned_by,
-        assignedToName: r.assignedToName,
-        assignedByName: r.assignedByName,
-        previousStatus: r.previous_status || null,
-      })),
-    );
+    res.json(result.recordset.map(mapTask));
   } catch (err) {
     next(err);
   }
@@ -217,88 +235,71 @@ async function getCompletedLog(req, res, next) {
 
 async function createTask(req, res, next) {
   try {
-    const {
-      title,
-      description = "",
-      priority = "medium",
-      status = "backlog",
-      dueDate = null,
-      assignedTo = null,
-      projectId = null,
-      color = null,
-      zoomLink = "",
-      githubLink = "",
-      difficultyLevel = null,
-      estimatedHours = null,
-    } = req.body;
-
-    if (!title) return res.status(400).json({ message: "Title is required" });
-
+    const body = req.body;
     const pool = await getPool();
-    const result = await pool
-      .request()
-      .input("title", sql.NVarChar, title)
-      .input("description", sql.NVarChar, description)
-      .input("priority", sql.NVarChar, priority)
-      .input("status", sql.NVarChar, status)
-      .input("dueDate", sql.Date, dueDate || null)
-      .input("assignedTo", sql.Int, assignedTo || null)
-      .input("assignedBy", sql.Int, req.user.id)
-      .input("projectId", sql.Int, projectId || null)
-      .input("color", sql.NVarChar, color)
-      .input("zoomLink", sql.NVarChar, zoomLink)
-      .input("githubLink", sql.NVarChar, githubLink)
-      .input("difficultyLevel", sql.Int, difficultyLevel || null)
-      .input("estimatedHours", sql.Decimal(6, 2), estimatedHours || null)
-      .query(`
-        INSERT INTO tms_tasks
-          (title, description, priority, status, due_date, assigned_to, assigned_by, project_id, color, zoom_link, github_link, difficulty_level, estimated_hours)
-        OUTPUT INSERTED.id
-        VALUES
-          (@title, @description, @priority, @status, @dueDate, @assignedTo, @assignedBy, @projectId, @color, @zoomLink, @githubLink, @difficultyLevel, @estimatedHours)
-      `);
-    const newId = result.recordset[0].id;
-    const task = await fetchTaskWithJoins(pool, newId);
-    const createProjectName = task.projectId
-      ? await getProjectName(pool, task.projectId)
-      : null;
 
-    await logActivity({
-      userId: req.user.id,
-      type: "task_created",
-      title: "Task created",
-      message: `You created "${task.title}"${createProjectName ? ` in ${createProjectName}` : ""}.`,
-      taskId: task.id,
-      projectId: task.projectId,
-    });
+    const request = pool
+      .request()
+      .input("title", body.title)
+      .input("description", body.description || null)
+      .input("priority", body.priority || "medium")
+      .input("status", body.status || "backlog")
+      .input("dueDate", sql.Date, body.dueDate || null)
+      .input(
+        "assignedTo",
+        body.assignedTo ? sql.Int : sql.Int,
+        body.assignedTo || null,
+      )
+      .input("assignedBy", sql.Int, req.user.id)
+      .input(
+        "projectId",
+        body.projectId ? sql.Int : sql.Int,
+        body.projectId || null,
+      )
+      .input("pinned", body.pinned || false)
+      .input("color", body.color || null)
+      .input("zoomLink", body.zoomLink || null)
+      .input("githubLink", body.githubLink || null)
+      .input("progress", sql.Int, body.progress || 0)
+      .input("difficultyLevel", body.difficultyLevel || null)
+      .input("estimatedHours", body.estimatedHours || null);
+
+    const result = await request.query(`
+      INSERT INTO tms_tasks (
+        title, description, priority, status, due_date, assigned_to, assigned_by,
+        project_id, pinned, color, zoom_link, github_link, progress,
+        difficulty_level, estimated_hours, created_at, updated_at
+      )
+      OUTPUT INSERTED.id
+      VALUES (
+        @title, @description, @priority, @status, @dueDate, @assignedTo, @assignedBy,
+        @projectId, @pinned, @color, @zoomLink, @githubLink, @progress,
+        @difficultyLevel, @estimatedHours, SYSUTCDATETIME(), SYSUTCDATETIME()
+      )
+    `);
+
+    const task = await fetchTaskWithJoins(pool, result.recordset[0].id);
+
+    if (task.projectId) {
+      await recalcProjectProgress(pool, task.projectId);
+    }
+
     if (task.assignedTo && task.assignedTo !== req.user.id) {
-      const projectName = createProjectName;
+      const projectName = task.projectId
+        ? await getProjectName(pool, task.projectId)
+        : null;
       await logActivity({
         userId: task.assignedTo,
         type: "task_assigned",
         title: "New task assigned",
-        message: `${task.assignedByName || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
+        message: `${req.user.name || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
         taskId: task.id,
         projectId: task.projectId,
       });
       await sendTaskAssignedNotification({
         task,
-        assignedByName: task.assignedByName,
+        assignedByName: req.user.name,
       });
-    }
-    if (task.assignedTo && task.assignedTo !== req.user.id) {
-      const projectName = createProjectName;
-      await logActivity({
-        userId: task.assignedTo,
-        type: "task_assigned",
-        title: "New task assigned",
-        message: `${task.assignedByName || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
-        taskId: task.id,
-        projectId: task.projectId,
-      });
-    }
-    if (task.projectId) {
-      await recalcProjectProgress(pool, task.projectId);
     }
 
     res.status(201).json(task);
@@ -309,11 +310,14 @@ async function createTask(req, res, next) {
 
 const USER_EDITABLE_FIELDS = [
   "status",
-  "pinned",
-  "completedBy",
   "progress",
+  "completedBy",
+  "completedAt",
+  "previousStatus",
   "actualHours",
+  "qualityRating",
 ];
+
 async function updateTask(req, res, next) {
   try {
     const id = req.params.id;
@@ -468,6 +472,16 @@ async function updateTask(req, res, next) {
           WHEN NOT MATCHED THEN
             INSERT (task_id, log_date, progress) VALUES (@taskId, src.log_date, @progress);
         `);
+
+      // Separate, never-deduped log — one row per commit — so the
+      // Daily Progress bar can show a permanent mark for every edit.
+      await pool
+        .request()
+        .input("taskId", sql.Int, id)
+        .input("progress", sql.Int, task.progress).query(`
+          INSERT INTO tms_task_progress_events (task_id, progress)
+          VALUES (@taskId, @progress);
+        `);
     }
 
     if (previousProjectId && previousProjectId !== task.projectId) {
@@ -515,25 +529,6 @@ async function updateTask(req, res, next) {
       await sendTaskAssignedNotification({
         task,
         assignedByName: req.user.name,
-      });
-    }
-
-    if (
-      updates.assignedTo !== undefined &&
-      task.assignedTo &&
-      task.assignedTo !== previousAssignedTo &&
-      task.assignedTo !== req.user.id
-    ) {
-      const projectName = task.projectId
-        ? await getProjectName(pool, task.projectId)
-        : null;
-      await logActivity({
-        userId: task.assignedTo,
-        type: "task_assigned",
-        title: "New task assigned",
-        message: `${req.user.name || "Someone"} assigned you "${task.title}"${projectName ? ` in ${projectName}` : ""}.`,
-        taskId: task.id,
-        projectId: task.projectId,
       });
     }
 
@@ -664,35 +659,32 @@ async function updateTask(req, res, next) {
 
 async function deleteTask(req, res, next) {
   try {
+    const id = req.params.id;
     const pool = await getPool();
 
-    await pool.request().input("id", sql.Int, req.params.id).query(`
-      UPDATE tms_notifications SET task_id = NULL WHERE task_id = @id
-    `);
+    const before = await pool
+      .request()
+      .input("id", sql.Int, id)
+      .query(
+        "SELECT project_id FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
+      );
+    const projectId = before.recordset[0]?.project_id ?? null;
 
-    const result = await pool.request().input("id", sql.Int, req.params.id)
-      .query(`
-        DELETE FROM tms_tasks
-        OUTPUT DELETED.id, DELETED.title, DELETED.project_id
-        WHERE id = @id
-      `);
+    // Hard delete — null out any notification references first to avoid
+    // the FK constraint violation, then remove the row entirely.
+    await pool
+      .request()
+      .input("id", sql.Int, id)
+      .query("UPDATE tms_notifications SET task_id = NULL WHERE task_id = @id");
 
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ message: "Task not found" });
+    await pool
+      .request()
+      .input("id", sql.Int, id)
+      .query("DELETE FROM tms_tasks WHERE id = @id");
+
+    if (projectId) {
+      await recalcProjectProgress(pool, projectId);
     }
-
-    const { title: deletedTitle, project_id: deletedProjectId } =
-      result.recordset[0];
-    if (deletedProjectId) {
-      await recalcProjectProgress(pool, deletedProjectId);
-    }
-
-    await logActivity({
-      userId: req.user.id,
-      type: "task_deleted",
-      title: "Task deleted",
-      message: `You deleted "${deletedTitle}".`,
-    });
 
     res.json({ message: "Task deleted" });
   } catch (err) {
@@ -763,64 +755,22 @@ function mapTask(row) {
 }
 async function getTaskProgressHistory(req, res, next) {
   try {
+    const taskId = req.params.id;
+    const days = parseInt(req.query.days) || 30;
     const pool = await getPool();
-    const taskResult = await pool
-      .request()
-      .input("id", sql.Int, req.params.id)
-      .query(
-        "SELECT created_at, due_date FROM tms_tasks WHERE id = @id AND deleted_at IS NULL",
-      );
-    const taskRow = taskResult.recordset[0];
-    if (!taskRow) return res.status(404).json({ message: "Task not found" });
 
-    // True last-resort: no creation date at all to anchor a range to
-    // (shouldn't happen in practice — every task gets one on insert).
-    if (!taskRow.created_at) {
-      const days = Array.from({ length: 5 }, (_, i) => ({
-        day: `dash-${i}`,
-        date: null,
-        progress: 0,
-      }));
-      return res.json(days);
-    }
-
-    // Anchored to UTC calendar days throughout — matches how log_date is
-    // written below (CAST(SYSUTCDATETIME() AS DATE)), so bars line up with
-    // the day the progress update actually landed on instead of being off
-    // by one whenever the server isn't running in UTC.
-    const startDate = new Date(taskRow.created_at);
-    startDate.setUTCHours(0, 0, 0, 0);
-
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    const rawDue = taskRow.due_date ? new Date(taskRow.due_date) : null;
-    if (rawDue) rawDue.setUTCHours(0, 0, 0, 0);
-
-    // Real due date -> chart creation through the due date. No due date
-    // (the common case) -> chart creation through today instead, so real
-    // logged progress still shows up rather than being thrown away.
-    const hasValidDue = !!rawDue && rawDue >= startDate;
-    const endDate = hasValidDue
-      ? rawDue
-      : today >= startDate
-        ? today
-        : startDate;
-
-    // Cap how many bars we render so a due date months out doesn't produce
-    // an unreadable chart — 60 days is generous for a per-task trend view.
-    const MAX_DAYS = 60;
-    const totalDays = Math.min(
-      Math.round((endDate - startDate) / 86400000) + 1,
-      MAX_DAYS,
-    );
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
+    const totalDays = days;
 
     const logResult = await pool
       .request()
-      .input("taskId", sql.Int, req.params.id)
+      .input("taskId", sql.Int, taskId)
       .input("start", sql.Date, startDate)
       .input("end", sql.Date, endDate).query(`
-        SELECT log_date, progress FROM tms_task_progress_log
+        SELECT log_date, progress
+        FROM tms_task_progress_log
         WHERE task_id = @taskId AND log_date BETWEEN @start AND @end
         ORDER BY log_date ASC
       `);
@@ -831,7 +781,7 @@ async function getTaskProgressHistory(req, res, next) {
     });
 
     let carry = 0;
-    const days = [];
+    const days2 = [];
     for (let i = 0; i < totalDays; i++) {
       const d = new Date(startDate);
       d.setUTCDate(d.getUTCDate() + i);
@@ -839,14 +789,135 @@ async function getTaskProgressHistory(req, res, next) {
       const cumulative = logMap[key] !== undefined ? logMap[key] : carry;
       const added = Math.max(0, cumulative - carry);
       carry = cumulative;
-      days.push({
+      days2.push({
         day: String(d.getUTCDate()),
         date: key,
         progress: added,
       });
     }
 
-    res.json(days);
+    res.json(days2);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Every individual progress commit for a task, oldest first — unlike
+// getTaskProgressHistory (which is bucketed to one value per day for the
+// trend chart), this is one row per edit so the Daily Progress bar can
+// place a permanent mark at the exact time each change was made.
+async function getTaskProgressMarks(req, res, next) {
+  try {
+    const taskId = req.params.id;
+    const pool = await getPool();
+
+    const result = await pool.request().input("taskId", sql.Int, taskId).query(`
+        SELECT progress, created_at AS createdAt
+        FROM tms_task_progress_events
+        WHERE task_id = @taskId
+        ORDER BY created_at ASC
+      `);
+
+    res.json(
+      result.recordset.map((r) => ({
+        progress: r.progress,
+        createdAt: r.createdAt,
+      })),
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+// The current user's tasks needing a daily progress update: every
+// non-done task assigned to them, plus anything they finished off today
+// (a completion still counts as touching the task today). Each row is
+// flagged with whether a tms_task_progress_log row exists for today —
+// the same table the progress-reminder cron reads from — so the Daily
+// Progress page and the reminder cron agree on what "updated today"
+// means instead of the page guessing from updated_at.
+async function getDailyProgress(req, res, next) {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().input("userId", sql.Int, req.user.id)
+      .query(`
+        SELECT t.*, u1.name AS assignedToName, u2.name AS assignedByName, u3.name AS completedByName,
+               p.color AS projectColor, p.name AS projectName,
+               pl.task_id AS progressLoggedTaskId
+        FROM tms_tasks t
+        LEFT JOIN tms_users u1 ON t.assigned_to = u1.id
+        LEFT JOIN tms_users u2 ON t.assigned_by = u2.id
+        LEFT JOIN tms_users u3 ON t.completed_by = u3.id
+        LEFT JOIN tms_projects p ON t.project_id = p.id
+        LEFT JOIN tms_task_progress_log pl
+          ON pl.task_id = t.id AND pl.log_date = CAST(SYSUTCDATETIME() AS DATE)
+        WHERE t.deleted_at IS NULL
+          AND t.assigned_to = @userId
+          AND (
+            t.status <> 'done'
+            OR CAST(t.completed_at AS DATE) = CAST(SYSUTCDATETIME() AS DATE)
+          )
+        ORDER BY t.created_at DESC
+      `);
+
+    const tasks = result.recordset.map((row) => ({
+      ...mapTask(row),
+      updatedToday: row.progressLoggedTaskId != null,
+    }));
+
+    res.json(tasks);
+  } catch (err) {
+    next(err);
+  }
+}
+// Per-day activity count for the requested calendar month (defaults to the
+// current month), scoped to the current user's own tasks — this is what
+// feeds the Daily Progress heatmap. "Activity" is counted as the number of
+// distinct tasks that got a tms_task_progress_log row that day, i.e. how
+// many tasks the user touched, not a raw progress percentage (a task
+// going 40% -> 45% and another going 0% -> 100% both count as 1 update).
+async function getProgressHeatmap(req, res, next) {
+  try {
+    const pool = await getPool();
+
+    const now = new Date();
+    let year = now.getUTCFullYear();
+    let month = now.getUTCMonth(); // 0-indexed
+
+    const monthParam = req.query.month; // expected "YYYY-MM"
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+      const [y, m] = monthParam.split("-").map(Number);
+      if (y && m >= 1 && m <= 12) {
+        year = y;
+        month = m - 1;
+      }
+    }
+
+    const startDate = new Date(Date.UTC(year, month, 1));
+    const endDate = new Date(Date.UTC(year, month + 1, 0)); // last day of month
+
+    const result = await pool
+      .request()
+      .input("userId", sql.Int, req.user.id)
+      .input("start", sql.Date, startDate)
+      .input("end", sql.Date, endDate).query(`
+        SELECT
+          CAST(pl.log_date AS DATE) AS logDate,
+          COUNT(DISTINCT pl.task_id) AS tasksUpdated
+        FROM tms_task_progress_log pl
+        INNER JOIN tms_tasks t ON t.id = pl.task_id
+        WHERE t.assigned_to = @userId
+          AND pl.log_date BETWEEN @start AND @end
+        GROUP BY CAST(pl.log_date AS DATE)
+        ORDER BY logDate ASC
+      `);
+
+    const days = result.recordset.map((row) => ({
+      date: new Date(row.logDate).toISOString().split("T")[0],
+      count: row.tasksUpdated,
+    }));
+
+    res.json({ year, month: month + 1, days });
   } catch (err) {
     next(err);
   }
@@ -860,4 +931,7 @@ module.exports = {
   deleteTask,
   getCompletionStats,
   getTaskProgressHistory,
+  getTaskProgressMarks,
+  getDailyProgress,
+  getProgressHeatmap,
 };

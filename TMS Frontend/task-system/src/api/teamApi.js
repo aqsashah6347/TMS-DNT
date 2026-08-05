@@ -6,7 +6,12 @@ export const teamApi = {
     const res = await axiosInstance.get("/teams");
     return res.data;
   },
-
+  // Powers the Performance page: admins get every team, everyone else
+  // gets only the teams they're set as manager_id for (often []).
+  getManagedTeams: async () => {
+    const res = await axiosInstance.get("/teams/managed");
+    return res.data;
+  },
   // The logged-in user's own team context: { team, projects, tasks }.
   // team is null if they haven't been assigned to one yet.
   getMyTeam: async () => {

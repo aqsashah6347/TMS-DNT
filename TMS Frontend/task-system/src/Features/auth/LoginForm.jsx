@@ -14,6 +14,7 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
@@ -31,11 +32,11 @@ export default function LoginForm() {
         return;
       }
 
-      login(data.user, data.token);
+      login(data.user, data.token, rememberMe);
       navigate("/");
     } catch (err) {
       setError(
-        err.response?.data?.message || "Invalid Employee ID or password"
+        err.response?.data?.message || "Invalid Employee ID or password",
       );
     } finally {
       setIsLoading(false);
@@ -47,13 +48,16 @@ export default function LoginForm() {
       <TwoFactorForm
         tempToken={tempToken}
         onBack={() => setStep("credentials")}
+        rememberMe={rememberMe}
       />
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full max-w-[280px]">
-      
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-5 w-full max-w-[280px]"
+    >
       {/* Email / Employee ID Field */}
       <div className="relative w-full border-b border-white/20 focus-within:border-orange-400 transition-colors pb-1.5 flex items-center">
         <Input
@@ -90,8 +94,46 @@ export default function LoginForm() {
         </button>
       </div>
 
+      {/* Keep me logged in */}
+      <label className="flex items-center gap-2 select-none cursor-pointer -mt-1">
+        <input
+          type="checkbox"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
+          className="peer sr-only"
+        />
+        <span
+          className="flex items-center justify-center w-4 h-4 rounded border transition-colors shrink-0"
+          style={{
+            borderColor: rememberMe ? "#e57d25" : "rgba(255,255,255,0.3)",
+            backgroundColor: rememberMe ? "#e57d25" : "transparent",
+          }}
+        >
+          {rememberMe && (
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 10 10"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M1.5 5L4 7.5L8.5 2.5"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </span>
+        <span className="text-xs text-white/60">Keep me logged in</span>
+      </label>
+
       {/* Error Message */}
-      {error && <p className="text-xs text-red-400 font-medium text-left">{error}</p>}
+      {error && (
+        <p className="text-xs text-red-400 font-medium text-left">{error}</p>
+      )}
 
       {/* Specular Submit Button */}
       <div className="w-full mt-2">
@@ -111,7 +153,6 @@ export default function LoginForm() {
           {isLoading ? "Logging in..." : "Log In"}
         </SpecularButton>
       </div>
-
     </form>
   );
 }

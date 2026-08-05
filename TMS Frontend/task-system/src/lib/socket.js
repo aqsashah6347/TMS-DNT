@@ -5,9 +5,12 @@ const SOCKET_URL = "http://localhost:5000";
 let socket = null;
 
 // Created lazily so it always picks up the freshest token. Call this
-// right after login (or on app load if a token already exists).
+// right after login (or on app load if a token already exists). Checks
+// both storages since the token can live in either, depending on whether
+// "Keep me logged in" was checked at login time.
 export function connectSocket() {
-  const token = localStorage.getItem("tms_token");
+  const token =
+    localStorage.getItem("tms_token") || sessionStorage.getItem("tms_token");
   if (!token) return null;
 
   if (socket) socket.disconnect();

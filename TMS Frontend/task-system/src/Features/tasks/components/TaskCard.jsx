@@ -2,6 +2,7 @@ import { User, Pin, Pencil } from "lucide-react";
 import { useTaskStore } from "../taskStore";
 import { useProjectStore } from "../../projects/projectStore";
 import { getProjectColor } from "../../../utils/projectColors";
+import EditableProgressBar from "../../../components/ui/EditableProgressBar";
 
 const priorityColorHex = {
   critical: "#f87171",
@@ -49,6 +50,7 @@ function formatDate(value) {
 
 export default function TaskCard({ task }) {
   const openTaskView = useTaskStore((s) => s.openTaskView);
+  const updateTask = useTaskStore((s) => s.updateTask);
   const projects = useProjectStore((s) => s.projects);
 
   const rawProjectColor = getProjectColor(task.projectId, projects);
@@ -68,6 +70,10 @@ export default function TaskCard({ task }) {
   function handleEditClick(e) {
     e.stopPropagation();
     openTaskView(task);
+  }
+
+  async function handleProgressSave(value) {
+    return updateTask(task.id, { progress: value });
   }
 
   return (
@@ -147,18 +153,14 @@ export default function TaskCard({ task }) {
         )}
       </div>
 
-      {/* Progress bar */}
-      <div className="flex items-center gap-3 mb-3">
-        <div
-          className="mask-progress-bar flex-1"
-          style={{
-            backgroundImage: `linear-gradient(${accentColor}, ${accentColor})`,
-            backgroundSize: `${progress}% 100%`,
-          }}
+      {/* Progress bar — editable: type a value, arrow keys, or click the
+          track, then hit the save button (or Enter) to persist it. */}
+      <div className="mb-3">
+        <EditableProgressBar
+          progress={progress}
+          color={accentColor}
+          onSave={handleProgressSave}
         />
-        <span className="text-sm font-semibold text-white/90 shrink-0">
-          {progress}%
-        </span>
       </div>
 
       {/* Footer: created by / date assigned, assigned to / due date */}

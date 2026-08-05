@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { LayoutDashboard, User, Users as UsersIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  User,
+  Users as UsersIcon,
+  ShieldOff,
+} from "lucide-react";
 import { usersApi } from "../api/usersApi";
 import { taskApi } from "../api/taskApi";
 import { teamApi } from "../api/teamApi";
 import { employeesApi } from "../api/employeesApi";
-import TeamsPerformanceView from "../Features/performance/components/TeamsPerformanceView";
+import { useAuthStore } from "../store/useAuthStore";
+import TeamPerformanceDetail from "../Features/performance/components/TeamPerformanceDetail";
+import TeamPerformanceSidebar from "../Features/performance/components/TeamPerformanceSidebar";
 import PerformanceDashboardTab from "../Features/performance/components/PerformanceDashboardTab";
 import EmployeeDirectorySidebar from "../Features/performance/components/EmployeeDirectorySidebar";
 import EmployeeProfilePanel from "../Features/performance/components/EmployeeProfilePanel";
@@ -152,6 +159,7 @@ function buildTeamStats(teams, employeeStatsById) {
         id: team.id,
         name: team.name,
         color: team.color,
+        managerId: team.managerId,
         managerName: team.managerName,
         memberCount: members.length,
         assigned,
@@ -176,6 +184,9 @@ const TABS = [
 ];
 
 export default function Performance() {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === "admin";
+
   const [tab, setTab] = useState("dashboard");
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -183,10 +194,14 @@ export default function Performance() {
   const [roster, setRoster] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  // null while still checking; true/false once we know whether this
+  // person is allowed to see the page at all (admin, or manager of ≥1 team)
+  const [isAuthorized, setIsAuthorized] = useState(null);
 
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,15 +209,64 @@ export default function Performance() {
       setIsLoading(true);
       setError(null);
       try {
-        const [usersData, allTasks, teamsData, rosterData] = await Promise.all([
-          usersApi.getAllUsers(),
+        // Access check + scope come from the same call: admins get every
+        // team back, everyone else only gets teams they manage (often
+        // none — that's what makes this page admin/manager-only without
+        // a separate permission flag to keep in sync).
+        const teamsData = await teamApi.getManagedTeams();
+        if (cancelled) return;
+
+        if (!isAdmin && (teamsData || []).length === 0) {
+          setIsAuthorized(false);
+          setIsLoading(false);
+          return;
+        }
+        setIsAuthorized(true);
+
+        // Roster (attendance/department/branch data) is admin-only on the
+        // backend — team managers just don't get that enrichment layer,
+        // buildEmployeeStats() falls back to "—"/"Unassigned" without it.
+        //
+        // NOTE: for non-admins we deliberately do NOT call usersApi.getAllUsers()
+        // — that endpoint returns every employee in the company (it has to,
+        // since Chat needs it too), which would leak the full roster to a
+        // manager's browser even if the UI only renders a filtered subset.
+        // Instead we build the user list straight from teamsData.memberDetails,
+        // which the backend already scoped to teams this manager owns.
+        const [usersData, allTasks, rosterData] = await Promise.all([
+          isAdmin ? usersApi.getAllUsers() : Promise.resolve(null),
           fetchAllTasks(),
-          teamApi.getAllTeams(),
-          employeesApi.getRoster(),
+          isAdmin
+            ? employeesApi.getRoster()
+            : Promise.resolve({ employees: [] }),
         ]);
         if (cancelled) return;
-        setUsers(usersData || []);
-        setTasks(allTasks || []);
+
+        if (isAdmin) {
+          setUsers(usersData || []);
+          setTasks(allTasks || []);
+        } else {
+          // Scope everything down to just the people on the team(s) this
+          // manager actually manages — memberDetails already includes the
+          // manager themself (assignMembers always adds managerId in).
+          const memberMap = new Map();
+          (teamsData || []).forEach((t) => {
+            (t.memberDetails || []).forEach((m) => {
+              memberMap.set(m.id, {
+                id: m.id,
+                name: m.name,
+                role: m.role,
+                avatarColor: m.avatarColor,
+                enroll_no: m.enrollNo ?? m.enroll_no ?? null,
+              });
+            });
+          });
+          const allowedIds = new Set(memberMap.keys());
+          setUsers(Array.from(memberMap.values()));
+          setTasks(
+            (allTasks || []).filter((t) => allowedIds.has(t.assignedTo)),
+          );
+        }
         setTeams(teamsData || []);
         setRoster(rosterData?.employees || []);
       } catch (err) {
@@ -218,7 +282,7 @@ export default function Performance() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAdmin]);
 
   const rosterByCode = useMemo(() => {
     const map = new Map();
@@ -254,6 +318,28 @@ export default function Performance() {
   const teamStats = useMemo(
     () => buildTeamStats(teams, employeeStatsById),
     [teams, employeeStatsById],
+  );
+
+  // Keep a team selected in the Teams tab at all times — default to the
+  // top-ranked (most efficient) team, and fall back to it again if the
+  // currently selected team disappears (filters change, team gets deleted).
+  useEffect(() => {
+    if (teamStats.length === 0) {
+      if (selectedTeamId !== null) setSelectedTeamId(null);
+      return;
+    }
+    const stillExists = teamStats.some((t) => t.id === selectedTeamId);
+    if (!stillExists) setSelectedTeamId(teamStats[0].id);
+  }, [teamStats, selectedTeamId]);
+
+  const selectedTeamRank = useMemo(() => {
+    const idx = teamStats.findIndex((t) => t.id === selectedTeamId);
+    return idx === -1 ? 1 : idx + 1;
+  }, [teamStats, selectedTeamId]);
+
+  const selectedTeam = useMemo(
+    () => teamStats.find((t) => t.id === selectedTeamId) || null,
+    [teamStats, selectedTeamId],
   );
 
   const topPerformers = useMemo(() => {
@@ -397,60 +483,91 @@ export default function Performance() {
             Performance
           </h2>
           <p className="text-sm text-white/50 mt-1">
-            Task achievement, difficulty handling, efficiency, and quality — per
-            employee and per team.
+            {isAdmin
+              ? "Task achievement, difficulty handling, efficiency, and quality — per employee and per team."
+              : "Task achievement, difficulty handling, efficiency, and quality — for your team."}
           </p>
         </div>
 
-        <div className="lg:ml-auto flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                tab === key
-                  ? "bg-orange-500/20 text-orange-400"
-                  : "text-white/50 hover:text-white/80"
-              }`}
-            >
-              <Icon size={14} /> {label}
-            </button>
-          ))}
-        </div>
+        {isAuthorized && (
+          <div className="lg:ml-auto flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
+            {TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  tab === key
+                    ? "bg-orange-500/20 text-orange-400"
+                    : "text-white/50 hover:text-white/80"
+                }`}
+              >
+                <Icon size={14} /> {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {error && (
-        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-4">
-          {error}
-        </p>
-      )}
-
-      {isLoading ? (
-        <p className="text-sm text-white/50 text-center py-16">
-          Loading performance data…
-        </p>
-      ) : tab === "dashboard" ? (
-        <PerformanceDashboardTab
-          orgStats={orgStats}
-          topPerformers={topPerformers}
-          onSelectEmployee={goToEmployee}
-        />
-      ) : tab === "employees" ? (
-        <div className="flex flex-col lg:flex-row gap-6">
-          <EmployeeDirectorySidebar
-            employees={filteredEmployees}
-            selectedId={selectedEmployeeId}
-            onSelect={setSelectedEmployeeId}
-            search={search}
-            onSearchChange={setSearch}
-            departments={departments}
-            departmentFilter={departmentFilter}
-            onDepartmentChange={setDepartmentFilter}
-          />
-          <EmployeeProfilePanel employee={selectedEmployee} />
+      {isAuthorized === false ? (
+        <div className="flex flex-col items-center justify-center text-center gap-3 py-24">
+          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+            <ShieldOff size={22} className="text-white/40" />
+          </div>
+          <h3 className="text-lg font-semibold text-white">
+            Performance is restricted
+          </h3>
+          <p className="text-sm text-white/50 max-w-sm">
+            This page is only available to admins and to team managers, scoped
+            to their own team. You'll get access automatically if you're made a
+            team's manager.
+          </p>
         </div>
       ) : (
-        <TeamsPerformanceView teams={teamStats} />
+        <>
+          {error && (
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-4">
+              {error}
+            </p>
+          )}
+
+          {isLoading ? (
+            <p className="text-sm text-white/50 text-center py-16">
+              Loading performance data…
+            </p>
+          ) : tab === "dashboard" ? (
+            <PerformanceDashboardTab
+              orgStats={orgStats}
+              topPerformers={topPerformers}
+              onSelectEmployee={goToEmployee}
+            />
+          ) : tab === "employees" ? (
+            <div className="flex flex-col lg:flex-row gap-6">
+              <EmployeeDirectorySidebar
+                employees={filteredEmployees}
+                selectedId={selectedEmployeeId}
+                onSelect={setSelectedEmployeeId}
+                search={search}
+                onSearchChange={setSearch}
+                departments={departments}
+                departmentFilter={departmentFilter}
+                onDepartmentChange={setDepartmentFilter}
+              />
+              <EmployeeProfilePanel employee={selectedEmployee} />
+            </div>
+          ) : (
+            <div className="flex flex-col lg:flex-row gap-6">
+              <TeamPerformanceDetail
+                team={selectedTeam}
+                rank={selectedTeamRank}
+              />
+              <TeamPerformanceSidebar
+                teams={teamStats}
+                selectedId={selectedTeamId}
+                onSelect={setSelectedTeamId}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

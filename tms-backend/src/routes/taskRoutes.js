@@ -19,6 +19,14 @@ router.get(
   taskController.getCompletedLog,
 );
 
+// Must stay above "/:id" — otherwise Express matches "daily-progress"
+// as an :id value instead of routing here.
+router.get(
+  "/daily-progress",
+  requirePermission("tasks", "view"),
+  taskController.getDailyProgress,
+);
+
 router.get("/", requirePermission("tasks", "view"), taskController.getAllTasks);
 
 // Individual task routes
@@ -32,6 +40,12 @@ router.get(
   "/:id/progress-history",
   requirePermission("tasks", "view"),
   taskController.getTaskProgressHistory,
+);
+
+router.get(
+  "/:id/progress-marks",
+  requirePermission("tasks", "view"),
+  taskController.getTaskProgressMarks,
 );
 
 router.post(
@@ -50,6 +64,12 @@ router.delete(
   "/:id",
   requirePermission("tasks", "delete"),
   taskController.deleteTask,
+);
+
+router.get(
+  "/progress-heatmap",
+  requirePermission("tasks", "view"),
+  taskController.getProgressHeatmap,
 );
 
 module.exports = router;

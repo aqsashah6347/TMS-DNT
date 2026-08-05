@@ -7,7 +7,7 @@ import {
   Users,
   Bell,
   MessageCircle,
-  BarChart3,
+  CalendarCheck2,
   KeyRound,
   IdCard,
   Settings,
@@ -23,17 +23,58 @@ const navItems = [
   { to: "/teams", label: "Teams", icon: Users },
   { to: "/activity", label: "Activity Log", icon: Bell }, // was: { to: "/inbox", label: "Inbox", icon: Inbox }
   { to: "/chat", label: "Chat", icon: MessageCircle },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/daily-progress", label: "Daily Progress", icon: CalendarCheck2 },
 ];
 
 const adminItems = [
-  { to: "/performance", label: "Performance", icon: TrendingUp },
   { to: "/access", label: "Manage Access", icon: KeyRound },
   { to: "/employees", label: "Employees", icon: IdCard },
   { to: "/communications", label: "Communications", icon: MailCheck }, // add this
 ];
 
-export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
+// Small helper so the three nav sections (plain, performance, admin-only)
+// can share the exact same link markup instead of triplicating it.
+function SidebarLink({ to, label, icon: Icon, expanded }) {
+  const linkClass = ({ isActive }) =>
+    `relative flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+      isActive
+        ? "bg-[#fb923c]/10 text-[#ffd7ae]"
+        : "text-white/55 hover:bg-white/5 hover:text-white"
+    }`;
+  return (
+    <div className="relative group w-full">
+      <NavLink to={to} className={linkClass}>
+        {({ isActive }) => (
+          <>
+            <span
+              className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-[#fb923c] transition-opacity duration-200 ${
+                isActive ? "opacity-100" : "opacity-0"
+              }`}
+            />
+            <Icon
+              size={18}
+              className="shrink-0 transition-all duration-200 group-hover:scale-110"
+            />
+            {expanded && <span className="truncate">{label}</span>}
+          </>
+        )}
+      </NavLink>
+
+      {!expanded && (
+        <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-[#fb923c]/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
+          {label}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Sidebar({
+  isAdmin = false,
+  showPerformance = false,
+  expanded,
+  onToggle,
+}) {
   const linkClass = ({ isActive }) =>
     `relative flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
       isActive
@@ -97,23 +138,29 @@ export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
             </div>
           ))}
 
-          {isAdmin && (
+          {(showPerformance || isAdmin) && (
             <>
               <div className="my-2 border-t border-white/10" />
-              {adminItems.map(({ to, label, icon: Icon }) => (
-                <div key={to} className="relative group w-full">
-                  <NavLink to={to} className={linkClass}>
-                    <Icon size={18} className="shrink-0" />
-                    {expanded && <span className="truncate">{label}</span>}
-                  </NavLink>
 
-                  {!expanded && (
-                    <div className="absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded-xl bg-zinc-900 border border-[#fb923c]/30 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1 pointer-events-none z-50">
-                      {label}
-                    </div>
-                  )}
-                </div>
-              ))}
+              {showPerformance && (
+                <SidebarLink
+                  to="/performance"
+                  label="Performance"
+                  icon={TrendingUp}
+                  expanded={expanded}
+                />
+              )}
+
+              {isAdmin &&
+                adminItems.map(({ to, label, icon }) => (
+                  <SidebarLink
+                    key={to}
+                    to={to}
+                    label={label}
+                    icon={icon}
+                    expanded={expanded}
+                  />
+                ))}
             </>
           )}
         </nav>

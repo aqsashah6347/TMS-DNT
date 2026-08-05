@@ -20,6 +20,20 @@ function signToken(user) {
   );
 }
 
+function publicUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    twoFactorEnabled: user.two_factor_enabled,
+    avatarUrl: user.avatar_url,
+    avatarColor: user.avatar_color,
+    enrollNo: user.enroll_no,
+  };
+}
+
 // STEP 1 of login: check employeeId (or email) + password. If correct, we
 // don't log the user in yet — we issue a short-lived tempToken and a
 // 6-digit OTP that verify-otp will check next. This matches

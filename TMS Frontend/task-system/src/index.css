@@ -2430,7 +2430,151 @@
   -webkit-appearance: none;
   margin: 0;
 }
+/* EditableProgressBar — shared control used by TaskCard + Daily Progress.
+   The track itself reuses .mask-progress-bar so the fill visual matches
+   every other progress bar in the app; everything below is the "better
+   UI" wrapped around it (hover readout, typeable field, save button). */
+.epb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
 
+.epb-track-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.epb-track {
+  cursor: pointer;
+  outline: none;
+  transition:
+    filter 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.epb-track:hover {
+  filter: brightness(1.12);
+}
+.epb-track:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+/* Hover readout — floats above the fill edge while the mouse is over
+   the track, matching the same dark-glass tooltip look used elsewhere. */
+.epb-hover-box {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: #1a1a1e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  z-index: 20;
+  animation: epb-fade-in 0.12s ease;
+}
+.epb-hover-box::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  background: #1a1a1e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+@keyframes epb-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.epb-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.epb-input {
+  width: 3ch;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  color: #f5f5f5;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
+  padding: 2px 4px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.epb-input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+}
+.epb-input::-webkit-outer-spin-button,
+.epb-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.epb-percent-sign {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  margin-left: -2px;
+  margin-right: 2px;
+}
+
+/* Save button — dim/disabled while nothing has changed, lights up as
+   soon as the value differs from what's saved. Never fires on its own. */
+.epb-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+  transition: all 0.15s ease;
+}
+.epb-save-btn--dirty {
+  color: #fff;
+  background: rgba(251, 146, 60, 0.25);
+  border-color: rgba(251, 146, 60, 0.55);
+  cursor: pointer;
+}
+.epb-save-btn--dirty:hover {
+  background: rgba(251, 146, 60, 0.4);
+  transform: translateY(-1px);
+}
+.epb-save-btn:disabled {
+  opacity: 0.6;
+}
+.epb-spin {
+  animation: tvm-spin 0.8s linear infinite;
+}
 .tvm-charts-row {
   display: flex;
   justify-content: space-between;
@@ -3201,4 +3345,162 @@
       grid-template-columns: 1fr;
     }
   }
+}
+/* =========================================================================
+   Kanban ("Pipeline") board — bookmark-tab column headers, color-blended
+   dividers between columns, and the compact task row used only here.
+   ========================================================================= */
+
+.kanban-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The colored ribbon "bookmark" sitting on top of each column. Shape is a
+   clipped tag — square top corners, a shallow V notch cut into the bottom
+   edge — the classic bookmark silhouette, tinted per-column via --bm-color. */
+.kanban-bookmark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px 15px;
+  color: #17170f;
+  background: var(--bm-color);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%);
+  box-shadow:
+    0 10px 18px -9px var(--bm-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.kanban-bookmark__label {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.kanban-bookmark__count {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+  padding: 1px 7px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Column body / drop zone beneath the bookmark tab. */
+.kanban-column__body {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 10px 7px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kanban-column__body--drag-over {
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 0 0 1.5px var(--kc-col, #fb923c);
+}
+
+/* Vertical rule between columns — a soft gradient that blends the color
+   of the column to its left into the color of the column to its right,
+   so the boundary itself carries the same color language as the tabs. */
+.kanban-divider {
+  width: 1px;
+  align-self: stretch;
+  flex-shrink: 0;
+  margin: 0 12px;
+  opacity: 0.9;
+}
+
+/* The compact task row — deliberately as small as the board can get away
+   with while staying readable and draggable. Shows: an accent bar (project
+   or priority color), the title, a priority dot, a tiny initials avatar,
+   and a hairline progress fill along the bottom edge. */
+.kanban-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px 7px 11px;
+  border-radius: 7px;
+  background: #19191c;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: grab;
+  overflow: hidden;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.kanban-card:hover {
+  transform: translateX(1px);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: #1e1e22;
+}
+
+.kanban-card:active {
+  cursor: grabbing;
+}
+
+.kanban-card__bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--kc-accent, #fb923c);
+}
+
+.kanban-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kanban-card__priority {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kanban-card__avatar {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.kanban-card__progress-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.kanban-card__progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 2px 2px 0;
+  transition: width 0.3s ease;
 }

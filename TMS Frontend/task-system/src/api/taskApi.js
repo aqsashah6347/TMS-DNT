@@ -1,7 +1,7 @@
 import axiosInstance from "./axiosInstance";
 
 export const taskApi = {
-getAllTasks: async (filters = {}, page = 1, pageSize = 25) => {
+  getAllTasks: async (filters = {}, page = 1, pageSize = 25) => {
     const res = await axiosInstance.get("/tasks", {
       params: { ...filters, page, pageSize },
     });
@@ -10,7 +10,12 @@ getAllTasks: async (filters = {}, page = 1, pageSize = 25) => {
     // array) or the new paginated shape, so a mismatch here can never
     // leave `tasks` as undefined for the rest of the app.
     if (Array.isArray(data)) {
-      return { tasks: data, page: 1, pageSize: data.length, total: data.length };
+      return {
+        tasks: data,
+        page: 1,
+        pageSize: data.length,
+        total: data.length,
+      };
     }
     return {
       tasks: data.tasks ?? [],
@@ -52,6 +57,20 @@ getAllTasks: async (filters = {}, page = 1, pageSize = 25) => {
   },
   getProgressHistory: async (id) => {
     const res = await axiosInstance.get(`/tasks/${id}/progress-history`);
+    return res.data;
+  },
+  getProgressMarks: async (id) => {
+    const res = await axiosInstance.get(`/tasks/${id}/progress-marks`);
+    return res.data;
+  },
+  getDailyProgress: async () => {
+    const res = await axiosInstance.get("/tasks/daily-progress");
+    return res.data;
+  },
+  getProgressHeatmap: async (month) => {
+    const res = await axiosInstance.get("/tasks/progress-heatmap", {
+      params: month ? { month } : {},
+    });
     return res.data;
   },
 };

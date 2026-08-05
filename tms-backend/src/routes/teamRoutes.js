@@ -10,6 +10,10 @@ router.use(requireAuth);
 // powers the "My Team" view for non-admin roles.
 router.get("/mine", teamController.getMyTeam);
 
+// Powers Performance page access + scoping: admins get every team back,
+// anyone else gets only the teams they manage (often an empty array).
+// Deliberately not requireRole-gated — see getManagedTeams for why.
+router.get("/managed", teamController.getManagedTeams);
 // Seeing the full team roster is admin/manager-only — "user" role can
 // only ever see their own team, via GET /mine above. requireRole here
 // instead of requirePermission so it can't be opened up for a "user" by

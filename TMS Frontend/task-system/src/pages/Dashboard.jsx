@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+// TMS Frontend/task-system/src/pages/Dashboard.jsx — full replacement
+import { useEffect, useState, useCallback } from "react";
 import PriorityTaskList from "../features/dashboard/components/PriorityTaskList";
 import ChatNotifications from "../Features/dashboard/components/ChatNotifications";
 import TaskAssignments from "../Features/dashboard/components/TaskAssignments";
@@ -6,13 +7,14 @@ import OverdueTasks from "../features/dashboard/components/OverdueTasks";
 import CalendarPreview from "../features/dashboard/components/CalendarPreview";
 //import DateTimeBox from "../features/dashboard/components/DateTimeBox";
 import QuickActions from "../features/dashboard/components/QuickActions";
-import { TrendingUp, Star, AlertTriangle } from "lucide-react";
+import { TrendingUp, Star, AlertTriangle, CalendarCheck2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTaskStore } from "../features/tasks/taskStore";
 import { useProjectStore } from "../features/projects/projectStore";
 import { useAuthStore } from "../store/useAuthStore";
 import Card from "../components/ui/Card";
 import PresentEmployeesButton from "../features/dashboard/components/AvailableEmployeesButton";
+import { taskApi } from "../api/taskApi";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -27,6 +29,30 @@ export default function Dashboard() {
     fetchTasks();
     fetchProjects();
   }, [fetchTasks, fetchProjects]);
+
+  // ---- Daily Progress badge: same "updated today" data DailyProgress.jsx
+  // shows, fetched separately here since the general task list doesn't
+  // carry the `updatedToday` flag. ----
+  const [dailyProgressCounts, setDailyProgressCounts] = useState({
+    done: 0,
+    total: 0,
+  });
+
+  const loadDailyProgressCounts = useCallback(async () => {
+    try {
+      const data = await taskApi.getDailyProgress();
+      setDailyProgressCounts({
+        done: data.filter((t) => t.updatedToday).length,
+        total: data.length,
+      });
+    } catch (err) {
+      setDailyProgressCounts({ done: 0, total: 0 });
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDailyProgressCounts();
+  }, [loadDailyProgressCounts]);
 
   const completed = tasks.filter((t) => t.status === "done").length;
   const total = tasks.length || 1;
@@ -55,23 +81,31 @@ export default function Dashboard() {
             <div className="flex-1 min-w-0 flex flex-col justify-between">
               <div>
                 {/* Margin bottom reduced from mb-6 to mb-4 */}
-                <div className="glass-dark mb-4">
-                  <span className="glass-badge glass-badge--primary mb-2.5 inline-flex">
-                    <span className="glass-badge__dot" />{" "}
-                    {user?.role || "Team Member"}
-                  </span>
-                  <h2
-                    className="text-xl text-white"
-                    style={{
-                      fontFamily: "var(--font-display)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Welcome back, {firstName}
-                  </h2>
-                  <p className="text-white/50 text-xs mt-0.5">
-                    Here's what's happening across your projects today.
-                  </p>
+                <div className="glass-dark mb-4 flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <span className="glass-badge glass-badge--primary mb-2.5 inline-flex">
+                      <span className="glass-badge__dot" />{" "}
+                      {user?.role || "Team Member"}
+                    </span>
+                    <h2
+                      className="text-xl text-white"
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Welcome back, {firstName}
+                    </h2>
+                    <p className="text-white/50 text-xs mt-0.5">
+                      Here's what's happening across your projects today.
+                    </p>
+                  </div>
+
+                  <DailyProgressBadge
+                    done={dailyProgressCounts.done}
+                    total={dailyProgressCounts.total}
+                    onClick={() => navigate("/daily-progress")}
+                  />
                 </div>
 
                 {/* Gap and margin optimized */}
@@ -204,6 +238,29 @@ export default function Dashboard() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// Clickable badge: grey while nothing's been updated today, flips to
+// green the moment at least one task has — a quick nudge/confirmation
+// that lives right on the dashboard, without needing to open the
+// Daily Progress page to check.
+function DailyProgressBadge({ done, total, onClick }) {
+  const hasUpdates = done > 0;
+
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs shrink-0 border transition-colors duration-200 cursor-pointer ${
+        hasUpdates
+          ? "bg-green-500/15 border-green-500/40 text-green-400 hover:bg-green-500/25"
+          : "bg-white/5 border-white/15 text-white/50 hover:bg-white/10"
+      }`}
+      title="Go to Daily Progress"
+    >
+      <CalendarCheck2 size={13} />
+      Daily Progress Updated {done}/{total}
+    </button>
   );
 }
 

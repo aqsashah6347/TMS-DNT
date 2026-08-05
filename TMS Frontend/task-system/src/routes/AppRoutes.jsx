@@ -9,7 +9,7 @@ const Tasks = lazy(() => import("../pages/Tasks"));
 const Projects = lazy(() => import("../pages/Projects"));
 const Teams = lazy(() => import("../pages/Teams"));
 const ActivityLog = lazy(() => import("../pages/ActivityLog"));
-const Analytics = lazy(() => import("../pages/Analytics"));
+const DailyProgress = lazy(() => import("../pages/DailyProgress"));
 const Performance = lazy(() => import("../pages/Performance"));
 const Chat = lazy(() => import("../pages/Chat"));
 const Access = lazy(() => import("../pages/Access"));
@@ -38,7 +38,6 @@ export default function AppRoutes() {
           }
         />
         <Route path="/login" element={<Login />} />
-
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route
           path="/dashboard"
@@ -97,26 +96,28 @@ export default function AppRoutes() {
           }
         />
         <Route
-          path="/analytics"
+          path="/daily-progress"
           element={
             <ProtectedRoute>
-              <Analytics />
+              <DailyProgress />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/performance"
-          element={
-            <ProtectedRoute adminOnly>
-              <Performance />
-            </ProtectedRoute>
-          }
-        />
+    
         <Route
           path="/access"
           element={
             <ProtectedRoute adminOnly>
               <Access />
+            </ProtectedRoute>
+          }
+        />
+        .
+        <Route
+          path="/performance"
+          element={
+            <ProtectedRoute>
+              <Performance />
             </ProtectedRoute>
           }
         />

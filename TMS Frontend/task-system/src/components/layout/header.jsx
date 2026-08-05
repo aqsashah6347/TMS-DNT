@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, Bell, X, ListTodo, FolderKanban, Users, LogOut } from "lucide-react";
+import { Search, Bell, X, ListTodo, FolderKanban, Users } from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useActivityStore } from "../../Features/activities/activityStore";
 import { useTaskStore } from "../../Features/tasks/taskStore";
@@ -9,6 +9,7 @@ import { taskApi } from "../../api/taskApi";
 import { projectApi } from "../../api/projectApi";
 import { teamApi } from "../../api/teamApi";
 import Avatar from "../ui/Avatar";
+import ProfileMenu from "./ProfileMenu";
 import Logo from "./logo";
 import { useNavigate } from "react-router-dom";
 
@@ -25,7 +26,7 @@ function timeAgo(dateStr) {
 const EMPTY_RESULTS = { tasks: [], projects: [], teams: [] };
 
 export default function Header() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const { activities, unreadCount, fetchActivities, markAsRead } =
     useActivityStore();
 
@@ -74,49 +75,49 @@ export default function Header() {
       return;
     }
 
-  setSearching(true);
-  const handle = setTimeout(async () => {
-    try {
-      const lower = q.toLowerCase();
+    setSearching(true);
+    const handle = setTimeout(async () => {
+      try {
+        const lower = q.toLowerCase();
 
-      // "user" role can't call getAllTeams anymore (admin/manager only
-      // on the backend) — fall back to their own team via /teams/mine
-      // instead of letting that request 403 and take the whole
-      // Promise.all down with it.
-      const teamsPromise =
-        user?.role === "admin" || user?.role === "manager"
-          ? teamApi.getAllTeams()
-          : teamApi.getMyTeam().then((r) => (r.team ? [r.team] : []));
-const [taskResult, allProjects, allTeams] = await Promise.all([
-  taskApi.getAllTasks({ search: q }),
-  projectApi.getAllProjects(),
-  teamsPromise,
-]);
+        // "user" role can't call getAllTeams anymore (admin/manager only
+        // on the backend) — fall back to their own team via /teams/mine
+        // instead of letting that request 403 and take the whole
+        // Promise.all down with it.
+        const teamsPromise =
+          user?.role === "admin" || user?.role === "manager"
+            ? teamApi.getAllTeams()
+            : teamApi.getMyTeam().then((r) => (r.team ? [r.team] : []));
+        const [taskResult, allProjects, allTeams] = await Promise.all([
+          taskApi.getAllTasks({ search: q }),
+          projectApi.getAllProjects(),
+          teamsPromise,
+        ]);
 
-const tasks = taskResult.tasks ?? [];
-      const projects = allProjects
-        .filter(
-          (p) =>
-            p.name?.toLowerCase().includes(lower) ||
-            p.description?.toLowerCase().includes(lower),
-        )
-        .slice(0, 5);
+        const tasks = taskResult.tasks ?? [];
+        const projects = allProjects
+          .filter(
+            (p) =>
+              p.name?.toLowerCase().includes(lower) ||
+              p.description?.toLowerCase().includes(lower),
+          )
+          .slice(0, 5);
 
-      const teams = allTeams
-        .filter((t) => t.name?.toLowerCase().includes(lower))
-        .slice(0, 5);
+        const teams = allTeams
+          .filter((t) => t.name?.toLowerCase().includes(lower))
+          .slice(0, 5);
 
-      setResults({ tasks: tasks.slice(0, 5), projects, teams });
-    } catch (err) {
-      console.error("Global search failed:", err);
-      setResults(EMPTY_RESULTS);
-    } finally {
-      setSearching(false);
-    }
-  }, 300);
+        setResults({ tasks: tasks.slice(0, 5), projects, teams });
+      } catch (err) {
+        console.error("Global search failed:", err);
+        setResults(EMPTY_RESULTS);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
 
     return () => clearTimeout(handle);
-  }, [query , user]);
+  }, [query, user]);
 
   function goToTask(task) {
     useTaskStore.getState().openTaskView(task);
@@ -142,12 +143,6 @@ const tasks = taskResult.tasks ?? [];
     setSearchOpen(false);
     setQuery("");
     setResults(EMPTY_RESULTS);
-  }
-
-  function handleLogout() {
-    logout();
-    setProfileOpen(false);
-    navigate("/login");
   }
 
   const count = unreadCount;
@@ -330,27 +325,19 @@ const tasks = taskResult.tasks ?? [];
           {/* Profile */}
           <div className="relative" ref={profileRef}>
             <button
-              onClick={() => setProfileOpen(!profileOpen)}
+              onClick={() => setProfileOpen((p) => !p)}
               className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors hover:bg-white/10"
             >
               <Avatar name={user?.name} color={user?.avatarColor} size={32} />
-
               <span className="text-sm font-medium text-white">
                 {user?.name || "Guest"}
               </span>
             </button>
 
-            {profileOpen && (
-              <div className="glass-dropdown-menu absolute right-0 top-full z-30 mt-2 w-40 overflow-hidden rounded-2xl py-1">
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-white transition-colors hover:bg-white/10"
-                >
-                  <LogOut size={14} />
-                  Logout
-                </button>
-              </div>
-            )}
+            <ProfileMenu
+              isOpen={profileOpen}
+              onClose={() => setProfileOpen(false)}
+            />
           </div>
         </div>
       </header>
