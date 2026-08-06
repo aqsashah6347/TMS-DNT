@@ -14,6 +14,14 @@ router.get("/mine", teamController.getMyTeam);
 // anyone else gets only the teams they manage (often an empty array).
 // Deliberately not requireRole-gated — see getManagedTeams for why.
 router.get("/managed", teamController.getManagedTeams);
+
+// Only that team's manager (or an admin) can set a member's Performance
+// Rating — enforced inside the controller, same pattern as /managed.
+router.put(
+  "/:teamId/members/:memberId/performance-rating",
+  teamController.setMemberPerformanceRating,
+);
+
 // Seeing the full team roster is admin/manager-only — "user" role can
 // only ever see their own team, via GET /mine above. requireRole here
 // instead of requirePermission so it can't be opened up for a "user" by

@@ -24,6 +24,7 @@ const navItems = [
   { to: "/activity", label: "Activity Log", icon: Bell }, // was: { to: "/inbox", label: "Inbox", icon: Inbox }
   { to: "/chat", label: "Chat", icon: MessageCircle },
   { to: "/daily-progress", label: "Daily Progress", icon: CalendarCheck2 },
+  { to: "/performance", label: "Performance", icon: TrendingUp },
 ];
 
 const adminItems = [
@@ -69,12 +70,7 @@ function SidebarLink({ to, label, icon: Icon, expanded }) {
   );
 }
 
-export default function Sidebar({
-  isAdmin = false,
-  showPerformance = false,
-  expanded,
-  onToggle,
-}) {
+export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
   const linkClass = ({ isActive }) =>
     `relative flex items-center gap-3 group rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
       isActive
@@ -93,7 +89,7 @@ export default function Sidebar({
             <div className="flex items-center gap-2">
               <Logo size={24} />
               <span className="text-sm font-semibold text-white tracking-wide">
-                TMS
+                MENU
               </span>
             </div>
           )}
@@ -138,29 +134,19 @@ export default function Sidebar({
             </div>
           ))}
 
-          {(showPerformance || isAdmin) && (
+          {isAdmin && (
             <>
               <div className="my-2 border-t border-white/10" />
 
-              {showPerformance && (
+              {adminItems.map(({ to, label, icon }) => (
                 <SidebarLink
-                  to="/performance"
-                  label="Performance"
-                  icon={TrendingUp}
+                  key={to}
+                  to={to}
+                  label={label}
+                  icon={icon}
                   expanded={expanded}
                 />
-              )}
-
-              {isAdmin &&
-                adminItems.map(({ to, label, icon }) => (
-                  <SidebarLink
-                    key={to}
-                    to={to}
-                    label={label}
-                    icon={icon}
-                    expanded={expanded}
-                  />
-                ))}
+              ))}
             </>
           )}
         </nav>

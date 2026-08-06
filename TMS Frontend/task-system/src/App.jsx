@@ -15,7 +15,6 @@ import {
   initBadgeClearOnFocus,
 } from "./lib/notify";
 import TaskCompleteLottie from "./Features/tasks/components/TaskCompleteLottie";
-import { teamApi } from "./api/teamApi";
 
 export default function App() {
   const { user } = useAuthStore();
@@ -23,29 +22,6 @@ export default function App() {
   const isLoginPage = location.pathname === "/login";
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const isAdmin = user?.role === "admin";
-
-  // Performance page + nav link are visible to admins, and to anyone who's
-  // been made a team's manager (which doesn't require the "manager" role —
-  // any user can be set as a team's manager_id from the Teams page). This
-  // is a lightweight, separate check from the Performance page's own data
-  // fetch, since the sidebar needs the answer on every page, not just
-  // while actually on /performance.
-  const [managesAnyTeam, setManagesAnyTeam] = useState(false);
-  useEffect(() => {
-    if (!user || isAdmin) return;
-    let cancelled = false;
-    teamApi
-      .getManagedTeams()
-      .then((teams) => {
-        if (!cancelled) setManagesAnyTeam((teams || []).length > 0);
-      })
-      .catch(() => {
-        if (!cancelled) setManagesAnyTeam(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user, isAdmin]);
 
   // Connects once as soon as we know who's logged in — covers both a
   // fresh login (useAuthStore.login already connects) and a page
@@ -91,7 +67,6 @@ export default function App() {
       <TaskCompleteLottie />
       <Sidebar
         isAdmin={isAdmin}
-        showPerformance={isAdmin || managesAnyTeam}
         expanded={sidebarExpanded}
         onToggle={() => setSidebarExpanded((prev) => !prev)}
       />

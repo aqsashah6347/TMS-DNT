@@ -1,5 +1,5 @@
 // src/Features/performance/components/TeamPerformanceDetail.jsx
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -9,7 +9,15 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Users, Zap, AlertTriangle, Crown } from "lucide-react";
+import {
+  Users,
+  Zap,
+  AlertTriangle,
+  Crown,
+  Star,
+  Check,
+  Loader2,
+} from "lucide-react";
 import RadialProgress from "../../../components/ui/RadialProgress";
 import {
   initials,
@@ -25,7 +33,119 @@ const STATUS_LABELS = {
   done: "Done",
 };
 
-export default function TeamPerformanceDetail({ team, rank }) {
+// Manager-only inline control for a member's Performance Rating (0-10).
+// Renders a read-only badge for everyone else. The actual permission
+// check lives on the backend (setMemberPerformanceRating) — canRate here
+// only controls whether the input renders.
+function PerformanceRatingControl({ member, teamId, canRate, onRate, color }) {
+  const [value, setValue] = useState(
+    member.performanceRating !== null && member.performanceRating !== undefined
+      ? String(member.performanceRating)
+      : "",
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [justSaved, setJustSaved] = useState(false);
+
+  if (!canRate) {
+    return member.performanceRating !== null &&
+      member.performanceRating !== undefined ? (
+      <span className="team-stats__chip">
+        <Star size={10} className="inline -mt-0.5 mr-1 text-orange-300" />
+        Performance {member.performanceRating}/10
+      </span>
+    ) : (
+      <span className="team-stats__chip team-stats__chip--empty">
+        Not rated yet
+      </span>
+    );
+  }
+
+  function handleChange(e) {
+    // Digits only, then clamp to 0-10 as they type so it's never possible
+    // to end up with something above 10 in the box.
+    const digits = e.target.value.replace(/[^0-9]/g, "");
+    if (digits === "") {
+      setValue("");
+    } else {
+      const clamped = Math.min(10, Number(digits));
+      setValue(String(clamped));
+    }
+    setError(null);
+  }
+
+  async function handleSave() {
+    const num = Number(value);
+    if (value === "" || Number.isNaN(num) || num < 0 || num > 10) {
+      setError("0–10");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await onRate(teamId, member.id, num);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1500);
+    } catch (err) {
+      setError(err.response?.data?.message || "Couldn't save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="team-stats__rating-row">
+      <label className="team-stats__rating-label">
+        <Star size={11} className="text-orange-300 shrink-0" />
+        Performance Rating
+      </label>
+      <div className="team-stats__rating-controls">
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={2}
+          className="glass-input team-stats__rating-input"
+          placeholder="0–10"
+          value={value}
+          onChange={handleChange}
+          onKeyDown={(e) => e.key === "Enter" && handleSave()}
+          disabled={saving}
+        />
+        <button
+          type="button"
+          className="glass-btn glass-btn--primary glass-btn--sm"
+          onClick={handleSave}
+          disabled={saving}
+          style={{ borderColor: `${color}66` }}
+        >
+          {saving ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : justSaved ? (
+            <Check size={12} />
+          ) : (
+            "Save"
+          )}
+        </button>
+      </div>
+      {error && <p className="team-stats__rating-error">{error}</p>}
+      {member.performanceRatedAt && !error && (
+        <p className="team-stats__rating-meta">
+          Last rated {new Date(member.performanceRatedAt).toLocaleDateString()}
+          {member.performanceRatedByName
+            ? ` by ${member.performanceRatedByName}`
+            : ""}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default function TeamPerformanceDetail({
+  team,
+  rank,
+  canRate = false,
+  onRate,
+}) {
   const members = team?.members || [];
 
   const overdueCount = useMemo(
@@ -271,6 +391,14 @@ export default function TeamPerformanceDetail({ team, rank }) {
                         </span>
                       </div>
                     )}
+
+                  <PerformanceRatingControl
+                    member={m}
+                    teamId={team.id}
+                    canRate={canRate}
+                    onRate={onRate}
+                    color={color}
+                  />
                 </div>
               ))}
             </div>

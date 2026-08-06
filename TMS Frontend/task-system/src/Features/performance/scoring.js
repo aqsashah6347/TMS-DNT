@@ -2,7 +2,8 @@
 //
 // Performance Calculation Engine
 // -------------------------------
-// FINAL SCORE = Completion×30% + TaskAmount×15% + TimeEfficiency×20% + TaskWeight×25% + Quality×10%
+// FINAL SCORE = Completion×24% + TaskAmount×12% + TimeEfficiency×16%
+//             + TaskWeight×20% + Quality×8% + PerformanceRating×20%
 //
 // tms_tasks doesn't (yet) store an explicit difficulty level, estimated/
 // actual hours, or a manager quality rating — so each function below
@@ -11,6 +12,13 @@
 // (task.difficultyLevel, task.estimatedHours, task.actualHours,
 // task.qualityRating) these functions use it automatically instead of the
 // proxy — no rewiring needed later.
+//
+// PerformanceRating is the manager-given rating set on the Teams tab ->
+// Roster section (tms_performance_ratings.rating), entered and stored on
+// a 0-10 scale. It's scaled ×10 internally so it blends correctly with
+// every other 0-100 component. If an employee hasn't been rated yet,
+// their score is renormalized across the remaining components instead of
+// being penalized.
 
 import { daysBetween } from "./utils";
 
@@ -91,42 +99,78 @@ export function qualityScore(tasks) {
   return Math.round(Math.max(0, onTimeRate - overduePenalty) * 100);
 }
 
+const FINAL_WEIGHTS = {
+  achievement: 0.24,
+  taskAmount: 0.12,
+  difficulty: 0.2,
+  timeEfficiency: 0.16,
+  quality: 0.08,
+  performanceRating: 0.2,
+};
+
 export function finalScore({
   achievement,
   taskAmount,
   difficulty,
   timeEfficiency,
   quality,
+  performanceRating, // expected on the 0-100 scale here (already scaled)
 }) {
-  const a = achievement ?? 0;
-  const ta = taskAmount ?? 0;
-  const d = difficulty ?? 0;
-  const t = timeEfficiency ?? 0;
-  const q = quality ?? 0;
-  return Math.round(a * 0.3 + ta * 0.15 + d * 0.25 + t * 0.2 + q * 0.1);
+  const values = {
+    achievement,
+    taskAmount,
+    difficulty,
+    timeEfficiency,
+    quality,
+    performanceRating,
+  };
+  let weightedSum = 0;
+  let weightTotal = 0;
+  for (const key of Object.keys(FINAL_WEIGHTS)) {
+    const v = values[key];
+    if (v === null || v === undefined) continue;
+    weightedSum += v * FINAL_WEIGHTS[key];
+    weightTotal += FINAL_WEIGHTS[key];
+  }
+  if (weightTotal === 0) return 0;
+  return Math.round(weightedSum / weightTotal);
 }
 
-export function buildScoreBreakdown(tasks) {
+// performanceRating comes in on the manager-facing 0-10 scale (matches
+// the DB CHECK constraint and the roster input). Everything downstream
+// (finalScore, gauges, radar) works on 0-100, so it's scaled ×10 here —
+// buildScoreBreakdown returns BOTH the raw 0-10 value (for display) and
+// the scaled 0-100 value (for the formula/visuals).
+export function buildScoreBreakdown(tasks, performanceRating = null) {
   const achievement = achievementScore(tasks);
   const taskAmount = taskAmountScore(tasks);
   const difficulty = difficultyScore(tasks);
   const timeEfficiency = timeEfficiencyScore(tasks);
   const quality = qualityScore(tasks);
-  const final = tasks.length
+
+  const performanceRatingScore =
+    performanceRating != null ? Math.round(performanceRating * 10) : null;
+
+  const hasAnyData = tasks.length > 0 || performanceRatingScore != null;
+  const final = hasAnyData
     ? finalScore({
         achievement,
         taskAmount,
         difficulty,
         timeEfficiency,
         quality,
+        performanceRating: performanceRatingScore,
       })
     : null;
+
   return {
     achievement,
     taskAmount,
     difficulty,
     timeEfficiency,
     quality,
+    performanceRating, // raw 0-10, for display (roster chip, etc.)
+    performanceRatingScore, // scaled 0-100, for gauges/radar
     final,
   };
 }

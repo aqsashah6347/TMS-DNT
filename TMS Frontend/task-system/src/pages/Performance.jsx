@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  LayoutDashboard,
-  User,
-  Users as UsersIcon,
-  ShieldOff,
-} from "lucide-react";
+import { LayoutDashboard, User, Users as UsersIcon } from "lucide-react";
 import { usersApi } from "../api/usersApi";
 import { taskApi } from "../api/taskApi";
 import { teamApi } from "../api/teamApi";
@@ -41,7 +36,13 @@ async function fetchAllTasks() {
 // Combines users + tasks + roster + teams into one stats-and-score object
 // per employee, used by the dashboard, the directory, and the profile
 // panel — this is the single source of truth for the whole page.
-function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
+function buildEmployeeStats(
+  users,
+  tasks,
+  rosterByCode,
+  teamByUserId,
+  performanceRatingByUserId,
+) {
   return users.map((u) => {
     const userTasks = tasks.filter((t) => t.assignedTo === u.id);
     const completed = userTasks.filter((t) => t.status === "done");
@@ -69,7 +70,11 @@ function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
 
     const roster = rosterByCode.get(u.enroll_no);
     const teamInfo = teamByUserId.get(u.id);
-    const scores = buildScoreBreakdown(userTasks);
+    const performanceRatingInfo = performanceRatingByUserId.get(u.id);
+    const scores = buildScoreBreakdown(
+      userTasks,
+      performanceRatingInfo?.rating ?? null,
+    );
 
     const statusCounts = { backlog: 0, "in progress": 0, review: 0, done: 0 };
     userTasks.forEach((t) => {
@@ -122,6 +127,9 @@ function buildEmployeeStats(users, tasks, rosterByCode, teamByUserId) {
       projects: Array.from(projectMap.values()).sort(
         (a, b) => b.total - a.total,
       ),
+      performanceRating: performanceRatingInfo?.rating ?? null,
+      performanceRatedAt: performanceRatingInfo?.ratedAt ?? null,
+      performanceRatedByName: performanceRatingInfo?.ratedByName ?? null,
       scores,
     };
   });
@@ -194,9 +202,14 @@ export default function Performance() {
   const [roster, setRoster] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  // null while still checking; true/false once we know whether this
-  // person is allowed to see the page at all (admin, or manager of ≥1 team)
-  const [isAuthorized, setIsAuthorized] = useState(null);
+  // Every logged-in user can see this page now — "scope" just decides
+  // what they see on it:
+  //  - "org": admins, and anyone made a team's manager — full dashboard,
+  //    Employees directory, and Teams tabs, exactly as before.
+  //  - "self": everyone else — just their own performance profile, no
+  //    tabs, no access to any other employee's data.
+  // null while we're still figuring out which one applies.
+  const [scope, setScope] = useState(null);
 
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -209,19 +222,44 @@ export default function Performance() {
       setIsLoading(true);
       setError(null);
       try {
-        // Access check + scope come from the same call: admins get every
-        // team back, everyone else only gets teams they manage (often
-        // none — that's what makes this page admin/manager-only without
-        // a separate permission flag to keep in sync).
+        // Scope comes from the same call: admins get every team back,
+        // everyone else only gets teams they manage (often none — that's
+        // what tells apart an "org" viewer from a plain "self" viewer,
+        // without a separate permission flag to keep in sync).
         const teamsData = await teamApi.getManagedTeams();
         if (cancelled) return;
 
-        if (!isAdmin && (teamsData || []).length === 0) {
-          setIsAuthorized(false);
+        const isOrgScope = isAdmin || (teamsData || []).length > 0;
+
+        if (!isOrgScope) {
+          // Plain employee: just their own tasks (the backend already
+          // scopes GET /tasks to "assigned to or by me" for role "user",
+          // so fetchAllTasks() here can never return anyone else's work)
+          // plus their own team name + manager-given rating, if any.
+          const [ownTasks, myTeam] = await Promise.all([
+            fetchAllTasks(),
+            teamApi.getMyTeam().catch(() => ({ team: null })),
+          ]);
+          if (cancelled) return;
+
+          setScope("self");
+          setUsers([
+            {
+              id: user.id,
+              name: user.name,
+              role: user.role,
+              avatarColor: user.avatarColor,
+              enroll_no: user.enrollNo ?? null,
+            },
+          ]);
+          setTasks(ownTasks || []);
+          setTeams(myTeam?.team ? [myTeam.team] : []);
+          setRoster([]);
           setIsLoading(false);
           return;
         }
-        setIsAuthorized(true);
+
+        setScope("org");
 
         // Roster (attendance/department/branch data) is admin-only on the
         // backend — team managers just don't get that enrichment layer,
@@ -282,7 +320,7 @@ export default function Performance() {
     return () => {
       cancelled = true;
     };
-  }, [isAdmin]);
+  }, [isAdmin, user]);
 
   const rosterByCode = useMemo(() => {
     const map = new Map();
@@ -304,9 +342,36 @@ export default function Performance() {
     return map;
   }, [teams]);
 
+  // Manager-given Performance Ratings, keyed by employee id — sourced
+  // straight from teams[].memberDetails (attachTeamDetails already joins
+  // tms_performance_ratings in), so this works for admins and scoped
+  // managers alike without a separate fetch.
+  const performanceRatingByUserId = useMemo(() => {
+    const map = new Map();
+    teams.forEach((team) => {
+      (team.memberDetails || []).forEach((m) => {
+        if (m.performanceRating !== null && m.performanceRating !== undefined) {
+          map.set(m.id, {
+            rating: m.performanceRating,
+            ratedAt: m.performanceRatedAt,
+            ratedByName: m.performanceRatedByName,
+          });
+        }
+      });
+    });
+    return map;
+  }, [teams]);
+
   const employeeStats = useMemo(
-    () => buildEmployeeStats(users, tasks, rosterByCode, teamByUserId),
-    [users, tasks, rosterByCode, teamByUserId],
+    () =>
+      buildEmployeeStats(
+        users,
+        tasks,
+        rosterByCode,
+        teamByUserId,
+        performanceRatingByUserId,
+      ),
+    [users, tasks, rosterByCode, teamByUserId, performanceRatingByUserId],
   );
 
   const employeeStatsById = useMemo(() => {
@@ -463,13 +528,47 @@ export default function Performance() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [employeeStats, search, departmentFilter]);
 
-  const selectedEmployee = selectedEmployeeId
-    ? employeeStatsById.get(selectedEmployeeId)
-    : null;
+  const selectedEmployee =
+    scope === "self"
+      ? employeeStats[0] || null
+      : selectedEmployeeId
+        ? employeeStatsById.get(selectedEmployeeId)
+        : null;
 
   function goToEmployee(id) {
     setSelectedEmployeeId(id);
     setTab("employees");
+  }
+
+  // Manager-only: set/update a member's Performance Rating. Optimistically
+  // patches local `teams` state so the roster + every derived score updates
+  // immediately without a full page refetch.
+  async function handleSetPerformanceRating(teamId, memberId, rating) {
+    const updated = await teamApi.setPerformanceRating(
+      teamId,
+      memberId,
+      rating,
+    );
+    setTeams((prev) =>
+      prev.map((t) =>
+        t.id !== teamId
+          ? t
+          : {
+              ...t,
+              memberDetails: (t.memberDetails || []).map((m) =>
+                m.id !== memberId
+                  ? m
+                  : {
+                      ...m,
+                      performanceRating: updated.rating,
+                      performanceRatedAt: updated.ratedAt,
+                      performanceRatedByName: updated.ratedByName,
+                    },
+              ),
+            },
+      ),
+    );
+    return updated;
   }
 
   return (
@@ -483,13 +582,15 @@ export default function Performance() {
             Performance
           </h2>
           <p className="text-sm text-white/50 mt-1">
-            {isAdmin
-              ? "Task achievement, difficulty handling, efficiency, and quality — per employee and per team."
-              : "Task achievement, difficulty handling, efficiency, and quality — for your team."}
+            {scope === "self"
+              ? "Task achievement, difficulty handling, efficiency, and quality — your own performance."
+              : isAdmin
+                ? "Task achievement, difficulty handling, efficiency, and quality — per employee and per team."
+                : "Task achievement, difficulty handling, efficiency, and quality — for your team."}
           </p>
         </div>
 
-        {isAuthorized && (
+        {scope === "org" && (
           <div className="lg:ml-auto flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
             {TABS.map(({ key, label, icon: Icon }) => (
               <button
@@ -508,66 +609,54 @@ export default function Performance() {
         )}
       </div>
 
-      {isAuthorized === false ? (
-        <div className="flex flex-col items-center justify-center text-center gap-3 py-24">
-          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-            <ShieldOff size={22} className="text-white/40" />
-          </div>
-          <h3 className="text-lg font-semibold text-white">
-            Performance is restricted
-          </h3>
-          <p className="text-sm text-white/50 max-w-sm">
-            This page is only available to admins and to team managers, scoped
-            to their own team. You'll get access automatically if you're made a
-            team's manager.
-          </p>
+      {error && (
+        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-4">
+          {error}
+        </p>
+      )}
+
+      {isLoading ? (
+        <p className="text-sm text-white/50 text-center py-16">
+          Loading performance data…
+        </p>
+      ) : scope === "self" ? (
+        <EmployeeProfilePanel employee={selectedEmployee} />
+      ) : tab === "dashboard" ? (
+        <PerformanceDashboardTab
+          orgStats={orgStats}
+          topPerformers={topPerformers}
+          onSelectEmployee={goToEmployee}
+        />
+      ) : tab === "employees" ? (
+        <div className="flex flex-col lg:flex-row gap-6">
+          <EmployeeDirectorySidebar
+            employees={filteredEmployees}
+            selectedId={selectedEmployeeId}
+            onSelect={setSelectedEmployeeId}
+            search={search}
+            onSearchChange={setSearch}
+            departments={departments}
+            departmentFilter={departmentFilter}
+            onDepartmentChange={setDepartmentFilter}
+          />
+          <EmployeeProfilePanel employee={selectedEmployee} />
         </div>
       ) : (
-        <>
-          {error && (
-            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 mb-4">
-              {error}
-            </p>
-          )}
-
-          {isLoading ? (
-            <p className="text-sm text-white/50 text-center py-16">
-              Loading performance data…
-            </p>
-          ) : tab === "dashboard" ? (
-            <PerformanceDashboardTab
-              orgStats={orgStats}
-              topPerformers={topPerformers}
-              onSelectEmployee={goToEmployee}
-            />
-          ) : tab === "employees" ? (
-            <div className="flex flex-col lg:flex-row gap-6">
-              <EmployeeDirectorySidebar
-                employees={filteredEmployees}
-                selectedId={selectedEmployeeId}
-                onSelect={setSelectedEmployeeId}
-                search={search}
-                onSearchChange={setSearch}
-                departments={departments}
-                departmentFilter={departmentFilter}
-                onDepartmentChange={setDepartmentFilter}
-              />
-              <EmployeeProfilePanel employee={selectedEmployee} />
-            </div>
-          ) : (
-            <div className="flex flex-col lg:flex-row gap-6">
-              <TeamPerformanceDetail
-                team={selectedTeam}
-                rank={selectedTeamRank}
-              />
-              <TeamPerformanceSidebar
-                teams={teamStats}
-                selectedId={selectedTeamId}
-                onSelect={setSelectedTeamId}
-              />
-            </div>
-          )}
-        </>
+        <div className="flex flex-col lg:flex-row gap-6">
+          <TeamPerformanceDetail
+            team={selectedTeam}
+            rank={selectedTeamRank}
+            canRate={
+              isAdmin || (!!user?.id && selectedTeam?.managerId === user.id)
+            }
+            onRate={handleSetPerformanceRating}
+          />
+          <TeamPerformanceSidebar
+            teams={teamStats}
+            selectedId={selectedTeamId}
+            onSelect={setSelectedTeamId}
+          />
+        </div>
       )}
     </div>
   );

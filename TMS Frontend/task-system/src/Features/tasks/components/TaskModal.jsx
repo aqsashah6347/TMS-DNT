@@ -11,6 +11,7 @@ import { employeesApi } from "../../../api/employeesApi";
 import { taskApi } from "../../../api/taskApi";
 import { getProjectColor } from "../../../utils/projectColors";
 import { useUIStore } from "../../../store/useUIStore";
+import TaskAssigneePicker from "./TaskAssigneePicker";
 import { BarChart } from "@mui/x-charts/BarChart";
 import { PieChart } from "@mui/x-charts/PieChart";
 import {
@@ -333,7 +334,7 @@ export default function TaskModal() {
   }, [isTaskModalOpen, formKey]);
 
   // employee.userId links a roster row to its real tms_users account —
-  // only those rows are relevant for tagging an assignable user's department.
+  // only those rows are relevant for tagging an assignable user's department/branch.
   const departmentByUserId = useMemo(() => {
     const map = {};
     roster.forEach((emp) => {
@@ -342,33 +343,28 @@ export default function TaskModal() {
     return map;
   }, [roster]);
 
-  const assigneeOptions = [
-    { value: "", label: "Unassigned", group: "all" },
-    ...assignableUsers.map((u) => ({
-      value: String(u.id),
-      label: u.name,
-      group: isAdmin
-        ? departmentByUserId[String(u.id)] || "Unassigned"
-        : undefined,
-    })),
-  ];
+  const branchByUserId = useMemo(() => {
+    const map = {};
+    roster.forEach((emp) => {
+      if (emp.userId) map[String(emp.userId)] = emp.branch || "Unassigned";
+    });
+    return map;
+  }, [roster]);
 
-  // Tabs only make sense for admins, since managers already get a
-  // pre-filtered (single-team) list from the backend.
-  const departmentTabs = isAdmin
-    ? [
-        { key: "all", label: "All" },
-        ...Array.from(
-          new Set(
-            assignableUsers.map(
-              (u) => departmentByUserId[String(u.id)] || "Unassigned",
-            ),
-          ),
-        )
-          .sort((a, b) => a.localeCompare(b))
-          .map((dept) => ({ key: dept, label: dept })),
-      ]
-    : null;
+  const assigneeUsers = useMemo(
+    () =>
+      assignableUsers.map((u) => ({
+        id: u.id,
+        name: u.name,
+        department: isAdmin
+          ? departmentByUserId[String(u.id)] || "Unassigned"
+          : undefined,
+        branch: isAdmin
+          ? branchByUserId[String(u.id)] || "Unassigned"
+          : undefined,
+      })),
+    [assignableUsers, departmentByUserId, branchByUserId, isAdmin],
+  );
 
   const projectOptions = [
     { value: "", label: "No project" },
@@ -378,6 +374,11 @@ export default function TaskModal() {
   const selectedProject = projects.find(
     (p) => p.id === (editingTask?.projectId ?? form.projectId),
   );
+
+  const projectMemberIds = useMemo(() => {
+    if (!form.projectId || !selectedProject?.memberDetails) return null;
+    return new Set(selectedProject.memberDetails.map((m) => String(m.id)));
+  }, [form.projectId, selectedProject]);
 
   // Live project color — looked up the same way TaskCard.jsx does, so the
   // preview always matches the project's *current* color even if form.color
@@ -508,14 +509,15 @@ export default function TaskModal() {
               value={form.dueDate || ""}
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
             />
-            <Dropdown
-              label="Assigned To"
-              value={form.assignedTo}
+            <TaskAssigneePicker
+              users={assigneeUsers}
+              selectedId={form.assignedTo}
               onChange={(v) => setForm({ ...form, assignedTo: v })}
-              options={assigneeOptions}
-              searchable
-              tabs={departmentTabs}
-              placeholder="Select an assignee"
+              showFilters={isAdmin}
+              restrictToProject={!isAdmin}
+              projectId={form.projectId}
+              projectName={selectedProject?.name}
+              projectMemberIds={projectMemberIds}
             />
           </div>
 
@@ -842,15 +844,15 @@ export default function TaskModal() {
                           fill: accentColor,
                         },
                         "& .MuiChartsAxis-tickLabel": {
-                          fill: "#9ca3af",
+                          fill: "#ffffff !important",
                           fontSize: 11,
                         },
                         "& .MuiChartsAxis-line": {
-                          stroke: "rgba(255,255,255,0.45)",
+                          stroke: "#ffffff !important",
                           strokeWidth: 1.5,
                         },
                         "& .MuiChartsAxis-tick": {
-                          stroke: "rgba(255,255,255,0.45)",
+                          stroke: "#ffffff !important",
                         },
                       }}
                     />

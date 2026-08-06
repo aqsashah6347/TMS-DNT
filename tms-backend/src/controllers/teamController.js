@@ -209,10 +209,14 @@ function attachTeamDetails(pool) {
   return async (team) => {
     const membersResult = await pool.request().input("teamId", sql.Int, team.id)
       .query(`
-        SELECT id, name, role, avatar_color AS avatarColor, enroll_no AS enrollNo
-        FROM tms_users
-        WHERE team_id = @teamId
-        ORDER BY name ASC
+        SELECT u.id, u.name, u.role, u.avatar_color AS avatarColor, u.enroll_no AS enrollNo,
+               pr.rating AS performanceRating, pr.rated_at AS performanceRatedAt,
+               pr.rated_by AS performanceRatedBy, rb.name AS performanceRatedByName
+        FROM tms_users u
+        LEFT JOIN tms_performance_ratings pr ON pr.employee_id = u.id
+        LEFT JOIN tms_users rb ON rb.id = pr.rated_by
+        WHERE u.team_id = @teamId
+        ORDER BY u.name ASC
       `);
 
     const projectCountResult = await pool
@@ -318,9 +322,8 @@ async function getManagedTeams(req, res, next) {
       return res.json(teams);
     }
 
-    const result = await pool
-      .request()
-      .input("managerId", sql.Int, req.user.id).query(`
+    const result = await pool.request().input("managerId", sql.Int, req.user.id)
+      .query(`
         SELECT t.*, m.name AS managerName, m.id AS managerId, cu.name AS createdByName
         FROM tms_teams t
         LEFT JOIN tms_users m ON t.manager_id = m.id
@@ -337,6 +340,103 @@ async function getManagedTeams(req, res, next) {
   }
 }
 
+// Sets/updates one employee's manager-given Performance Rating (0-100).
+// Only that team's manager, or an admin, can call this — mirrors the
+// scoping rule already used in getManagedTeams. Stored separately from
+// tms_tasks.quality_rating: quality_rating is a per-task review score,
+// this is a holistic per-employee judgment from their manager, and it's
+// a distinct weighted input to the efficacy formula (see scoring.js).
+async function setMemberPerformanceRating(req, res, next) {
+  try {
+    const teamId = Number(req.params.teamId);
+    const memberId = Number(req.params.memberId);
+    const { rating } = req.body;
+
+    if (
+      rating === undefined ||
+      rating === null ||
+      Number.isNaN(Number(rating))
+    ) {
+      return res.status(400).json({ message: "Rating is required" });
+    }
+    const ratingValue = Math.round(Number(rating));
+    if (ratingValue < 0 || ratingValue > 100) {
+      return res
+        .status(400)
+        .json({ message: "Rating must be between 0 and 100" });
+    }
+
+    const pool = await getPool();
+
+    const teamResult = await pool
+      .request()
+      .input("teamId", sql.Int, teamId)
+      .query("SELECT id, manager_id FROM tms_teams WHERE id = @teamId");
+    const team = teamResult.recordset[0];
+    if (!team) return res.status(404).json({ message: "Team not found" });
+
+    const isManager = team.manager_id === req.user.id;
+    if (req.user.role !== "admin" && !isManager) {
+      return res
+        .status(403)
+        .json({
+          message: "Only this team's manager can set performance ratings",
+        });
+    }
+    if (memberId === team.manager_id) {
+      return res
+        .status(400)
+        .json({ message: "Managers aren't rated on their own roster" });
+    }
+
+    const memberResult = await pool
+      .request()
+      .input("memberId", sql.Int, memberId)
+      .query("SELECT id, team_id FROM tms_users WHERE id = @memberId");
+    const member = memberResult.recordset[0];
+    if (!member || member.team_id !== teamId) {
+      return res
+        .status(404)
+        .json({ message: "That person isn't on this team" });
+    }
+
+    await pool
+      .request()
+      .input("employeeId", sql.Int, memberId)
+      .input("teamId", sql.Int, teamId)
+      .input("rating", sql.Int, ratingValue)
+      .input("ratedBy", sql.Int, req.user.id).query(`
+        MERGE tms_performance_ratings AS target
+        USING (SELECT @employeeId AS employee_id) AS src
+        ON target.employee_id = src.employee_id
+        WHEN MATCHED THEN
+          UPDATE SET rating = @rating, team_id = @teamId,
+                     rated_by = @ratedBy, rated_at = GETDATE()
+        WHEN NOT MATCHED THEN
+          INSERT (employee_id, team_id, rating, rated_by, rated_at)
+          VALUES (@employeeId, @teamId, @rating, @ratedBy, GETDATE());
+      `);
+
+    await logActivity({
+      userId: memberId,
+      type: "performance_rated",
+      title: "Performance rating updated",
+      message: `${req.user.name || "Your manager"} set your performance rating to ${ratingValue}.`,
+    });
+
+    res.json({
+      employeeId: memberId,
+      teamId,
+      rating: ratingValue,
+      ratedBy: req.user.id,
+      ratedByName: req.user.name,
+      ratedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getAllTeams,
   getMyTeam,
@@ -344,4 +444,5 @@ module.exports = {
   createTeam,
   updateTeam,
   deleteTeam,
+  setMemberPerformanceRating,
 };

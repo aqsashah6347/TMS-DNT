@@ -1,7 +1,17 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, Bell, X, ListTodo, FolderKanban, Users } from "lucide-react";
+import {
+  Search,
+  Bell,
+  X,
+  ListTodo,
+  FolderKanban,
+  Users,
+  UserPlus,
+  MessageCircle,
+} from "lucide-react";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useActivityStore } from "../../Features/activities/activityStore";
+import { useChatStore } from "../../Features/chat/chatStore";
 import { useTaskStore } from "../../Features/tasks/taskStore";
 import { useProjectStore } from "../../Features/projects/projectStore";
 import { useTeamStore } from "../../Features/teams/teamStore";
@@ -10,7 +20,6 @@ import { projectApi } from "../../api/projectApi";
 import { teamApi } from "../../api/teamApi";
 import Avatar from "../ui/Avatar";
 import ProfileMenu from "./ProfileMenu";
-import Logo from "./logo";
 import { useNavigate } from "react-router-dom";
 
 function timeAgo(dateStr) {
@@ -27,8 +36,15 @@ const EMPTY_RESULTS = { tasks: [], projects: [], teams: [] };
 
 export default function Header() {
   const { user } = useAuthStore();
-  const { activities, unreadCount, fetchActivities, markAsRead } =
-    useActivityStore();
+  const { activities, fetchActivities, markAsRead } = useActivityStore();
+  const {
+    conversations,
+    teams,
+    fetchConversations,
+    fetchTeams,
+    openConversation,
+    openTeamConversation,
+  } = useChatStore();
 
   const [bellOpen, setBellOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -45,9 +61,14 @@ export default function Header() {
 
   // The bell + dashboard's InboxPreview both read from this same store, so
   // fetching once here keeps everything in sync with the real Activity Log.
+  // Conversations/teams are fetched here too so the bell can surface unread
+  // chat messages — sockets (wired up app-wide in App.jsx) keep both stores
+  // live after this initial load.
   useEffect(() => {
     fetchActivities();
-  }, [fetchActivities]);
+    fetchConversations();
+    fetchTeams();
+  }, [fetchActivities, fetchConversations, fetchTeams]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -145,7 +166,71 @@ export default function Header() {
     setResults(EMPTY_RESULTS);
   }
 
-  const count = unreadCount;
+  // The bell is scoped down to just two kinds of alerts: someone assigning
+  // you a task, and someone messaging you (1:1 or team chat) over the
+  // socket — everything else the Activity Log tracks (edits, deadlines,
+  // project changes, etc.) stays out of this menu.
+  const taskAssignedActivities = activities.filter(
+    (a) => a.type === "task_assigned",
+  );
+  const unreadChats = conversations.filter((c) => c.unreadCount > 0);
+  const unreadTeamChats = teams.filter((t) => t.unreadCount > 0);
+
+  const bellNotifications = [
+    ...taskAssignedActivities.map((a) => ({
+      id: `task-${a.id}`,
+      kind: "task",
+      title: a.title || "Task assigned",
+      subtitle: a.message,
+      time: a.createdAt,
+      read: a.read,
+      onClick: () => {
+        if (!a.read) markAsRead(a.id);
+        setBellOpen(false);
+        navigate("/activity");
+      },
+    })),
+    ...unreadChats.map((c) => ({
+      id: `chat-${c.userId}`,
+      kind: "chat",
+      title: c.userName,
+      subtitle:
+        c.lastMessage ||
+        (c.lastAttachmentName
+          ? `Sent a file: ${c.lastAttachmentName}`
+          : "Sent an attachment"),
+      time: c.lastMessageAt,
+      read: false,
+      onClick: () => {
+        openConversation(c.userId);
+        setBellOpen(false);
+        navigate("/chat");
+      },
+    })),
+    ...unreadTeamChats.map((t) => ({
+      id: `team-${t.id}`,
+      kind: "chat",
+      title: `${t.name} (team chat)`,
+      subtitle:
+        t.lastMessage ||
+        (t.lastAttachmentName
+          ? `Sent a file: ${t.lastAttachmentName}`
+          : "Sent an attachment"),
+      time: t.lastMessageAt,
+      read: false,
+      onClick: () => {
+        openTeamConversation(t.id);
+        setBellOpen(false);
+        navigate("/chat");
+      },
+    })),
+  ].sort((a, b) => new Date(b.time) - new Date(a.time));
+
+  const count =
+    taskAssignedActivities.filter((a) => !a.read).length +
+    unreadChats.length +
+    unreadTeamChats.length;
+
   const hasResults =
     results.tasks.length > 0 ||
     results.projects.length > 0 ||
@@ -156,7 +241,7 @@ export default function Header() {
       <header className="hash-bar fixed top-0 left-0 right-0 z-30 h-16 flex items-center px-6">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <Logo size={26} />
+          <img src="/dreamsLogo.png" alt="DREAMS" className="h-[26px] w-auto" />
 
           <h1 className="text-lg font-semibold tracking-wide text-orange-400 whitespace-nowrap">
             Task Management System
@@ -281,29 +366,44 @@ export default function Header() {
                   </p>
                 </div>
 
-                {activities.length === 0 ? (
+                {bellNotifications.length === 0 ? (
                   <p className="py-6 text-center text-sm text-white/50">
                     No notifications
                   </p>
                 ) : (
-                  activities.slice(0, 5).map((a) => (
+                  bellNotifications.slice(0, 5).map((n) => (
                     <button
-                      key={a.id}
-                      onClick={() => {
-                        if (!a.read) markAsRead(a.id);
-                        setBellOpen(false);
-                        navigate("/activity");
-                      }}
+                      key={n.id}
+                      onClick={n.onClick}
                       className={`w-full border-b border-white/5 px-4 py-3 text-left transition-colors hover:bg-white/10 ${
-                        !a.read ? "bg-white/5" : ""
+                        !n.read ? "bg-white/5" : ""
                       }`}
                     >
-                      <p className="text-xs leading-snug text-white">
-                        {a.title || a.message}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        {n.kind === "task" ? (
+                          <UserPlus
+                            size={12}
+                            className="shrink-0 text-blue-400"
+                          />
+                        ) : (
+                          <MessageCircle
+                            size={12}
+                            className="shrink-0 text-orange-400"
+                          />
+                        )}
+                        <p className="text-xs leading-snug text-white truncate">
+                          {n.title}
+                        </p>
+                      </div>
+
+                      {n.subtitle && (
+                        <p className="mt-1 text-[11px] text-white/50 line-clamp-1">
+                          {n.subtitle}
+                        </p>
+                      )}
 
                       <p className="mt-1 text-[11px] text-white/40">
-                        {timeAgo(a.createdAt)}
+                        {timeAgo(n.time)}
                       </p>
                     </button>
                   ))

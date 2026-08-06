@@ -13,6 +13,10 @@ const taskRoutes = require("./src/routes/taskRoutes");
 const projectRoutes = require("./src/routes/projectRoutes");
 const teamRoutes = require("./src/routes/teamRoutes");
 const activityRoutes = require("./src/routes/activityRoutes");
+const monthlyReportRoutes = require("./src/routes/monthlyReportRoutes");
+const {
+  startMonthlyReportChecker,
+} = require("./src/utils/monthlyReportChecker");
 const {
   startMissedDeadlineChecker,
 } = require("./src/utils/missedDeadlineChecker");
@@ -46,7 +50,7 @@ app.use("/api/attendance", attendanceRoutes);
 
 // Quick way to check the server is alive: visit http://localhost:5000/api/health
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
-
+app.use("/api/monthly-reports", monthlyReportRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
@@ -72,6 +76,7 @@ startContactSync();
 startMissedDeadlineChecker();
 startDeadlineReminderChecker();
 startProgressReminderChecker();
+startMonthlyReportChecker();
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {

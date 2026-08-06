@@ -1,10 +1,10 @@
-import { Plus, FolderPlus, ListChecks, BarChart3 } from "lucide-react";
+import { Plus, FolderPlus, ListChecks, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { useTaskStore } from "../../tasks/taskStore";
 import { useProjectStore } from "../../projects/projectStore";
-
-export default function QuickActions({ columns = 4 }) {
+import PresentEmployeesButton from "./AvailableEmployeesButton";
+export default function QuickActions({ columns = 2 }) {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const openCreateTaskModal = useTaskStore((s) => s.openCreateModal);
@@ -40,13 +40,6 @@ export default function QuickActions({ columns = 4 }) {
       bg: "rgba(96, 165, 250, 0.15)",
       onClick: () => navigate("/tasks"),
     },
-    {
-      label: "Reports",
-      icon: BarChart3,
-      color: "#4ade80",
-      bg: "rgba(74, 222, 128, 0.15)",
-      onClick: () => navigate("/analytics"),
-    },
   ].filter(Boolean);
 
   return (
@@ -56,15 +49,13 @@ export default function QuickActions({ columns = 4 }) {
     >
       {actions.map(({ label, icon: Icon, color, bg, onClick }) => (
         <button key={label} className="quick-action-btn" onClick={onClick}>
-          <span
-            className="quick-action-btn__icon"
-            style={{ background: bg }}
-          >
+          <span className="quick-action-btn__icon" style={{ background: bg }}>
             <Icon size={16} color={color} />
           </span>
           {label}
         </button>
       ))}
+      <PresentEmployeesButton />
     </div>
   );
 }

@@ -33,4 +33,13 @@ export const teamApi = {
     const res = await axiosInstance.delete(`/teams/${id}`);
     return res.data;
   },
+
+  // Manager-only: set/update a team member's Performance Rating (0-100).
+  setPerformanceRating: async (teamId, memberId, rating) => {
+    const res = await axiosInstance.put(
+      `/teams/${teamId}/members/${memberId}/performance-rating`,
+      { rating },
+    );
+    return res.data;
+  },
 };
