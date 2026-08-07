@@ -66,6 +66,7 @@ async function getReminders(req, res, next) {
   try {
     const period = currentPeriod();
     const pool = await getPool();
+    const windowActive = isReminderWindow();
 
     const teamsResult =
       req.user.role === "admin"
@@ -73,15 +74,18 @@ async function getReminders(req, res, next) {
             SELECT t.id, t.name, t.manager_id FROM tms_teams t ORDER BY t.name ASC
           `)
         : await pool.request().input("managerId", sql.Int, req.user.id).query(`
-              SELECT t.id, t.name, t.manager_id FROM tms_teams t
-              WHERE t.manager_id = @managerId
-              ORDER BY t.name ASC
-            `);
+            SELECT t.id, t.name, t.manager_id FROM tms_teams t
+            WHERE t.manager_id = @managerId
+            ORDER BY t.name ASC
+          `);
 
     const teams = [];
     for (const team of teamsResult.recordset) {
       const report = await getOrCreateReport(pool, team.id, period);
-      if (report.status === "released") continue; // already filed & out — nothing to remind about
+      if (report.status === "released") continue;
+
+      const visible = windowActive || !!report.force_visible;
+      if (!visible) continue;
 
       const countsResult = await pool
         .request()
@@ -92,19 +96,20 @@ async function getReminders(req, res, next) {
             (SELECT COUNT(*) FROM tms_users WHERE team_id = @teamId AND id <> @managerId) AS total,
             (SELECT COUNT(*) FROM tms_monthly_report_ratings WHERE report_id = @reportId) AS rated
         `);
-      const { total, rated } = countsResult.recordset[0];
+      const { total, rated } = countsResult.recordset[0] || {};
 
       teams.push({
         teamId: team.id,
         teamName: team.name,
         reportId: report.id,
-        status: report.status, // 'pending' | 'submitted'
+        status: report.status,
         ratedCount: rated,
         totalCount: total,
+        forceVisible: !!report.force_visible,
       });
     }
 
-    res.json({ active: isReminderWindow(), period, teams });
+    res.json({ active: teams.length > 0, period, teams });
   } catch (err) {
     next(err);
   }
@@ -384,6 +389,115 @@ async function releaseReports(req, res, next) {
   }
 }
 
+// GET /api/monthly-reports/overview
+// Admin-only. Every team, its manager, and — for the CURRENT period —
+// each member's marked/not-marked status, so the Performance > Reports
+// tab can render a per-manager, per-employee bento grid in one call
+// instead of the roster fetch getCurrentReport() does per-team.
+async function getOverview(req, res, next) {
+  try {
+    const period = currentPeriod();
+    const pool = await getPool();
+
+    const teamsResult = await pool.request().query(`
+      SELECT t.id, t.name, t.color, t.manager_id AS managerId,
+             u.name AS managerName, u.avatar_color AS managerAvatarColor
+      FROM tms_teams t
+      LEFT JOIN tms_users u ON u.id = t.manager_id
+      ORDER BY t.name ASC
+    `);
+
+    const teams = [];
+    for (const team of teamsResult.recordset) {
+      const report = await getOrCreateReport(pool, team.id, period);
+
+      const membersResult = await pool
+        .request()
+        .input("teamId", sql.Int, team.id)
+        .input("managerId", sql.Int, team.managerId ?? -1)
+        .input("reportId", sql.Int, report.id).query(`
+          SELECT u.id, u.name, u.avatar_color AS avatarColor,
+                 mrr.rating AS rating, mrr.rated_at AS ratedAt
+          FROM tms_users u
+          LEFT JOIN tms_monthly_report_ratings mrr
+            ON mrr.report_id = @reportId AND mrr.employee_id = u.id
+          WHERE u.team_id = @teamId AND u.id <> @managerId
+          ORDER BY u.name ASC
+        `);
+
+      const members = membersResult.recordset.map((m) => ({
+        id: m.id,
+        name: m.name,
+        avatarColor: m.avatarColor,
+        marked: m.rating !== null,
+        rating: m.rating,
+        ratedAt: m.ratedAt,
+      }));
+
+      const markedCount = members.filter((m) => m.marked).length;
+
+      teams.push({
+        teamId: team.id,
+        teamName: team.name,
+        teamColor: team.color,
+        managerId: team.managerId,
+        managerName: team.managerName || "Unassigned",
+        managerAvatarColor: team.managerAvatarColor,
+        reportId: report.id,
+        status: report.status,
+        forceVisible: !!report.force_visible,
+        members,
+        markedCount,
+        totalCount: members.length,
+        fullyMarked: members.length > 0 && markedCount === members.length,
+      });
+    }
+
+    res.json({ period, teams });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// PUT /api/monthly-reports/teams/:teamId/current/visibility
+// Admin-only. Flips force_visible on this team's CURRENT report — see
+// getReminders() for what it does. Toggled from the Reports overview
+// tab's team modal.
+async function setForceVisible(req, res, next) {
+  try {
+    const teamId = Number(req.params.teamId);
+    const { forceVisible } = req.body;
+    const pool = await getPool();
+
+    const teamResult = await pool
+      .request()
+      .input("teamId", sql.Int, teamId)
+      .query("SELECT id FROM tms_teams WHERE id = @teamId");
+    if (!teamResult.recordset[0]) {
+      return res.status(404).json({ message: "Team not found" });
+    }
+
+    const period = currentPeriod();
+    const report = await getOrCreateReport(pool, teamId, period);
+    if (report.status === "released") {
+      return res.status(400).json({
+        message: "This month's report is already released and locked",
+      });
+    }
+
+    await pool
+      .request()
+      .input("reportId", sql.Int, report.id)
+      .input("forceVisible", sql.Bit, !!forceVisible).query(`
+        UPDATE tms_monthly_reports SET force_visible = @forceVisible WHERE id = @reportId
+      `);
+
+    res.json({ reportId: report.id, forceVisible: !!forceVisible });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getReminders,
   getCurrentReport,
@@ -392,4 +506,6 @@ module.exports = {
   getAnnouncement,
   releaseReports,
   releasePeriod,
+  getOverview,
+  setForceVisible,
 };

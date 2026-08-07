@@ -79,7 +79,11 @@ export default function Sidebar({ isAdmin = false, expanded, onToggle }) {
     }`;
   return (
     <aside
-      className={`hash-nav fixed left-5 top-20 bottom-5 z-20 overflow-visible flex flex-col transition-all duration-500 ease-out ${
+      // "fixed" -> "absolute": no longer stuck to the viewport while
+      // scrolling. "top-20" -> "top-16": moved up now that the navbar
+      // bar is gone, leaving just enough room above for the DREAMS logo
+      // (rendered in App.jsx, positioned in that same top-left corner).
+      className={`hash-nav absolute left-5 top-16 bottom-5 z-20 overflow-visible flex flex-col transition-all duration-500 ease-out ${
         expanded ? "w-60 px-4" : "w-[68px] px-2 items-center"
       }`}
     >

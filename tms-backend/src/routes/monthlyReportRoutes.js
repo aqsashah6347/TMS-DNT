@@ -15,6 +15,14 @@ router.get("/announcement", monthlyReportController.getAnnouncement);
 // access to that team's report.
 router.get("/reminders", monthlyReportController.getReminders);
 
+// Admin-only cross-org view: every team/manager + per-employee marked
+// status for the current period. Powers the Performance > Reports tab.
+router.get(
+  "/overview",
+  requireRole("admin"),
+  monthlyReportController.getOverview,
+);
+
 router.get("/teams/:teamId/current", monthlyReportController.getCurrentReport);
 
 router.put(
@@ -25,6 +33,14 @@ router.put(
 router.post(
   "/teams/:teamId/current/submit",
   monthlyReportController.submitReport,
+);
+
+// Admin-only: force this team's report reminder visible outside the
+// normal filing window. Toggled from the Reports overview team modal.
+router.put(
+  "/teams/:teamId/current/visibility",
+  requireRole("admin"),
+  monthlyReportController.setForceVisible,
 );
 
 // Admin-only manual release — mainly for testing before

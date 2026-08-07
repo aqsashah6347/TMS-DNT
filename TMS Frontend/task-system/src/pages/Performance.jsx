@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { LayoutDashboard, User, Users as UsersIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  User,
+  Users as UsersIcon,
+  ClipboardCheck,
+} from "lucide-react";
 import { usersApi } from "../api/usersApi";
 import { taskApi } from "../api/taskApi";
 import { teamApi } from "../api/teamApi";
@@ -10,12 +15,12 @@ import TeamPerformanceSidebar from "../Features/performance/components/TeamPerfo
 import PerformanceDashboardTab from "../Features/performance/components/PerformanceDashboardTab";
 import EmployeeDirectorySidebar from "../Features/performance/components/EmployeeDirectorySidebar";
 import EmployeeProfilePanel from "../Features/performance/components/EmployeeProfilePanel";
+import ReportsOverviewTab from "../Features/performance/components/ReportsOverviewTab";
 import {
   buildScoreBreakdown,
   ratingFor,
 } from "../Features/performance/scoring";
 import { daysBetween } from "../Features/performance/utils";
-
 // Fetches every task page-by-page (the backend caps pageSize at 100) so
 // stats reflect the whole tms_tasks table, not just the first page.
 async function fetchAllTasks() {
@@ -189,6 +194,7 @@ const TABS = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "employees", label: "Employees", icon: User },
   { key: "teams", label: "Teams", icon: UsersIcon },
+  { key: "reports", label: "Reports", icon: ClipboardCheck, adminOnly: true },
 ];
 
 export default function Performance() {
@@ -581,30 +587,26 @@ export default function Performance() {
           >
             Performance
           </h2>
-          <p className="text-sm text-white/50 mt-1">
-            {scope === "self"
-              ? "Task achievement, difficulty handling, efficiency, and quality — your own performance."
-              : isAdmin
-                ? "Task achievement, difficulty handling, efficiency, and quality — per employee and per team."
-                : "Task achievement, difficulty handling, efficiency, and quality — for your team."}
-          </p>
+
         </div>
 
         {scope === "org" && (
           <div className="lg:ml-auto flex rounded-xl bg-white/5 border border-white/10 p-1 shrink-0">
-            {TABS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  tab === key
-                    ? "bg-orange-500/20 text-orange-400"
-                    : "text-white/50 hover:text-white/80"
-                }`}
-              >
-                <Icon size={14} /> {label}
-              </button>
-            ))}
+            {TABS.filter((t) => !t.adminOnly || isAdmin).map(
+              ({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setTab(key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    tab === key
+                      ? "bg-orange-500/20 text-orange-400"
+                      : "text-white/50 hover:text-white/80"
+                  }`}
+                >
+                  <Icon size={14} /> {label}
+                </button>
+              ),
+            )}
           </div>
         )}
       </div>
@@ -627,6 +629,8 @@ export default function Performance() {
           topPerformers={topPerformers}
           onSelectEmployee={goToEmployee}
         />
+      ) : tab === "reports" && isAdmin ? (
+        <ReportsOverviewTab />
       ) : tab === "employees" ? (
         <div className="flex flex-col lg:flex-row gap-6">
           <EmployeeDirectorySidebar

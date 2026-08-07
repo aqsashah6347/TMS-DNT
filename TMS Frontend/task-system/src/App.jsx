@@ -65,6 +65,17 @@ export default function App() {
     <div className="relative min-h-screen">
       <Scene />
       <TaskCompleteLottie />
+      {/*
+        DREAMS logo — fits into the corner freed up by the removed
+        navbar. "absolute" (not "fixed"), so it scrolls away with the
+        page instead of staying stuck on screen. Sits just above the
+        sidebar, which now starts at top-16 instead of top-20.
+      */}
+      <img
+        src="/dreamsLogo.png"
+        alt="DREAMS"
+        className="absolute left-5 top-4 h-9 w-auto z-20"
+      />
       <Sidebar
         isAdmin={isAdmin}
         expanded={sidebarExpanded}
@@ -72,7 +83,11 @@ export default function App() {
       />
       <Header />
       <main
-        className={`relative z-10 pt-20 pr-6 pb-6 min-h-screen transition-[padding-left] duration-500 ease-out ${
+        // pt-6 -> pt-24: page content (e.g. the "Tasks" heading and its
+        // toolbar) was sitting at the same height as the header's
+        // bell/profile icons and colliding with them. This pushes
+        // content below the header row instead.
+        className={`relative z-10 pt-15 pr-6 pb-6 min-h-screen transition-[padding-left] duration-500 ease-out ${
           sidebarExpanded ? "pl-[284px]" : "pl-28"
         }`}
       >

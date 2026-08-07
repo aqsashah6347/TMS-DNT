@@ -1,11 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  Search,
+  // Search, X, ListTodo, FolderKanban, Users — were only used by the
+  // now-commented-out search bar UI below; removed from the import to
+  // avoid "unused import" lint noise. Add them back if you restore search.
   Bell,
-  X,
-  ListTodo,
-  FolderKanban,
-  Users,
   UserPlus,
   MessageCircle,
 } from "lucide-react";
@@ -238,8 +236,18 @@ export default function Header() {
 
   return (
     <>
-      <header className="hash-bar fixed top-0 left-0 right-0 z-30 h-16 flex items-center px-6">
-        {/* Logo */}
+      {/*
+        NAVBAR REMOVED (per request): the full-width bar background,
+        DREAMS logo, "Task Management System" text, and search bar have
+        all been commented out below rather than deleted — uncomment to
+        restore. The bell + profile icons keep their original top-right
+        position; the header box itself no longer has the "hash-bar"
+        background class, so it's transparent and only the two icons on
+        the right are visible. Pair this with the reduced pt-* on
+        <main> in App.jsx so content shifts upward into the freed space.
+      */}
+      <header className="fixed top-0 left-0 right-0 z-30 h-16 flex items-center px-6">
+        {/* Logo — commented out, not deleted
         <div className="flex items-center gap-3">
           <img src="/dreamsLogo.png" alt="DREAMS" className="h-[26px] w-auto" />
 
@@ -247,10 +255,11 @@ export default function Header() {
             Task Management System
           </h1>
         </div>
+        */}
 
         {/* Right Side */}
         <div className="ml-auto flex items-center gap-4">
-          {/* Search */}
+          {/* Search — commented out, not deleted
           <div className="relative" ref={searchRef}>
             <div className="flex items-center gap-2 w-72 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md px-4 py-2.5 transition-colors duration-200 hover:border-white/20 focus-within:border-orange-500/40 focus-within:bg-orange-500/10">
               <Search size={16} className="text-orange-400" />
@@ -344,6 +353,7 @@ export default function Header() {
               </div>
             )}
           </div>
+          */}
 
           {/* Notifications — now wired to the real Activity Log data */}
           <div className="relative" ref={bellRef}>
