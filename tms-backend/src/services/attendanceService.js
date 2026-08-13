@@ -21,13 +21,13 @@ function normalizeEmployeeCode(value) {
   return Number.isNaN(n) ? String(value).trim() : String(n);
 }
 
-async function fetchLogsForDate(dateStr) {
+async function fetchLogsForRange(fromStr, toStr) {
   const baseUrl = process.env.ZK_API_BASE_URL;
   if (!baseUrl) {
     throw new Error("ZK_API_BASE_URL is not set in .env");
   }
 
-  const url = `${baseUrl}/api/zk/logs?from=${dateStr}&to=${dateStr}`;
+  const url = `${baseUrl}/api/zk/logs?from=${fromStr}&to=${toStr}`;
   const response = await fetch(url);
 
   if (!response.ok) {
@@ -36,6 +36,81 @@ async function fetchLogsForDate(dateStr) {
 
   const data = await response.json();
   return Array.isArray(data.items) ? data.items : [];
+}
+
+// Kept for the existing single-day callers below — just a range of one day.
+async function fetchLogsForDate(dateStr) {
+  return fetchLogsForRange(dateStr, dateStr);
+}
+
+// "2026-08-13T09:03:00.000Z" -> "2026-08-13" (local calendar day, not UTC).
+function dateStringFromLogTime(logTime) {
+  const d = new Date(logTime);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function toDateString(dateObj) {
+  const yyyy = dateObj.getFullYear();
+  const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const dd = String(dateObj.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Turns "today" | "week" | "month" into a { from, to } date range, always
+// ending today. "week" = Monday through today. "month" = rolling last 30
+// days (not the previous calendar month) — simplest interpretation, and
+// avoids an empty box on the 1st of the month.
+function dateRangeFor(rangeKey) {
+  const today = new Date();
+  const toStr = toDateString(today);
+
+  if (rangeKey === "week") {
+    const day = today.getDay(); // 0 = Sunday
+    const diffToMonday = day === 0 ? 6 : day - 1;
+    const from = new Date(today);
+    from.setDate(today.getDate() - diffToMonday);
+    return { from: toDateString(from), to: toStr };
+  }
+
+  if (rangeKey === "month") {
+    const from = new Date(today);
+    from.setDate(today.getDate() - 29);
+    return { from: toDateString(from), to: toStr };
+  }
+
+  // "today" (or anything unrecognized) — just today.
+  return { from: toStr, to: toStr };
+}
+
+// Groups every log in the range by employee, then by calendar day, and
+// collapses each day down to a first/last log (check-in/check-out).
+// Returns Map<normalizedEnrollNo, Map<"YYYY-MM-DD", {checkIn, checkOut}>>.
+async function getDailyLogsPerEmployeeForRange(fromStr, toStr) {
+  const items = await fetchLogsForRange(fromStr, toStr);
+
+  const byEmployee = new Map();
+
+  for (const item of items) {
+    const enrollNo = normalizeEmployeeCode(item.enrollNo);
+    const dayStr = dateStringFromLogTime(item.logTime);
+    const logTime = item.logTime;
+
+    if (!byEmployee.has(enrollNo)) byEmployee.set(enrollNo, new Map());
+    const days = byEmployee.get(enrollNo);
+
+    const existing = days.get(dayStr);
+    if (!existing) {
+      days.set(dayStr, { checkIn: logTime, checkOut: logTime });
+      continue;
+    }
+    if (new Date(logTime) < new Date(existing.checkIn)) existing.checkIn = logTime;
+    if (new Date(logTime) > new Date(existing.checkOut)) existing.checkOut = logTime;
+  }
+
+  return byEmployee;
 }
 
 async function getFirstLogPerEmployeeForDate(dateStr = todayDateString()) {
@@ -87,6 +162,8 @@ async function getFirstAndLastLogPerEmployeeForDate(
 module.exports = {
   getFirstLogPerEmployeeForDate,
   getFirstAndLastLogPerEmployeeForDate,
+  getDailyLogsPerEmployeeForRange,
+  dateRangeFor,
   todayDateString,
   normalizeEmployeeCode,
 };

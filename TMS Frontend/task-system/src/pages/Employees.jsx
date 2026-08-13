@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, User, ChevronDown, Check, LayoutGrid, List, Filter } from "lucide-react";
 import { employeesApi } from "../api/employeesApi";
+import EmployeeAttendanceModal from "../Features/employees/components/EmployeeAttendanceModal";
 
 function formatTime(iso) {
   if (!iso) return "—";
@@ -11,17 +12,11 @@ function formatTime(iso) {
   });
 }
 
-// Check-out specifically shows "00:00" instead of "—" while the employee
-// hasn't checked out yet. Check-in keeps using formatTime's "—" fallback.
 function formatCheckOut(iso) {
   if (!iso) return "00:00";
   return formatTime(iso);
 }
 
-// Today's date, spelled out as "July 16, 2026" — shown on each attendance
-// card since Check In/Check Out only make sense in the context of a
-// specific day. Recomputed fresh on every render so it can't go stale on
-// a page left open across midnight.
 function formatCardDate() {
   return new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -30,9 +25,6 @@ function formatCardDate() {
   });
 }
 
-// showOnlineDot defaults to false, so every other caller of Avatar (e.g.
-// the List View table row below) renders exactly as before — only
-// EmployeeCard opts in, and only when emp.status === "present".
 function Avatar({ name, gender, size = "sm", showOnlineDot = false }) {
   const initial = name?.[0]?.toUpperCase() || "?";
   const isFemale = (gender || "").toLowerCase() === "female";
@@ -68,7 +60,6 @@ function Avatar({ name, gender, size = "sm", showOnlineDot = false }) {
   );
 }
 
-// Kept exactly as-is — still used by List View's Status column below.
 function StatusPill({ status }) {
   const isPresent = status === "present";
   return (
@@ -84,11 +75,12 @@ function StatusPill({ status }) {
   );
 }
 
-// Card used in Card View — "Present" pill removed; presence is now shown
-// as a green online dot on the avatar, condition = emp.status === "present".
-function EmployeeCard({ emp }) {
+function EmployeeCard({ emp, onSelect }) {
   return (
-    <div className="rounded-2xl bg-white/5 border border-white/10 p-4 flex flex-col items-center text-center hover:border-orange-500/30 hover:bg-white/[0.07] transition-colors">
+    <div
+      onClick={onSelect}
+      className="rounded-2xl bg-white/5 border border-white/10 p-4 flex flex-col items-center text-center hover:border-orange-500/30 hover:bg-white/[0.07] transition-colors cursor-pointer"
+    >
       <div className="w-full flex items-center justify-between mb-2">
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-white/10 text-white/70 border border-white/10">
           Emp # {emp.employeeCode}
@@ -123,10 +115,6 @@ function EmployeeCard({ emp }) {
   );
 }
 
-// Single "Filters" button that opens one panel containing both the
-// Department and Branch pickers. Replaces what used to be two separate
-// dropdown buttons sitting side-by-side in the toolbar — that extra
-// width was what pushed the card/list view toggle off screen.
 function FiltersMenu({
   departments,
   departmentValue,
@@ -275,6 +263,7 @@ export default function Employees() {
   const [branchFilter, setBranchFilter] = useState("");
   const [viewMode, setViewMode] = useState("present"); // "present" | "all" — present is default
   const [viewLayout, setViewLayout] = useState("card"); // "card" | "list" — card is default
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -470,7 +459,8 @@ export default function Employees() {
                   {filtered.map((emp) => (
                     <tr
                       key={emp.employeeCode}
-                      className="hover:bg-white/5 transition-colors"
+                      onClick={() => setSelectedEmployee(emp)}
+                      className="hover:bg-white/5 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-3">
@@ -505,11 +495,20 @@ export default function Employees() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {filtered.map((emp) => (
-                <EmployeeCard key={emp.employeeCode} emp={emp} />
+                <EmployeeCard
+                  key={emp.employeeCode}
+                  emp={emp}
+                  onSelect={() => setSelectedEmployee(emp)}
+                />
               ))}
             </div>
           ))}
       </div>
+
+      <EmployeeAttendanceModal
+        employee={selectedEmployee}
+        onClose={() => setSelectedEmployee(null)}
+      />
     </div>
   );
 }

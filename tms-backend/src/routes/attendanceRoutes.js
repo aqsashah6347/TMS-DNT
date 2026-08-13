@@ -8,5 +8,6 @@ const attendanceController = require("../controllers/attendanceController");
 router.use(requireAuth, requireRole("admin"));
 
 router.get("/today", attendanceController.getTodayAttendance);
+router.get("/employee/:employeeCode", attendanceController.getEmployeeAttendanceHistory);
 
 module.exports = router;
