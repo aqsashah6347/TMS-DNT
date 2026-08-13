@@ -9,9 +9,12 @@ const axiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Attach the auth token automatically to every request, once you have real login working.
+// Attach the auth token automatically to every request. The token can be
+// in localStorage (user checked "Keep me logged in") or sessionStorage
+// (they didn't), so check both.
 axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("tms_token");
+  const token =
+    localStorage.getItem("tms_token") || sessionStorage.getItem("tms_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -22,6 +25,8 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("tms_token");
+      sessionStorage.removeItem("tms_token");
+      localStorage.removeItem("tms_remember_me");
       window.location.href = "/login";
     }
     return Promise.reject(error);

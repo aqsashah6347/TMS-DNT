@@ -69,13 +69,14 @@ export default function EmployeeProfilePanel({ employee }) {
   const rating = ratingFor(scores.final);
   const hasData = employee.assigned > 0;
 
- const radarData = [
-   { metric: "Completion", value: scores.achievement ?? 0 },
-   { metric: "Task Amount", value: scores.taskAmount ?? 0 },
-   { metric: "Task Weight", value: scores.difficulty ?? 0 },
-   { metric: "Efficiency", value: scores.timeEfficiency ?? 0 },
-   { metric: "Quality", value: scores.quality ?? 0 },
- ];
+const radarData = [
+  { metric: "Completion", value: scores.achievement ?? 0 },
+  { metric: "Task Amount", value: scores.taskAmount ?? 0 },
+  { metric: "Task Weight", value: scores.difficulty ?? 0 },
+  { metric: "Efficiency", value: scores.timeEfficiency ?? 0 },
+  { metric: "Quality", value: scores.quality ?? 0 },
+  { metric: "Manager Rating", value: scores.performanceRatingScore ?? 0 },
+];
 
   const statusData = Object.entries(employee.statusCounts)
     .map(([status, value]) => ({ status, value }))
@@ -141,7 +142,7 @@ export default function EmployeeProfilePanel({ employee }) {
         </p>
       ) : (
         <>
-          {/* Final score + explainability + 4 sub-metric gauges */}
+          {/* Final score + explainability + sub-metric gauges */}
           <div className="border-t border-white/10 mt-6 pt-6">
             <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-4">
               Why did I get this score?
@@ -159,35 +160,46 @@ export default function EmployeeProfilePanel({ employee }) {
                   size={76}
                   thickness={7}
                   label="Completion"
-                  caption="30% weight"
+                  caption="24% weight"
                 />
                 <ScoreGauge
                   score={scores.taskAmount}
                   size={76}
                   thickness={7}
                   label="Task Amount"
-                  caption="15% weight"
+                  caption="12% weight"
                 />
                 <ScoreGauge
                   score={scores.difficulty}
                   size={76}
                   thickness={7}
                   label="Task Weight"
-                  caption="25% weight"
+                  caption="20% weight"
                 />
                 <ScoreGauge
                   score={scores.timeEfficiency}
                   size={76}
                   thickness={7}
                   label="Efficiency"
-                  caption="20% weight"
+                  caption="16% weight"
                 />
                 <ScoreGauge
                   score={scores.quality}
                   size={76}
                   thickness={7}
                   label="Quality"
-                  caption="10% weight"
+                  caption="8% weight"
+                />
+                <ScoreGauge
+                  score={scores.performanceRatingScore}
+                  size={76}
+                  thickness={7}
+                  label="Manager Rating"
+                  caption={
+                    scores.performanceRating !== null
+                      ? `${scores.performanceRating}/10 · 20% weight`
+                      : "20% weight"
+                  }
                 />
               </div>
             </div>

@@ -21,6 +21,7 @@ export default function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const isAdmin = user?.role === "admin";
 
   // Connects once as soon as we know who's logged in — covers both a
   // fresh login (useAuthStore.login already connects) and a page
@@ -65,7 +66,7 @@ export default function App() {
       <Scene />
       <TaskCompleteLottie />
       <Sidebar
-        isAdmin={user?.role === "admin"}
+        isAdmin={isAdmin}
         expanded={sidebarExpanded}
         onToggle={() => setSidebarExpanded((prev) => !prev)}
       />

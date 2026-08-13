@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Calendar from "react-calendar";
 import { Locate } from "lucide-react";
+import { useTaskStore } from "../../tasks/taskStore";
 
 function isSameDay(a, b) {
   return (
@@ -15,6 +16,15 @@ function addMonths(date, amount) {
   d.setDate(1);
   d.setMonth(d.getMonth() + amount);
   return d;
+}
+
+// Local (not UTC) YYYY-MM-DD, matching how dueDate is stored/compared
+// elsewhere (e.g. TaskCalendarView) so the dot lines up with the same day
+// the task list shows, regardless of timezone offset.
+function toDateStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
 }
 
 function AnalogClock({ onClick }) {
@@ -103,6 +113,36 @@ export default function CalendarPreview() {
   const [date, setDate] = useState(new Date());
   const [activeStartDate, setActiveStartDate] = useState(new Date());
 
+  const allTasksFull = useTaskStore((s) => s.allTasksFull);
+  const fetchAllTasksFull = useTaskStore((s) => s.fetchAllTasksFull);
+  const openTaskView = useTaskStore((s) => s.openTaskView);
+
+  useEffect(() => {
+    fetchAllTasksFull();
+  }, [fetchAllTasksFull]);
+
+  // Group due tasks by local date string. allTasksFull is already scoped
+  // to what this user can see (their own + created-by-them tasks for
+  // "user", their team's for "manager", everything for "admin" — see
+  // taskController.getAllTasks), so no extra client-side filtering by
+  // assignedTo is needed here. That extra filter was the actual bug:
+  // for anyone whose id isn't the assignee on their own tasks (admins,
+  // managers, or a "user" who mostly creates tasks for others) it wiped
+  // the list down to nothing, so no dots ever rendered — meaning there
+  // was nothing to hover or click in the first place.
+  //
+  // dueDate normally comes back as a plain "YYYY-MM-DD" string from the
+  // API, but this also tolerates a full ISO timestamp by taking just the
+  // date portion, so a format mismatch can't silently make the dot
+  // disappear.
+  const tasksByDueDate = allTasksFull
+    .filter((t) => t.dueDate)
+    .reduce((acc, t) => {
+      const key = String(t.dueDate).slice(0, 10);
+      (acc[key] ||= []).push(t);
+      return acc;
+    }, {});
+
   const goToToday = () => {
     const today = new Date();
     setDate(today);
@@ -110,11 +150,27 @@ export default function CalendarPreview() {
   };
 
   const handleDayClick = (clickedDate) => {
+    // A day with one of your tasks due opens that task straight away
+    // instead of just selecting the day.
+    const dayTasks = tasksByDueDate[toDateStr(clickedDate)];
+    if (dayTasks && dayTasks.length > 0) {
+      openTaskView(dayTasks[0]);
+      return;
+    }
+
     if (isSameDay(clickedDate, new Date())) {
       goToToday();
       return;
     }
     setDate(clickedDate);
+  };
+
+  // Clicking a specific task row in the tooltip opens that task (rather
+  // than always the first one due that day, which the tile click below
+  // still does as a shortcut).
+  const handleTaskClick = (e, task) => {
+    e.stopPropagation();
+    openTaskView(task);
   };
 
   const monthLabel = activeStartDate.toLocaleDateString(undefined, {
@@ -172,6 +228,72 @@ export default function CalendarPreview() {
           showNavigation={false}
           className="tms-calendar"
           showNeighboringMonth={true}
+          tileContent={({ date: tileDate, view }) => {
+            if (view !== "month") return null;
+            const key = toDateStr(tileDate);
+            const dayTasks = tasksByDueDate[key];
+            if (!dayTasks || dayTasks.length === 0) return null;
+
+            const isSelected = isSameDay(tileDate, date);
+
+            return (
+              // Pure CSS :hover drives the tooltip (see .calendar-hover-zone
+              // and .calendar-task-tooltip in index.css) instead of React
+              // state — no onMouseEnter/onMouseLeave to get out of sync.
+              <span
+                className="calendar-hover-zone"
+                onClick={(e) => {
+                  // Explicit, rather than relying on this bubbling up to
+                  // react-calendar's own tile button handler — guarantees
+                  // the click opens the task no matter how that internal
+                  // wiring behaves.
+                  e.stopPropagation();
+                  handleDayClick(tileDate);
+                }}
+              >
+                <span
+                  className={`calendar-due-dot${isSelected ? " calendar-due-dot--selected" : ""}`}
+                />
+
+                <div className="calendar-task-tooltip" role="tooltip">
+                  <p className="calendar-task-tooltip__heading">
+                    {dayTasks.length === 1
+                      ? "1 task due"
+                      : `${dayTasks.length} tasks due`}
+                  </p>
+                  <ul className="calendar-task-tooltip__list">
+                    {dayTasks.map((t) => (
+                      <li key={t.id}>
+                        {/* Not a <button> on purpose — this sits inside
+                            tileContent, which react-calendar already
+                            renders inside its own <button> for the tile.
+                            A <button> nested in a <button> is invalid
+                            HTML; browsers close the outer one early when
+                            they hit it, which corrupts the tile's DOM and
+                            is what was breaking hover/click on the
+                            calendar. */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="calendar-task-tooltip__item"
+                          onClick={(e) => handleTaskClick(e, t)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleTaskClick(e, t);
+                            }
+                          }}
+                        >
+                          {t.title}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <span className="calendar-task-tooltip__arrow" />
+                </div>
+              </span>
+            );
+          }}
         />
       </div>
     </div>

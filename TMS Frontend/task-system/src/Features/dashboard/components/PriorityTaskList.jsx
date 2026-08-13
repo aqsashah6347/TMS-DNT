@@ -1,8 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useTaskStore } from "../../tasks/taskStore";
 
-const priorityRank = { critical: 0, high: 1, medium: 2, low: 3 };
-
 function formatDate(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -13,10 +11,23 @@ export default function PriorityTaskList() {
   const { tasks, openTaskView } = useTaskStore();
   const navigate = useNavigate();
 
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const threeDaysOut = new Date(startOfToday);
+  threeDaysOut.setDate(threeDaysOut.getDate() + 3);
+  threeDaysOut.setHours(23, 59, 59, 999);
+
   const priorityTasks = [...tasks]
-    .filter((t) => t.status !== "done")
-    .sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority])
-    .slice(0, 4);
+    .filter((t) => t.status !== "done" && t.dueDate)
+    .filter((t) => {
+      const due = new Date(t.dueDate);
+      return due >= startOfToday && due <= threeDaysOut;
+    })
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
   function handleClick(task) {
     openTaskView(task);
