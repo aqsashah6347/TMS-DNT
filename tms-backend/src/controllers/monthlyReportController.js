@@ -204,7 +204,9 @@ async function setReportRating(req, res, next) {
 
     const period = currentPeriod();
     const report = await getOrCreateReport(pool, teamId, period);
-    if (report.status === "released") {
+    // Admins get full, unrestricted access to edit reports — including
+    // after release. Only non-admin managers are locked out post-release.
+    if (report.status === "released" && req.user.role !== "admin") {
       return res.status(400).json({
         message: "This month's report is already released and locked",
       });
@@ -266,7 +268,9 @@ async function submitReport(req, res, next) {
 
     const period = currentPeriod();
     const report = await getOrCreateReport(pool, teamId, period);
-    if (report.status === "released") {
+    // Admins get full, unrestricted access — including re-filing a
+    // released report. Only non-admin managers are locked out.
+    if (report.status === "released" && req.user.role !== "admin") {
       return res
         .status(400)
         .json({ message: "This month's report is already released" });
@@ -479,11 +483,8 @@ async function setForceVisible(req, res, next) {
 
     const period = currentPeriod();
     const report = await getOrCreateReport(pool, teamId, period);
-    if (report.status === "released") {
-      return res.status(400).json({
-        message: "This month's report is already released and locked",
-      });
-    }
+    // setForceVisible is admin-only already (see route middleware), so
+    // no released-report lock here — admins can always flip this.
 
     await pool
       .request()

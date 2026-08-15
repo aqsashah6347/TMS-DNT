@@ -81,7 +81,7 @@ const STATUS_META = {
 // the score input is easy to hit); already-marked members collapse to a
 // compact summary tile. That's what gives the grid its non-linear,
 // bento feel instead of a uniform list.
-function MemberTile({ member, teamId, locked, onRated }) {
+function MemberTile({ member, teamId, onRated }) {
   const [value, setValue] = useState(
     member.rating != null ? String(member.rating) : "",
   );
@@ -174,7 +174,9 @@ function MemberTile({ member, teamId, locked, onRated }) {
         )}
       </div>
 
-      {!locked && (
+      {/* locked check removed — this modal is admin-only, so the score
+          input stays available even after the report is released. */}
+      {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 flex-1 bg-white/5 rounded-xl px-2.5 py-1.5">
             <Star size={13} className="text-orange-300 shrink-0" />
@@ -207,7 +209,7 @@ function MemberTile({ member, teamId, locked, onRated }) {
             )}
           </button>
         </div>
-      )}
+      }
       {rowError && <span className="text-red-400 text-[10px]">{rowError}</span>}
     </div>
   );
@@ -255,7 +257,11 @@ export default function ReportsTeamModal({ team, isOpen, onClose, onChanged }) {
 
   if (!team) return null;
 
-  const locked = team.status === "released";
+  // `locked` is no longer used to gate the UI — this modal is
+  // admin-only, so ratings/visibility stay editable even after
+  // release. Left here (commented) in case a future non-admin view
+  // needs to reintroduce a lock.
+  // const locked = team.status === "released";
   const markedCount = members.filter((m) => m.rating != null).length;
   const progressPct =
     members.length > 0 ? Math.round((markedCount / members.length) * 100) : 0;
@@ -381,7 +387,6 @@ export default function ReportsTeamModal({ team, isOpen, onClose, onChanged }) {
               key={member.id}
               member={member}
               teamId={team.teamId}
-              locked={locked}
               onRated={handleRated}
             />
           ))}
