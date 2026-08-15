@@ -41,4 +41,64 @@ async function getTodayAttendance(req, res, next) {
   }
 }
 
-module.exports = { getTodayAttendance };
+// GET /api/attendance/employee/:employeeCode?range=today|week|month
+// Builds one entry per calendar day in the range (even days with no log,
+// so the employee modal can show "Absent" instead of just skipping them).
+async function getEmployeeAttendanceHistory(req, res, next) {
+  try {
+    const { employeeCode } = req.params;
+    const rangeKey = ["today", "week", "month"].includes(req.query.range)
+      ? req.query.range
+      : "today";
+
+    const { from, to } = attendanceService.dateRangeFor(rangeKey);
+    const normalizedCode = attendanceService.normalizeEmployeeCode(employeeCode);
+
+    const [byEmployee, employees] = await Promise.all([
+      attendanceService.getDailyLogsPerEmployeeForRange(from, to),
+      fetchAllEmployees(),
+    ]);
+
+    const emp = employees.find(
+      (e) =>
+        attendanceService.normalizeEmployeeCode(e.employeeCode) ===
+        normalizedCode,
+    );
+
+    const daysForEmployee = byEmployee.get(normalizedCode) || new Map();
+
+    const days = [];
+    const cursor = new Date(`${from}T00:00:00`);
+    const end = new Date(`${to}T00:00:00`);
+    while (cursor <= end) {
+      const yyyy = cursor.getFullYear();
+      const mm = String(cursor.getMonth() + 1).padStart(2, "0");
+      const dd = String(cursor.getDate()).padStart(2, "0");
+      const dayStr = `${yyyy}-${mm}-${dd}`;
+      const log = daysForEmployee.get(dayStr);
+      days.push({
+        date: dayStr,
+        checkIn: log?.checkIn || null,
+        checkOut: log && log.checkOut !== log.checkIn ? log.checkOut : null,
+        present: Boolean(log),
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    days.reverse(); // most recent day first
+
+    res.json({
+      employeeCode,
+      name: emp?.fullName || null,
+      department: emp?.departmentName || "—",
+      range: rangeKey,
+      from,
+      to,
+      days,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getTodayAttendance, getEmployeeAttendanceHistory };
